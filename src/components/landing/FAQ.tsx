@@ -16,22 +16,22 @@ export function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section id="faq" className="py-28 md:py-40">
+    <section id="faq" className="py-20 sm:py-28 md:py-40">
       <div className="container">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-4xl font-bold tracking-tight text-foreground md:text-5xl">
+        <div className="mx-auto max-w-2xl text-center px-4">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-foreground">
             Questions? Answers.
           </h2>
-          <p className="mt-4 text-lg text-muted-foreground">Everything you need to know about maroa.ai.</p>
+          <p className="mt-3 sm:mt-4 text-base sm:text-lg text-muted-foreground">Everything you need to know about maroa.ai.</p>
         </div>
-        <div className="mx-auto mt-16 max-w-2xl">
+        <div className="mx-auto mt-10 sm:mt-16 max-w-2xl px-2 sm:px-0">
           {faqs.map((faq, i) => (
             <div key={i} className={`${i > 0 ? "border-t border-border" : ""}`}>
               <button
                 onClick={() => setOpenIndex(openIndex === i ? null : i)}
-                className="flex w-full items-center justify-between py-6 text-left group"
+                className="flex w-full items-center justify-between py-5 sm:py-6 text-left group"
               >
-                <span className="text-[15px] font-medium text-foreground pr-8 group-hover:text-primary transition-colors duration-200">{faq.q}</span>
+                <span className="text-sm sm:text-[15px] font-medium text-foreground pr-4 group-hover:text-primary transition-colors duration-200">{faq.q}</span>
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border transition-colors group-hover:border-primary/30">
                   {openIndex === i ? (
                     <Minus className="h-3.5 w-3.5 text-primary" strokeWidth={2} />
@@ -42,10 +42,10 @@ export function FAQ() {
               </button>
               <div
                 className={`overflow-hidden transition-all duration-300 ease-out ${
-                  openIndex === i ? "max-h-48 pb-6" : "max-h-0"
+                  openIndex === i ? "max-h-48 pb-5 sm:pb-6" : "max-h-0"
                 }`}
               >
-                <p className="text-sm leading-relaxed text-muted-foreground pr-12">{faq.a}</p>
+                <p className="text-sm leading-relaxed text-muted-foreground pr-8 sm:pr-12">{faq.a}</p>
               </div>
             </div>
           ))}

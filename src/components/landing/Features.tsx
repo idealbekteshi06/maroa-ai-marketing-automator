@@ -16,26 +16,26 @@ const features = [
 
 export function Features() {
   return (
-    <section id="features" className="py-28 md:py-40">
+    <section id="features" className="py-20 sm:py-28 md:py-40">
       <div className="container">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-4xl font-bold tracking-tight text-foreground md:text-5xl">
+        <div className="mx-auto max-w-2xl text-center px-4">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-foreground">
             Everything you need.
           </h2>
-          <p className="mt-4 text-lg text-muted-foreground">
+          <p className="mt-3 sm:mt-4 text-base sm:text-lg text-muted-foreground">
             Nothing you don't.
           </p>
         </div>
-        <div className="mt-20 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {features.map((f, i) => (
+        <div className="mt-12 sm:mt-20 grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 px-2 sm:px-0">
+          {features.map((f) => (
             <div
               key={f.title}
-              className="group rounded-2xl border border-border bg-card p-8 transition-all duration-300 hover:shadow-card-hover hover:-translate-y-0.5"
+              className="group rounded-2xl border border-border bg-card p-6 sm:p-8 transition-all duration-300 hover:shadow-card-hover hover:-translate-y-0.5"
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/8 transition-colors group-hover:bg-primary/12">
-                <f.icon className="h-6 w-6 text-primary" strokeWidth={1.5} />
+              <div className="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-2xl bg-primary/8 transition-colors group-hover:bg-primary/12">
+                <f.icon className="h-5 w-5 sm:h-6 sm:w-6 text-primary" strokeWidth={1.5} />
               </div>
-              <h3 className="mt-5 text-base font-semibold text-foreground">{f.title}</h3>
+              <h3 className="mt-4 sm:mt-5 text-[15px] font-semibold text-foreground">{f.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{f.desc}</p>
             </div>
           ))}

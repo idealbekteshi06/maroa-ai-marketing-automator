@@ -4,7 +4,7 @@ import { BarChart3, TrendingUp, Sparkles, Send } from "lucide-react";
 
 function DashboardMockup() {
   return (
-    <div className="relative mx-auto mt-16 max-w-4xl opacity-0 animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
+    <div className="relative mx-auto mt-16 max-w-4xl opacity-0 animate-fade-in-up hidden sm:block" style={{ animationDelay: "0.4s" }}>
       <div className="rounded-2xl border border-border bg-card shadow-elevated overflow-hidden">
         {/* Browser chrome */}
         <div className="flex items-center gap-2 border-b border-border px-4 py-3">
@@ -56,7 +56,7 @@ function DashboardMockup() {
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden pb-16 pt-24 md:pb-32 md:pt-36">
+    <section className="relative overflow-hidden pb-16 pt-20 sm:pb-32 sm:pt-36">
       <div className="container text-center">
         <div className="opacity-0 animate-fade-in" style={{ animationDelay: "0s" }}>
           <span className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-4 py-1.5 text-xs font-medium text-muted-foreground">
@@ -64,21 +64,21 @@ export function Hero() {
             AI Marketing Platform
           </span>
         </div>
-        <h1 className="mx-auto mt-8 max-w-3xl text-5xl font-bold leading-[1.08] tracking-tight text-foreground md:text-7xl text-balance opacity-0 animate-fade-in" style={{ animationDelay: "0.05s" }}>
+        <h1 className="mx-auto mt-6 sm:mt-8 max-w-3xl text-4xl sm:text-5xl md:text-7xl font-bold leading-[1.08] tracking-tight text-foreground text-balance opacity-0 animate-fade-in" style={{ animationDelay: "0.05s" }}>
           Your marketing
           <br />
           on autopilot.
         </h1>
-        <p className="mx-auto mt-6 max-w-lg text-lg leading-relaxed text-muted-foreground opacity-0 animate-fade-in" style={{ animationDelay: "0.15s" }}>
+        <p className="mx-auto mt-5 sm:mt-6 max-w-lg text-base sm:text-lg leading-relaxed text-muted-foreground px-4 sm:px-0 opacity-0 animate-fade-in" style={{ animationDelay: "0.15s" }}>
           maroa.ai uses AI to write your content, run your ads,
           and post everything automatically.
         </p>
-        <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row opacity-0 animate-fade-in" style={{ animationDelay: "0.25s" }}>
-          <Link to="/signup">
-            <Button variant="hero" size="xl">Start free trial</Button>
+        <div className="mt-8 sm:mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row px-4 sm:px-0 opacity-0 animate-fade-in" style={{ animationDelay: "0.25s" }}>
+          <Link to="/signup" className="w-full sm:w-auto">
+            <Button variant="hero" size="xl" className="w-full sm:w-auto">Start free trial</Button>
           </Link>
-          <a href="#how-it-works">
-            <Button variant="hero-outline" size="xl">See how it works</Button>
+          <a href="#how-it-works" className="w-full sm:w-auto">
+            <Button variant="hero-outline" size="xl" className="w-full sm:w-auto">See how it works</Button>
           </a>
         </div>
         <p className="mt-4 text-xs text-muted-foreground opacity-0 animate-fade-in" style={{ animationDelay: "0.3s" }}>
