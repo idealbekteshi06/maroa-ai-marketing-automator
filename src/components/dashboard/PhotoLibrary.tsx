@@ -11,7 +11,11 @@ interface Photo {
   id: string;
   photo_url: string;
   photo_type: string | null;
-  file_name: string | null;
+  description: string | null;
+  is_active: boolean;
+  use_count: number;
+  last_used_at: string | null;
+  uploaded_at: string;
 }
 
 export default function PhotoLibrary() {
@@ -27,7 +31,7 @@ export default function PhotoLibrary() {
       .from("business_photos")
       .select("*")
       .eq("business_id", businessId)
-      .order("created_at", { ascending: false });
+      .order("uploaded_at", { ascending: false });
     setPhotos((data as Photo[]) ?? []);
     setLoading(false);
   };
@@ -56,8 +60,9 @@ export default function PhotoLibrary() {
       await externalSupabase.from("business_photos").insert({
         business_id: businessId,
         photo_url: urlData.publicUrl,
-        file_name: file.name,
         photo_type: "Product",
+        description: file.name,
+        is_active: true,
       });
     }
 
@@ -103,9 +108,9 @@ export default function PhotoLibrary() {
           {photos.map((p) => (
             <div key={p.id} className="group relative aspect-square rounded-2xl bg-muted overflow-hidden">
               {p.photo_url ? (
-                <img src={p.photo_url} alt={p.file_name ?? "Photo"} className="h-full w-full object-cover" loading="lazy" />
+                <img src={p.photo_url} alt={p.description ?? "Photo"} className="h-full w-full object-cover" loading="lazy" />
               ) : (
-                <div className="flex h-full items-center justify-center text-muted-foreground text-xs">{p.file_name}</div>
+                <div className="flex h-full items-center justify-center text-muted-foreground text-xs">{p.description}</div>
               )}
               <div className="absolute inset-0 flex items-start justify-between p-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <span className="rounded-full bg-background/80 px-2 py-1 text-[10px] font-medium text-foreground">{p.photo_type ?? "Uncategorized"}</span>
