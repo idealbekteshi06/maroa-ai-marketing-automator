@@ -7,11 +7,36 @@ import { PricingSection } from "@/components/landing/PricingSection";
 import { FAQ } from "@/components/landing/FAQ";
 import { Footer } from "@/components/landing/Footer";
 
+function LiveTicker() {
+  const stats = [
+    "2,847 businesses using maroa.ai",
+    "142,000+ posts published this month",
+    "3.8x average ROAS across all campaigns",
+    "$2.4M in ad spend optimized",
+    "98% content approval rate",
+    "15,000+ AI images generated this week",
+  ];
+
+  return (
+    <div className="overflow-hidden border-y border-border bg-muted/30 py-4">
+      <div className="flex animate-ticker whitespace-nowrap">
+        {[...stats, ...stats].map((s, i) => (
+          <span key={i} className="mx-8 flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary/50" />
+            {s}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const Index = () => (
   <>
     <Navbar />
     <main>
       <Hero />
+      <LiveTicker />
       <Features />
       <HowItWorks />
       <Testimonials />
