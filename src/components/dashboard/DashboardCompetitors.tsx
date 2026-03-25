@@ -4,9 +4,11 @@ import { useAuth } from "@/contexts/AuthContext";
 
 interface Insight {
   id: string;
-  competitor_name: string;
-  insight: string;
-  recommendation: string;
+  competitor_doing_well: string | null;
+  gap_opportunity: string | null;
+  content_to_steal: string | null;
+  positioning_tip: string | null;
+  recorded_at: string;
 }
 
 export default function DashboardCompetitors() {
@@ -22,7 +24,7 @@ export default function DashboardCompetitors() {
         .from("competitor_insights")
         .select("*")
         .eq("business_id", businessId)
-        .order("created_at", { ascending: false });
+        .order("recorded_at", { ascending: false });
       setInsights((data as Insight[]) ?? []);
       setLoading(false);
     };
@@ -49,13 +51,32 @@ export default function DashboardCompetitors() {
       ) : (
         <div className="space-y-4">
           {insights.map((ins) => (
-            <div key={ins.id} className="rounded-2xl bg-card p-6">
-              <p className="text-xs font-medium text-primary">{ins.competitor_name}</p>
-              <p className="mt-2 text-sm text-card-foreground">{ins.insight}</p>
-              <div className="mt-4 rounded-xl bg-primary/5 p-4">
-                <p className="text-xs font-medium text-primary">💡 Recommendation</p>
-                <p className="mt-1 text-sm text-card-foreground">{ins.recommendation}</p>
-              </div>
+            <div key={ins.id} className="rounded-2xl bg-card p-6 space-y-4">
+              {ins.competitor_doing_well && (
+                <div>
+                  <p className="text-xs font-medium text-primary">🏆 Competitor Doing Well</p>
+                  <p className="mt-1 text-sm text-card-foreground">{ins.competitor_doing_well}</p>
+                </div>
+              )}
+              {ins.gap_opportunity && (
+                <div className="rounded-xl bg-primary/5 p-4">
+                  <p className="text-xs font-medium text-primary">🎯 Gap Opportunity</p>
+                  <p className="mt-1 text-sm text-card-foreground">{ins.gap_opportunity}</p>
+                </div>
+              )}
+              {ins.content_to_steal && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">💡 Content to Steal</p>
+                  <p className="mt-1 text-sm text-card-foreground">{ins.content_to_steal}</p>
+                </div>
+              )}
+              {ins.positioning_tip && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">📍 Positioning Tip</p>
+                  <p className="mt-1 text-sm text-card-foreground">{ins.positioning_tip}</p>
+                </div>
+              )}
+              <p className="text-[10px] text-muted-foreground">{ins.recorded_at}</p>
             </div>
           ))}
         </div>

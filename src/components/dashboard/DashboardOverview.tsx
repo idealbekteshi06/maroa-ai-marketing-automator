@@ -5,17 +5,20 @@ import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface DailyStat {
-  date: string;
+  recorded_at: string;
   total_reach: number;
-  posts_published: number;
-  ad_spend: number;
-  roas: number;
+  ig_reach: number;
+  ig_impressions: number;
+  ig_followers: number;
+  fb_reach: number;
+  fb_engaged: number;
+  fb_fan_adds: number;
 }
 
 export default function DashboardOverview() {
   const { businessId } = useAuth();
   const [stats, setStats] = useState<DailyStat[]>([]);
-  const [activities, setActivities] = useState<string[]>([]);
+  const [businessData, setBusinessData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,26 +26,34 @@ export default function DashboardOverview() {
 
     const fetchData = async () => {
       setLoading(true);
-      const { data } = await externalSupabase
-        .from("daily_stats")
-        .select("*")
-        .eq("business_id", businessId)
-        .order("date", { ascending: false })
-        .limit(30);
 
-      setStats(data ?? []);
+      const [statsRes, bizRes] = await Promise.all([
+        externalSupabase
+          .from("daily_stats")
+          .select("*")
+          .eq("business_id", businessId)
+          .order("recorded_at", { ascending: false })
+          .limit(30),
+        externalSupabase
+          .from("businesses")
+          .select("total_reach, total_spend, avg_roas, posts_published")
+          .eq("id", businessId)
+          .maybeSingle(),
+      ]);
+
+      setStats(statsRes.data ?? []);
+      setBusinessData(bizRes.data);
       setLoading(false);
     };
 
     fetchData();
   }, [businessId]);
 
-  const latest = stats[0];
   const summaryCards = [
-    { label: "Total Reach", value: latest?.total_reach?.toLocaleString() ?? "—", icon: Eye },
-    { label: "Posts Published", value: latest?.posts_published?.toString() ?? "—", icon: Sparkles },
-    { label: "Ad Spend", value: latest ? `$${latest.ad_spend}` : "—", icon: DollarSign },
-    { label: "ROAS", value: latest ? `${latest.roas}x` : "—", icon: TrendingUp },
+    { label: "Total Reach", value: businessData?.total_reach?.toLocaleString() ?? "—", icon: Eye },
+    { label: "Posts Published", value: businessData?.posts_published?.toString() ?? "—", icon: Sparkles },
+    { label: "Total Spend", value: businessData?.total_spend != null ? `$${businessData.total_spend}` : "—", icon: DollarSign },
+    { label: "Avg ROAS", value: businessData?.avg_roas != null ? `${businessData.avg_roas}x` : "—", icon: TrendingUp },
   ];
 
   if (loading) {
@@ -80,7 +91,7 @@ export default function DashboardOverview() {
               const max = Math.max(...stats.map((d) => d.total_reach || 1));
               const height = ((s.total_reach || 0) / max) * 100;
               return (
-                <div key={i} className="flex-1 rounded-t bg-primary/20 transition-all hover:bg-primary/40" style={{ height: `${height}%` }} title={`${s.date}: ${s.total_reach}`} />
+                <div key={i} className="flex-1 rounded-t bg-primary/20 transition-all hover:bg-primary/40" style={{ height: `${height}%` }} title={`${s.recorded_at}: ${s.total_reach}`} />
               );
             })
           ) : (
@@ -109,7 +120,7 @@ export default function DashboardOverview() {
                 <div key={i} className="flex items-start gap-3 border-b border-border pb-3 last:border-0">
                   <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
                   <p className="text-sm text-muted-foreground">
-                    {s.date}: Reached {s.total_reach?.toLocaleString() ?? 0} people, {s.posts_published ?? 0} posts published
+                    {s.recorded_at}: IG reach {s.ig_reach?.toLocaleString() ?? 0}, FB reach {s.fb_reach?.toLocaleString() ?? 0}
                   </p>
                 </div>
               ))
