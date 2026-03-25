@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, FileText, Megaphone, Share2,
-  Search, Settings, Bell, Menu, X, ImageIcon,
+  Search, Settings, Bell, Menu, X, ImageIcon, LogOut,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
 import DashboardContent from "@/components/dashboard/DashboardContent";
 import DashboardAds from "@/components/dashboard/DashboardAds";
@@ -37,7 +38,18 @@ const pages: Record<string, React.FC> = {
 export default function Dashboard() {
   const [active, setActive] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const Page = pages[active] || DashboardOverview;
+
+  const initials = user?.user_metadata?.first_name
+    ? `${user.user_metadata.first_name[0]}${user.user_metadata.last_name?.[0] ?? ""}`.toUpperCase()
+    : user?.email?.[0]?.toUpperCase() ?? "U";
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/login");
+  };
 
   return (
     <div className="flex min-h-screen">
@@ -64,6 +76,11 @@ export default function Dashboard() {
             </button>
           ))}
         </nav>
+        <div className="border-t border-sidebar-border p-3">
+          <button onClick={handleSignOut} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/50">
+            <LogOut className="h-4 w-4" /> Sign out
+          </button>
+        </div>
       </aside>
 
       {/* Mobile sidebar overlay */}
@@ -107,7 +124,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <Button variant="ghost" size="icon"><Bell className="h-5 w-5" /></Button>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">JD</div>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">{initials}</div>
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-6">
