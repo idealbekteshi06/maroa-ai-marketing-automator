@@ -63,6 +63,16 @@ const plans = [
   },
 ];
 
+const comparisonData = [
+  ["Monthly cost", "$49/mo", "$2,000+/mo", "Free (your time)"],
+  ["Time investment", "5 min/week", "2-3 hrs/week", "15-20 hrs/week"],
+  ["Content creation", "Unlimited AI", "10-20 posts", "You write it all"],
+  ["Ad management", "AI-optimized", "Monthly review", "Trial & error"],
+  ["Competitor tracking", "Real-time AI", "Quarterly report", "Manual research"],
+  ["Reports", "Weekly auto", "Monthly PDF", "Build your own"],
+  ["Setup time", "5 minutes", "2-4 weeks", "Ongoing"],
+];
+
 export function PricingSection() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -91,19 +101,19 @@ export function PricingSection() {
   };
 
   return (
-    <section id="pricing" className="py-28 md:py-40 bg-muted/30">
+    <section id="pricing" className="py-20 sm:py-28 md:py-40 bg-muted/30">
       <div className="container">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-4xl font-bold tracking-tight text-foreground md:text-5xl">
+        <div className="mx-auto max-w-2xl text-center px-4">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-foreground">
             Simple pricing.
           </h2>
-          <p className="mt-4 text-lg text-muted-foreground">No surprises. Cancel anytime.</p>
+          <p className="mt-3 sm:mt-4 text-base sm:text-lg text-muted-foreground">No surprises. Cancel anytime.</p>
         </div>
-        <div className="mx-auto mt-16 grid max-w-4xl gap-6 md:grid-cols-3">
+        <div className="mx-auto mt-12 sm:mt-16 grid max-w-4xl gap-5 sm:gap-6 px-2 sm:px-0 md:grid-cols-3">
           {plans.map((plan) => (
             <div
               key={plan.name}
-              className={`relative flex flex-col rounded-2xl border-2 p-8 transition-all duration-300 hover:-translate-y-0.5 ${
+              className={`relative flex flex-col rounded-2xl border-2 p-6 sm:p-8 transition-all duration-300 hover:-translate-y-0.5 ${
                 plan.popular
                   ? "border-primary bg-card shadow-elevated"
                   : "border-border bg-card hover:shadow-card-hover"
@@ -115,12 +125,12 @@ export function PricingSection() {
                 </span>
               )}
               <h3 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">{plan.name}</h3>
-              <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-5xl font-bold tracking-tight text-foreground">{plan.price}</span>
+              <div className="mt-3 sm:mt-4 flex items-baseline gap-1">
+                <span className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground">{plan.price}</span>
                 <span className="text-sm text-muted-foreground">{plan.period}</span>
               </div>
-              <p className="mt-3 text-sm text-muted-foreground">{plan.desc}</p>
-              <ul className="mt-8 flex-1 space-y-3">
+              <p className="mt-2 sm:mt-3 text-sm text-muted-foreground">{plan.desc}</p>
+              <ul className="mt-6 sm:mt-8 flex-1 space-y-3">
                 {plan.features.map((f) => (
                   <li key={f.text} className="flex items-center gap-2.5 text-sm">
                     {f.included ? (
@@ -133,7 +143,7 @@ export function PricingSection() {
                 ))}
               </ul>
               <Button
-                className="mt-8 w-full"
+                className="mt-6 sm:mt-8 w-full"
                 variant={plan.popular ? "default" : "outline"}
                 size="lg"
                 disabled={loading !== null}
@@ -146,33 +156,25 @@ export function PricingSection() {
         </div>
 
         {/* Comparison table */}
-        <div className="mx-auto mt-24 max-w-4xl">
-          <h3 className="text-center text-2xl font-bold text-foreground">maroa.ai vs the alternatives</h3>
-          <div className="mt-10 overflow-x-auto">
-            <table className="w-full text-sm">
+        <div className="mx-auto mt-16 sm:mt-24 max-w-4xl px-2 sm:px-0">
+          <h3 className="text-center text-xl sm:text-2xl font-bold text-foreground">maroa.ai vs the alternatives</h3>
+          <div className="mt-8 sm:mt-10 -mx-2 sm:mx-0 overflow-x-auto">
+            <table className="w-full text-xs sm:text-sm min-w-[420px]">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="py-4 text-left font-medium text-muted-foreground">Feature</th>
-                  <th className="py-4 text-center font-bold text-primary">maroa.ai</th>
-                  <th className="py-4 text-center font-medium text-muted-foreground">Marketing Agency</th>
-                  <th className="py-4 text-center font-medium text-muted-foreground">DIY</th>
+                  <th className="py-3 sm:py-4 text-left font-medium text-muted-foreground pr-3">Feature</th>
+                  <th className="py-3 sm:py-4 text-center font-bold text-primary px-2">maroa.ai</th>
+                  <th className="py-3 sm:py-4 text-center font-medium text-muted-foreground px-2">Agency</th>
+                  <th className="py-3 sm:py-4 text-center font-medium text-muted-foreground pl-2">DIY</th>
                 </tr>
               </thead>
               <tbody>
-                {[
-                  ["Monthly cost", "$49/mo", "$2,000+/mo", "Free (your time)"],
-                  ["Time investment", "5 min/week", "2-3 hrs/week", "15-20 hrs/week"],
-                  ["Content creation", "Unlimited AI", "10-20 posts", "You write it all"],
-                  ["Ad management", "AI-optimized daily", "Monthly review", "Trial & error"],
-                  ["Competitor tracking", "Real-time AI", "Quarterly report", "Manual research"],
-                  ["Performance reports", "Weekly automated", "Monthly PDF", "Build your own"],
-                  ["Setup time", "5 minutes", "2-4 weeks", "Ongoing"],
-                ].map(([feature, maroa, agency, diy]) => (
+                {comparisonData.map(([feature, maroa, agency, diy]) => (
                   <tr key={feature} className="border-b border-border/50">
-                    <td className="py-4 font-medium text-foreground">{feature}</td>
-                    <td className="py-4 text-center font-medium text-primary">{maroa}</td>
-                    <td className="py-4 text-center text-muted-foreground">{agency}</td>
-                    <td className="py-4 text-center text-muted-foreground">{diy}</td>
+                    <td className="py-3 sm:py-4 font-medium text-foreground pr-3 whitespace-nowrap">{feature}</td>
+                    <td className="py-3 sm:py-4 text-center font-medium text-primary px-2">{maroa}</td>
+                    <td className="py-3 sm:py-4 text-center text-muted-foreground px-2">{agency}</td>
+                    <td className="py-3 sm:py-4 text-center text-muted-foreground pl-2">{diy}</td>
                   </tr>
                 ))}
               </tbody>
