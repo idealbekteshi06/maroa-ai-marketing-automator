@@ -3,26 +3,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { externalSupabase } from "@/integrations/supabase/external-client";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Check } from "lucide-react";
+import { Check, ExternalLink } from "lucide-react";
 
 const tabs = ["Profile", "Billing", "Notifications"];
 
-// TODO: Replace with your Stripe publishable key
-const STRIPE_PUBLISHABLE_KEY = "pk_test_51T8u8ORdWtvqvMKip8L7l2bBsBMQUW7lznYBXpLZqdZSjhweHF2sDpqBVsKysz6K4XYjvzZK34c4jdT0PM9sPxYU00SWfZxY0y";
+const PLANS = {
+  free: { name: "Free", price: 0, product_id: null, price_id: null, features: ["1 business", "5 posts/month", "Basic dashboard"] },
+  growth: { name: "Growth", price: 49, product_id: "prod_UDQJ9P4MuCqw3G", price_id: "price_1TEzSrRdWtvqvMKio7e5VO2Y", popular: true, features: ["Unlimited content", "All platforms", "Ad management", "Daily optimization", "Weekly strategy", "Competitor tracking"] },
+  agency: { name: "Agency", price: 99, product_id: "prod_UDQKixhKr9Pxg7", price_id: "price_1TEzTeRdWtvqvMKiWI61UYLk", features: ["Unlimited businesses", "White label", "Client reports", "Everything in Growth"] },
+} as const;
 
-const plans = [
-  { id: "free", name: "Free", price: 0, features: ["1 business", "5 posts/month", "Basic dashboard"] },
-  { id: "growth", name: "Growth", price: 49, popular: true, features: ["Unlimited content", "All platforms", "Ad management", "Daily optimization", "Weekly strategy", "Competitor tracking"] },
-  { id: "agency", name: "Agency", price: 99, features: ["Unlimited businesses", "White label", "Client reports", "Everything in Growth"] },
-];
-
-// Stripe Price IDs — replace with your actual Stripe price IDs
-const STRIPE_PRICE_IDS: Record<string, string> = {
-  growth: "price_GROWTH_MONTHLY_ID",
-  agency: "price_AGENCY_MONTHLY_ID",
-};
+type PlanKey = keyof typeof PLANS;
 
 export default function DashboardSettings() {
   const [activeTab, setActiveTab] = useState("Profile");
@@ -30,6 +24,10 @@ export default function DashboardSettings() {
   const [business, setBusiness] = useState<any>(null);
   const [profileForm, setProfileForm] = useState({ business_name: "", email: "", location: "", industry: "" });
   const [saving, setSaving] = useState(false);
+  const [currentPlan, setCurrentPlan] = useState<PlanKey>("free");
+  const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
+  const [checkingPlan, setCheckingPlan] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
   useEffect(() => {
     if (!businessId) return;
@@ -51,6 +49,47 @@ export default function DashboardSettings() {
       });
   }, [businessId]);
 
+  // Check subscription status
+  const checkSubscription = async () => {
+    setCheckingPlan(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setCheckingPlan(false); return; }
+
+      const { data, error } = await supabase.functions.invoke("check-subscription", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (error || data?.error) {
+        console.warn("Subscription check failed:", error || data?.error);
+        setCheckingPlan(false);
+        return;
+      }
+
+      if (data?.subscribed && data?.product_id) {
+        const matchedPlan = (Object.entries(PLANS) as [PlanKey, typeof PLANS[PlanKey]][]).find(
+          ([_, p]) => p.product_id === data.product_id
+        );
+        if (matchedPlan) {
+          setCurrentPlan(matchedPlan[0]);
+          setSubscriptionEnd(data.subscription_end);
+        }
+      } else {
+        setCurrentPlan("free");
+        setSubscriptionEnd(null);
+      }
+    } catch (err) {
+      console.warn("Subscription check error:", err);
+    }
+    setCheckingPlan(false);
+  };
+
+  useEffect(() => {
+    checkSubscription();
+    const interval = setInterval(checkSubscription, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   const handleSaveProfile = async () => {
     if (!businessId) return;
     setSaving(true);
@@ -65,51 +104,66 @@ export default function DashboardSettings() {
 
   const handleDeleteAccount = async () => {
     if (!confirm("Are you sure? This will permanently delete your account and all data.")) return;
-    // Delete business data
     if (businessId) {
       await externalSupabase.from("businesses").delete().eq("id", businessId);
     }
-    // Sign out
     await externalSupabase.auth.signOut();
     window.location.href = "/";
   };
 
-  const currentPlan = business?.plan ?? "free";
-  const currentPlanPrice = business?.plan_price ?? 0;
-
-  const handleChangePlan = async (planId: string) => {
-    if (planId === "free") {
-      // Downgrade to free — update DB
+  const handleUpgrade = async (planKey: PlanKey) => {
+    const plan = PLANS[planKey];
+    if (!plan.price_id) {
+      // Downgrade to free
       if (businessId) {
-        await externalSupabase
-          .from("businesses")
-          .update({ plan: "free", plan_price: 0 })
-          .eq("id", businessId);
-        setBusiness((prev: any) => ({ ...prev, plan: "free", plan_price: 0 }));
+        await externalSupabase.from("businesses").update({ plan: "free", plan_price: 0 }).eq("id", businessId);
+        setCurrentPlan("free");
+        setSubscriptionEnd(null);
         toast.success("Downgraded to Free plan.");
       }
       return;
     }
 
-    // Redirect to Stripe Checkout
-    const priceId = STRIPE_PRICE_IDS[planId];
-    if (!priceId || priceId.includes("YOUR")) {
-      toast.error("Stripe price IDs not configured yet. Update STRIPE_PRICE_IDS in DashboardSettings.tsx");
-      return;
-    }
-
+    setCheckoutLoading(planKey);
     try {
-      // For now, open Stripe checkout via a simple redirect
-      // In production, create a checkout session via an edge function
-      toast.info("Stripe checkout integration — configure your price IDs and checkout endpoint.");
-    } catch (err) {
-      toast.error("Failed to start checkout.");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { priceId: plan.price_id },
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (error || data?.error) throw new Error(data?.error || "Checkout failed");
+
+      if (data?.url) {
+        window.open(data.url, "_blank");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to start checkout.");
+    }
+    setCheckoutLoading(null);
+  };
+
+  const handleManageSubscription = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const { data, error } = await supabase.functions.invoke("customer-portal", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (error || data?.error) throw new Error(data?.error || "Portal failed");
+      if (data?.url) window.open(data.url, "_blank");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to open billing portal.");
     }
   };
 
-  const nextBillingDate = new Date();
-  nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
-  const formattedBillingDate = nextBillingDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  const formattedEnd = subscriptionEnd
+    ? new Date(subscriptionEnd).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+    : null;
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
@@ -147,30 +201,42 @@ export default function DashboardSettings() {
         <div className="space-y-6">
           {/* Current Plan */}
           <div className="rounded-2xl bg-card p-6">
-            <h3 className="font-semibold text-card-foreground">Current Plan</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-card-foreground">Current Plan</h3>
+              {currentPlan !== "free" && (
+                <Button variant="outline" size="sm" onClick={handleManageSubscription}>
+                  <ExternalLink className="mr-2 h-3 w-3" /> Manage subscription
+                </Button>
+              )}
+            </div>
             <div className="mt-4 flex items-center justify-between rounded-xl bg-muted p-4">
               <div>
-                <p className="font-medium text-foreground capitalize">{currentPlan} Plan</p>
+                <p className="font-medium text-foreground capitalize">{PLANS[currentPlan].name} Plan</p>
                 <p className="text-sm text-muted-foreground">
-                  {currentPlanPrice > 0 ? `$${currentPlanPrice}/month · Next billing: ${formattedBillingDate}` : "Free forever"}
+                  {PLANS[currentPlan].price > 0
+                    ? `$${PLANS[currentPlan].price}/month${formattedEnd ? ` · Next billing: ${formattedEnd}` : ""}`
+                    : "Free forever"}
                 </p>
               </div>
               {currentPlan !== "free" && (
                 <span className="rounded-full bg-success/10 px-3 py-1 text-xs font-medium text-success">Active</span>
               )}
             </div>
+            <Button variant="ghost" size="sm" className="mt-2" onClick={checkSubscription} disabled={checkingPlan}>
+              {checkingPlan ? "Checking..." : "Refresh status"}
+            </Button>
           </div>
 
           {/* Plan Options */}
           <div className="grid gap-4 sm:grid-cols-3">
-            {plans.map((plan) => (
+            {(Object.entries(PLANS) as [PlanKey, typeof PLANS[PlanKey]][]).map(([key, plan]) => (
               <div
-                key={plan.id}
+                key={key}
                 className={`relative rounded-2xl border-2 p-6 transition-all ${
-                  currentPlan === plan.id ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/30"
+                  currentPlan === key ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/30"
                 }`}
               >
-                {plan.popular && (
+                {"popular" in plan && plan.popular && (
                   <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-1 text-[10px] font-semibold text-primary-foreground">
                     Most popular
                   </span>
@@ -187,24 +253,22 @@ export default function DashboardSettings() {
                   ))}
                 </ul>
                 <Button
-                  variant={currentPlan === plan.id ? "outline" : "default"}
+                  variant={currentPlan === key ? "outline" : "default"}
                   size="sm"
                   className="mt-4 w-full"
-                  disabled={currentPlan === plan.id}
-                  onClick={() => handleChangePlan(plan.id)}
+                  disabled={currentPlan === key || checkoutLoading !== null}
+                  onClick={() => handleUpgrade(key)}
                 >
-                  {currentPlan === plan.id ? "Current plan" : currentPlan !== "free" && plan.price < (business?.plan_price ?? 0) ? "Downgrade" : "Upgrade"}
+                  {checkoutLoading === key
+                    ? "Redirecting..."
+                    : currentPlan === key
+                    ? "Current plan"
+                    : plan.price < PLANS[currentPlan].price
+                    ? "Downgrade"
+                    : "Upgrade"}
                 </Button>
               </div>
             ))}
-          </div>
-
-          {/* Stripe Key Notice */}
-          <div className="rounded-xl bg-muted p-4">
-            <p className="text-xs text-muted-foreground">
-              💡 To enable payments, update <code className="rounded bg-background px-1 py-0.5 text-[10px]">STRIPE_PUBLISHABLE_KEY</code> and{" "}
-              <code className="rounded bg-background px-1 py-0.5 text-[10px]">STRIPE_PRICE_IDS</code> in <code className="rounded bg-background px-1 py-0.5 text-[10px]">DashboardSettings.tsx</code>
-            </p>
           </div>
         </div>
       )}
