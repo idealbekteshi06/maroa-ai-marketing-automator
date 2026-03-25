@@ -141,10 +141,7 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-1.5">
             <ThemeToggle />
-            <Button variant="ghost" size="icon" className="relative h-8 w-8">
-              <Bell className="h-4 w-4" />
-              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-primary" />
-            </Button>
+            <NotificationDropdown />
             <div className="ml-1 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{initials}</div>
           </div>
         </header>

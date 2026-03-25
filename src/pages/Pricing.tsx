@@ -3,49 +3,28 @@ import { Footer } from "@/components/landing/Footer";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
 const PLANS = [
   {
-    key: "free",
-    name: "Free",
-    monthlyPrice: 0,
-    annualPrice: 0,
+    key: "free", name: "Free", monthlyPrice: 0, annualPrice: 0,
     desc: "Try it out with one business.",
     features: ["1 business", "5 posts per month", "Basic dashboard", "Email support"],
-    popular: false,
-    priceId: null,
+    popular: false, priceId: null,
   },
   {
-    key: "growth",
-    name: "Growth",
-    monthlyPrice: 49,
-    annualPrice: 41,
+    key: "growth", name: "Growth", monthlyPrice: 49, annualPrice: 41,
     desc: "Everything you need to grow.",
-    features: [
-      "Unlimited content generation", "All social platforms", "Meta ad management",
-      "Daily AI optimization", "Weekly strategy reports", "Competitor tracking",
-      "AI image generation", "Priority support",
-    ],
-    popular: true,
-    priceId: "price_1TEzSrRdWtvqvMKio7e5VO2Y",
+    features: ["Unlimited content generation", "All social platforms", "Meta ad management", "Daily AI optimization", "Weekly strategy reports", "Competitor tracking", "AI image generation", "Priority support"],
+    popular: true, priceId: "price_1TEzSrRdWtvqvMKio7e5VO2Y",
   },
   {
-    key: "agency",
-    name: "Agency",
-    monthlyPrice: 99,
-    annualPrice: 83,
+    key: "agency", name: "Agency", monthlyPrice: 99, annualPrice: 83,
     desc: "For agencies managing multiple brands.",
-    features: [
-      "Everything in Growth", "Unlimited businesses", "White label dashboard",
-      "Client-facing reports", "Custom integrations", "Dedicated account manager",
-      "API access", "Custom branding",
-    ],
-    popular: false,
-    priceId: "price_1TEzTeRdWtvqvMKiWI61UYLk",
+    features: ["Everything in Growth", "Unlimited businesses", "White label dashboard", "Client-facing reports", "Custom integrations", "Dedicated account manager", "API access", "Custom branding"],
+    popular: false, priceId: "price_1TEzTeRdWtvqvMKiWI61UYLk",
   },
 ];
 
@@ -56,27 +35,22 @@ export default function Pricing() {
   const navigate = useNavigate();
 
   const handleCheckout = async (plan: typeof PLANS[number]) => {
-    if (!plan.priceId) {
-      navigate("/signup");
-      return;
-    }
-
-    if (!user) {
-      navigate("/signup");
-      return;
-    }
+    if (!plan.priceId) { navigate("/signup"); return; }
+    if (!user) { navigate("/signup"); return; }
 
     setLoading(plan.key);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Not authenticated");
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-      const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: { priceId: plan.priceId },
-        headers: { Authorization: `Bearer ${session.access_token}` },
+      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/create-checkout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": anonKey },
+        body: JSON.stringify({ priceId: plan.priceId, email: user.email }),
       });
 
-      if (error || data?.error) throw new Error(data?.error || "Checkout failed");
+      const data = await response.json();
+      if (data?.error) throw new Error(data.error);
       if (data?.url) window.open(data.url, "_blank");
     } catch (err: any) {
       toast.error(err.message || "Failed to start checkout.");
@@ -90,67 +64,34 @@ export default function Pricing() {
       <main className="py-24 md:py-32">
         <div className="container">
           <div className="text-center">
-            <h1 className="text-4xl font-bold tracking-tight text-foreground md:text-5xl">
-              Simple, transparent pricing
-            </h1>
-            <p className="mx-auto mt-4 max-w-lg text-lg text-muted-foreground">
-              No hidden fees. No contracts. Cancel anytime.
-            </p>
-
+            <h1 className="text-4xl font-bold tracking-tight text-foreground md:text-5xl">Simple, transparent pricing</h1>
+            <p className="mx-auto mt-4 max-w-lg text-lg text-muted-foreground">No hidden fees. No contracts. Cancel anytime.</p>
             <div className="mt-8 flex items-center justify-center gap-3">
               <span className={`text-sm ${!annual ? "text-foreground font-medium" : "text-muted-foreground"}`}>Monthly</span>
-              <button
-                onClick={() => setAnnual(!annual)}
-                className={`relative h-7 w-12 rounded-full transition-colors ${annual ? "bg-primary" : "bg-muted"}`}
-              >
+              <button onClick={() => setAnnual(!annual)} className={`relative h-7 w-12 rounded-full transition-colors ${annual ? "bg-primary" : "bg-muted"}`}>
                 <div className={`absolute top-0.5 h-6 w-6 rounded-full bg-background shadow transition-transform ${annual ? "translate-x-[22px]" : "translate-x-0.5"}`} />
               </button>
-              <span className={`text-sm ${annual ? "text-foreground font-medium" : "text-muted-foreground"}`}>
-                Annual <span className="text-primary">(2 months free)</span>
-              </span>
+              <span className={`text-sm ${annual ? "text-foreground font-medium" : "text-muted-foreground"}`}>Annual <span className="text-primary">(2 months free)</span></span>
             </div>
           </div>
-
           <div className="mx-auto mt-16 grid max-w-5xl gap-8 md:grid-cols-3">
             {PLANS.map((plan) => {
               const price = annual ? plan.annualPrice : plan.monthlyPrice;
               return (
-                <div
-                  key={plan.name}
-                  className={`relative rounded-2xl p-8 ${
-                    plan.popular
-                      ? "bg-foreground text-background ring-2 ring-foreground"
-                      : "bg-card text-card-foreground border border-border"
-                  }`}
-                >
-                  {plan.popular && (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-1 text-xs font-medium text-primary-foreground">
-                      Most popular
-                    </span>
-                  )}
+                <div key={plan.name} className={`relative rounded-2xl p-8 ${plan.popular ? "bg-foreground text-background ring-2 ring-foreground" : "bg-card text-card-foreground border border-border"}`}>
+                  {plan.popular && <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-1 text-xs font-medium text-primary-foreground">Most popular</span>}
                   <h3 className="text-xl font-semibold">{plan.name}</h3>
                   <div className="mt-4 flex items-baseline gap-1">
                     <span className="text-5xl font-bold">${price}</span>
                     {price > 0 && <span className={`text-sm ${plan.popular ? "opacity-60" : "text-muted-foreground"}`}>/month</span>}
                   </div>
-                  <p className={`mt-3 text-sm ${plan.popular ? "opacity-70" : "text-muted-foreground"}`}>
-                    {plan.desc}
-                  </p>
+                  <p className={`mt-3 text-sm ${plan.popular ? "opacity-70" : "text-muted-foreground"}`}>{plan.desc}</p>
                   <ul className="mt-8 space-y-3">
                     {plan.features.map((f) => (
-                      <li key={f} className="flex items-start gap-3 text-sm">
-                        <Check className={`mt-0.5 h-4 w-4 shrink-0 text-primary`} />
-                        {f}
-                      </li>
+                      <li key={f} className="flex items-start gap-3 text-sm"><Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />{f}</li>
                     ))}
                   </ul>
-                  <Button
-                    className="mt-8 w-full"
-                    variant={plan.popular ? "hero" : "outline"}
-                    size="lg"
-                    disabled={loading !== null}
-                    onClick={() => handleCheckout(plan)}
-                  >
+                  <Button className="mt-8 w-full" variant={plan.popular ? "default" : "outline"} size="lg" disabled={loading !== null} onClick={() => handleCheckout(plan)}>
                     {loading === plan.key ? "Redirecting..." : price === 0 ? "Get started free" : "Start free trial"}
                   </Button>
                 </div>
