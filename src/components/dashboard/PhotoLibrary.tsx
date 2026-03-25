@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Upload, X } from "lucide-react";
+import { Upload, X, ImageIcon } from "lucide-react";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -16,6 +16,14 @@ interface Photo {
   use_count: number;
   last_used_at: string | null;
   uploaded_at: string;
+}
+
+function SkeletonGrid() {
+  return (
+    <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+      {[1, 2, 3, 4].map((i) => <div key={i} className="aspect-square rounded-2xl border border-border bg-card animate-pulse-soft" />)}
+    </div>
+  );
 }
 
 export default function PhotoLibrary() {
@@ -78,43 +86,46 @@ export default function PhotoLibrary() {
     fetchPhotos();
   };
 
-  if (loading) {
-    return (
-      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 pb-20 md:pb-0">
-        {[1, 2, 3, 4].map((i) => <div key={i} className="aspect-square animate-pulse rounded-2xl bg-muted" />)}
-      </div>
-    );
-  }
+  if (loading) return <SkeletonGrid />;
 
   return (
-    <div className="space-y-6 pb-20 md:pb-0">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">Your business photos used in AI-generated content.</p>
         <div>
           <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleUpload} />
-          <Button size="sm" onClick={() => fileInputRef.current?.click()}>
-            <Upload className="mr-2 h-4 w-4" /> Upload
+          <Button size="sm" className="h-9 text-xs" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="mr-2 h-3.5 w-3.5" /> Upload
           </Button>
         </div>
       </div>
 
       {photos.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <p className="text-lg font-medium text-foreground">No photos yet</p>
-          <p className="mt-1 text-sm text-muted-foreground">Upload your business photos to get started.</p>
+        <div
+          className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-card py-20 text-center cursor-pointer transition-colors hover:border-primary/30"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/8">
+            <ImageIcon className="h-6 w-6 text-primary" />
+          </div>
+          <p className="mt-5 text-base font-semibold text-foreground">Upload your business photos</p>
+          <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+            Add 5-10 photos of your products, team, and space. Our AI will use them to create stunning content.
+          </p>
+          <Button className="mt-6" size="sm" variant="outline">Choose files</Button>
         </div>
       ) : (
         <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
           {photos.map((p) => (
-            <div key={p.id} className="group relative aspect-square rounded-2xl bg-muted overflow-hidden">
+            <div key={p.id} className="group relative aspect-square rounded-2xl border border-border bg-card overflow-hidden transition-all hover:shadow-card-hover">
               {p.photo_url ? (
                 <img src={p.photo_url} alt={p.description ?? "Photo"} className="h-full w-full object-cover" loading="lazy" />
               ) : (
                 <div className="flex h-full items-center justify-center text-muted-foreground text-xs">{p.description}</div>
               )}
-              <div className="absolute inset-0 flex items-start justify-between p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="rounded-full bg-background/80 px-2 py-1 text-[10px] font-medium text-foreground">{p.photo_type ?? "Uncategorized"}</span>
-                <button onClick={() => handleDelete(p.id)} className="rounded-full bg-background/80 p-1 text-foreground hover:bg-destructive hover:text-destructive-foreground">
+              <div className="absolute inset-0 flex items-start justify-between p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gradient-to-b from-foreground/20 to-transparent">
+                <span className="rounded-full bg-background/90 px-2.5 py-1 text-[10px] font-medium text-foreground">{p.photo_type ?? "Uncategorized"}</span>
+                <button onClick={() => handleDelete(p.id)} className="rounded-full bg-background/90 p-1.5 text-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors">
                   <X className="h-3 w-3" />
                 </button>
               </div>
@@ -123,7 +134,11 @@ export default function PhotoLibrary() {
         </div>
       )}
 
-      <div className="text-xs text-muted-foreground">Photo types: {photoTypes.join(", ")}</div>
+      <div className="flex flex-wrap gap-2">
+        {photoTypes.map((t) => (
+          <span key={t} className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">{t}</span>
+        ))}
+      </div>
     </div>
   );
 }

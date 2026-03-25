@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
+import { Megaphone } from "lucide-react";
 
 interface Campaign {
   id: string;
@@ -29,6 +30,19 @@ const statusBadge: Record<string, string> = {
   paused: "bg-destructive/10 text-destructive",
 };
 
+function MiniChart({ value, max }: { value: number; max: number }) {
+  const pct = max > 0 ? (value / max) * 100 : 0;
+  return (
+    <div className="h-1.5 w-16 rounded-full bg-border overflow-hidden">
+      <div className="h-full rounded-full bg-primary/50 transition-all" style={{ width: `${Math.min(pct, 100)}%` }} />
+    </div>
+  );
+}
+
+function SkeletonRow() {
+  return <div className="h-20 rounded-2xl border border-border bg-card animate-pulse-soft" />;
+}
+
 export default function DashboardAds() {
   const { businessId } = useAuth();
   const [campaigns, setCampaigns] = useState<(Campaign & { perf?: PerfLog })[]>([]);
@@ -46,7 +60,6 @@ export default function DashboardAds() {
 
       const campaignList = (camps ?? []) as Campaign[];
 
-      // Fetch latest perf log per campaign
       const withPerf = await Promise.all(
         campaignList.map(async (c) => {
           const { data: perf } = await externalSupabase
@@ -66,35 +79,54 @@ export default function DashboardAds() {
     fetchData();
   }, [businessId]);
 
+  const maxSpend = Math.max(...campaigns.map((c) => c.perf?.spend ?? 0), 1);
+
   if (loading) {
     return (
-      <div className="space-y-3 pb-20 md:pb-0">
-        {[1, 2, 3].map((i) => <div key={i} className="h-20 animate-pulse rounded-2xl bg-muted" />)}
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => <SkeletonRow key={i} />)}
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 pb-20 md:pb-0">
+    <div className="space-y-5">
       <p className="text-sm text-muted-foreground">Your AI-managed ad campaigns.</p>
 
       {campaigns.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <p className="text-lg font-medium text-foreground">No campaigns yet</p>
-          <p className="mt-1 text-sm text-muted-foreground">Campaigns will appear here once your ads start running.</p>
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card py-20 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/8">
+            <Megaphone className="h-6 w-6 text-primary" />
+          </div>
+          <p className="mt-5 text-base font-semibold text-foreground">No campaigns yet</p>
+          <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+            Campaigns will appear here once maroa.ai launches your first ad. Connect your Meta account to get started.
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
           {campaigns.map((c) => (
-            <div key={c.id} className="grid grid-cols-2 gap-4 rounded-2xl bg-card p-5 sm:grid-cols-5 sm:items-center">
+            <div key={c.id} className="grid grid-cols-2 gap-4 rounded-2xl border border-border bg-card p-5 transition-all hover:shadow-card sm:grid-cols-5 sm:items-center">
               <div className="col-span-2 sm:col-span-1">
-                <p className="font-medium text-card-foreground">{c.business_name}</p>
-                <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${statusBadge[c.status] ?? statusBadge.active}`}>{c.status}</span>
+                <p className="text-sm font-semibold text-card-foreground">{c.business_name}</p>
+                <span className={`mt-1 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize ${statusBadge[c.status] ?? statusBadge.active}`}>{c.status}</span>
                 {c.last_decision && <p className="mt-1 text-[10px] text-muted-foreground">{c.last_decision}</p>}
               </div>
-              <div><p className="text-xs text-muted-foreground">Spend</p><p className="font-medium text-card-foreground">${c.perf?.spend ?? c.daily_budget}</p></div>
-              <div><p className="text-xs text-muted-foreground">CTR</p><p className="font-medium text-card-foreground">{c.perf?.ctr ?? 0}%</p></div>
-              <div><p className="text-xs text-muted-foreground">ROAS</p><p className="font-medium text-card-foreground">{c.perf?.roas ?? 0}x</p></div>
+              <div>
+                <p className="text-[10px] text-muted-foreground">Spend</p>
+                <p className="text-sm font-semibold text-card-foreground">${c.perf?.spend ?? c.daily_budget}</p>
+                <MiniChart value={c.perf?.spend ?? 0} max={maxSpend} />
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground">CTR</p>
+                <p className="text-sm font-semibold text-card-foreground">{c.perf?.ctr ?? 0}%</p>
+                <MiniChart value={c.perf?.ctr ?? 0} max={10} />
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground">ROAS</p>
+                <p className="text-sm font-semibold text-card-foreground">{c.perf?.roas ?? 0}x</p>
+                <MiniChart value={c.perf?.roas ?? 0} max={10} />
+              </div>
             </div>
           ))}
         </div>
