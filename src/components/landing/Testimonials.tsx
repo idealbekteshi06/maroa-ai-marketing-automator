@@ -5,7 +5,7 @@ const testimonials = [
     role: "Owner, Bloom Bakery",
   },
   {
-    quote: "I used to spend 10 hours a week on social media. Now I spend zero. Our ads are performing better than ever.",
+    quote: "I used to spend 10 hours a week on social media. Now I spend zero. Our ads perform better than ever.",
     name: "Marcus Rivera",
     role: "Founder, FitZone Gym",
   },
@@ -18,18 +18,25 @@ const testimonials = [
 
 export function Testimonials() {
   return (
-    <section className="border-t border-border py-24 md:py-32">
+    <section className="py-28 md:py-40 bg-card">
       <div className="container">
-        <h2 className="text-center text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-          Loved by small businesses
+        <h2 className="text-center text-4xl font-semibold tracking-tight text-foreground md:text-5xl">
+          Loved by small businesses.
         </h2>
-        <div className="mt-16 grid gap-8 md:grid-cols-3">
+        <div className="mx-auto mt-20 grid max-w-5xl gap-6 md:grid-cols-3">
           {testimonials.map((t) => (
-            <div key={t.name} className="rounded-2xl bg-card p-8">
-              <p className="text-foreground leading-relaxed">"{t.quote}"</p>
-              <div className="mt-6">
-                <p className="font-semibold text-foreground">{t.name}</p>
-                <p className="text-sm text-muted-foreground">{t.role}</p>
+            <div key={t.name} className="flex flex-col justify-between rounded-3xl bg-background p-8 md:p-10">
+              <p className="text-base leading-relaxed text-foreground font-light">
+                "{t.quote}"
+              </p>
+              <div className="mt-8 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-semibold text-foreground">
+                  {t.name.split(" ").map(n => n[0]).join("")}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{t.name}</p>
+                  <p className="text-xs text-muted-foreground">{t.role}</p>
+                </div>
               </div>
             </div>
           ))}
