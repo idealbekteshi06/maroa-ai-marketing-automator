@@ -1,15 +1,22 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { FileText, Search as SearchIcon, Filter } from "lucide-react";
+import { FileText, Search as SearchIcon } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 
 interface ContentItem {
   id: string;
   instagram_caption: string | null;
   facebook_post: string | null;
+  email_subject: string | null;
+  email_body: string | null;
   image_url: string | null;
   status: string;
   created_at: string;
@@ -32,6 +39,9 @@ export default function DashboardContent() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [editItem, setEditItem] = useState<ContentItem | null>(null);
+  const [editForm, setEditForm] = useState({ instagram_caption: "", facebook_post: "", email_subject: "", email_body: "" });
+  const [editSaving, setEditSaving] = useState(false);
 
   const fetchContent = async () => {
     if (!businessId) return;
@@ -59,8 +69,37 @@ export default function DashboardContent() {
     fetchContent();
   };
 
+  const openEdit = (item: ContentItem) => {
+    setEditItem(item);
+    setEditForm({
+      instagram_caption: item.instagram_caption ?? "",
+      facebook_post: item.facebook_post ?? "",
+      email_subject: item.email_subject ?? "",
+      email_body: item.email_body ?? "",
+    });
+  };
+
+  const handleEditSave = async () => {
+    if (!editItem) return;
+    setEditSaving(true);
+    const { error } = await externalSupabase
+      .from("generated_content")
+      .update({
+        instagram_caption: editForm.instagram_caption || null,
+        facebook_post: editForm.facebook_post || null,
+        email_subject: editForm.email_subject || null,
+        email_body: editForm.email_body || null,
+      })
+      .eq("id", editItem.id);
+    setEditSaving(false);
+    if (error) { toast.error("Failed to save changes"); return; }
+    toast.success("Content updated!");
+    setEditItem(null);
+    fetchContent();
+  };
+
   const filtered = content.filter((c) => {
-    const matchesSearch = !searchQuery || 
+    const matchesSearch = !searchQuery ||
       c.instagram_caption?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.facebook_post?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || c.status === statusFilter;
@@ -77,27 +116,16 @@ export default function DashboardContent() {
 
   return (
     <div className="space-y-5">
-      {/* Search & Filter bar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2 flex-1">
           <div className="relative flex-1 max-w-sm">
             <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search content..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9 text-sm"
-            />
+            <Input placeholder="Search content..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 h-9 text-sm" />
           </div>
           <div className="flex items-center gap-1 rounded-xl border border-border bg-card p-0.5">
             {["all", "pending", "approved", "published"].map((s) => (
-              <button
-                key={s}
-                onClick={() => setStatusFilter(s)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
-                  statusFilter === s ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
+              <button key={s} onClick={() => setStatusFilter(s)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium capitalize transition-colors ${statusFilter === s ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
                 {s === "all" ? "All" : s}
               </button>
             ))}
@@ -106,7 +134,6 @@ export default function DashboardContent() {
         <Button size="sm" className="h-9 text-xs">Generate new</Button>
       </div>
 
-      {/* Content list */}
       {filtered.length > 0 ? (
         <div className="space-y-3">
           {filtered.map((c) => (
@@ -135,11 +162,9 @@ export default function DashboardContent() {
                   {c.status === "pending" ? "Pending" : c.status}
                 </span>
                 {(c.status === "pending" || c.status === "pending approval") && (
-                  <>
-                    <Button size="sm" className="h-8 text-xs" onClick={() => handleApprove(c.id)}>Approve</Button>
-                    <Button variant="outline" size="sm" className="h-8 text-xs">Edit</Button>
-                  </>
+                  <Button size="sm" className="h-8 text-xs" onClick={() => handleApprove(c.id)}>Approve</Button>
                 )}
+                <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => openEdit(c)}>Edit</Button>
               </div>
             </div>
           ))}
@@ -160,6 +185,37 @@ export default function DashboardContent() {
           <p className="text-sm text-muted-foreground">No content matches your search.</p>
         </div>
       )}
+
+      {/* Edit Modal */}
+      <Dialog open={!!editItem} onOpenChange={(open) => { if (!open) setEditItem(null); }}>
+        <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Content</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <Label>Instagram Caption</Label>
+              <Textarea value={editForm.instagram_caption} onChange={(e) => setEditForm(f => ({ ...f, instagram_caption: e.target.value }))} className="mt-1" rows={3} />
+            </div>
+            <div>
+              <Label>Facebook Post</Label>
+              <Textarea value={editForm.facebook_post} onChange={(e) => setEditForm(f => ({ ...f, facebook_post: e.target.value }))} className="mt-1" rows={3} />
+            </div>
+            <div>
+              <Label>Email Subject</Label>
+              <Input value={editForm.email_subject} onChange={(e) => setEditForm(f => ({ ...f, email_subject: e.target.value }))} className="mt-1" />
+            </div>
+            <div>
+              <Label>Email Body</Label>
+              <Textarea value={editForm.email_body} onChange={(e) => setEditForm(f => ({ ...f, email_body: e.target.value }))} className="mt-1" rows={4} />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditItem(null)}>Cancel</Button>
+              <Button onClick={handleEditSave} disabled={editSaving}>{editSaving ? "Saving..." : "Save changes"}</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

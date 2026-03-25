@@ -6,25 +6,54 @@ import { useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { toast } from "sonner";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 
 export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       const { error } = await externalSupabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("Invalid login")) {
+          throw new Error("Incorrect email or password. Please try again.");
+        }
+        throw error;
+      }
       toast.success("Welcome back!");
       navigate("/dashboard");
     } catch (err: any) {
       toast.error(err.message || "Login failed.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail) return;
+    setResetLoading(true);
+    try {
+      const { error } = await externalSupabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast.success("Password reset link sent! Check your email.");
+      setForgotOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send reset email.");
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -65,7 +94,7 @@ export default function Login() {
           </form>
 
           <div className="mt-4 text-center">
-            <button className="text-sm text-primary hover:underline">Forgot password?</button>
+            <button onClick={() => { setResetEmail(email); setForgotOpen(true); }} className="text-sm text-primary hover:underline">Forgot password?</button>
           </div>
         </div>
 
@@ -74,6 +103,21 @@ export default function Login() {
           <Link to="/signup" className="text-primary font-medium hover:underline">Sign up</Link>
         </p>
       </div>
+
+      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reset your password</DialogTitle>
+            <DialogDescription>Enter your email and we'll send you a reset link.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleForgotPassword} className="space-y-4 mt-4">
+            <Input type="email" placeholder="you@example.com" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} required />
+            <Button type="submit" className="w-full" disabled={resetLoading}>
+              {resetLoading ? "Sending..." : "Send reset link"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

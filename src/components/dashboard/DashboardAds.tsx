@@ -25,8 +25,8 @@ interface PerfLog {
 }
 
 const statusBadge: Record<string, string> = {
-  active: "bg-primary/10 text-primary",
-  scaling: "bg-success/10 text-success",
+  active: "bg-success/10 text-success",
+  scaling: "bg-primary/10 text-primary",
   paused: "bg-destructive/10 text-destructive",
 };
 
@@ -105,30 +105,40 @@ export default function DashboardAds() {
         </div>
       ) : (
         <div className="space-y-3">
-          {campaigns.map((c) => (
-            <div key={c.id} className="grid grid-cols-2 gap-4 rounded-2xl border border-border bg-card p-5 transition-all hover:shadow-card sm:grid-cols-5 sm:items-center">
-              <div className="col-span-2 sm:col-span-1">
-                <p className="text-sm font-semibold text-card-foreground">{c.business_name}</p>
-                <span className={`mt-1 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize ${statusBadge[c.status] ?? statusBadge.active}`}>{c.status}</span>
-                {c.last_decision && <p className="mt-1 text-[10px] text-muted-foreground">{c.last_decision}</p>}
+          {campaigns.map((c) => {
+            const badge = c.status === "active"
+              ? "bg-success/10 text-success"
+              : c.status === "paused"
+              ? "bg-destructive/10 text-destructive"
+              : c.status === "scaling"
+              ? "bg-primary/10 text-primary"
+              : "bg-muted text-muted-foreground";
+
+            return (
+              <div key={c.id} className="grid grid-cols-2 gap-4 rounded-2xl border border-border bg-card p-5 transition-all hover:shadow-card sm:grid-cols-5 sm:items-center">
+                <div className="col-span-2 sm:col-span-1">
+                  <p className="text-sm font-semibold text-card-foreground">{c.business_name}</p>
+                  <span className={`mt-1 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize ${badge}`}>{c.status}</span>
+                  {c.last_decision && <p className="mt-1 text-[10px] text-muted-foreground">{c.last_decision}</p>}
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground">Spend</p>
+                  <p className="text-sm font-semibold text-card-foreground">${c.perf?.spend ?? c.daily_budget}</p>
+                  <MiniChart value={c.perf?.spend ?? 0} max={maxSpend} />
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground">CTR</p>
+                  <p className="text-sm font-semibold text-card-foreground">{c.perf?.ctr != null ? `${Number(c.perf.ctr).toFixed(2)}%` : "0%"}</p>
+                  <MiniChart value={c.perf?.ctr ?? 0} max={10} />
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground">ROAS</p>
+                  <p className="text-sm font-semibold text-card-foreground">{c.perf?.roas != null ? `${Number(c.perf.roas).toFixed(1)}x` : "0x"}</p>
+                  <MiniChart value={c.perf?.roas ?? 0} max={10} />
+                </div>
               </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground">Spend</p>
-                <p className="text-sm font-semibold text-card-foreground">${c.perf?.spend ?? c.daily_budget}</p>
-                <MiniChart value={c.perf?.spend ?? 0} max={maxSpend} />
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground">CTR</p>
-                <p className="text-sm font-semibold text-card-foreground">{c.perf?.ctr ?? 0}%</p>
-                <MiniChart value={c.perf?.ctr ?? 0} max={10} />
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground">ROAS</p>
-                <p className="text-sm font-semibold text-card-foreground">{c.perf?.roas ?? 0}x</p>
-                <MiniChart value={c.perf?.roas ?? 0} max={10} />
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

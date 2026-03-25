@@ -79,8 +79,20 @@ export default function PhotoLibrary() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleDelete = async (id: string) => {
-    const { error } = await externalSupabase.from("business_photos").delete().eq("id", id);
+  const handleDelete = async (photo: Photo) => {
+    // Extract storage path from the public URL
+    try {
+      const url = new URL(photo.photo_url);
+      const pathParts = url.pathname.split("/storage/v1/object/public/business-photos/");
+      if (pathParts.length > 1) {
+        const storagePath = decodeURIComponent(pathParts[1]);
+        await externalSupabase.storage.from("business-photos").remove([storagePath]);
+      }
+    } catch (err) {
+      console.warn("Could not delete from storage:", err);
+    }
+
+    const { error } = await externalSupabase.from("business_photos").delete().eq("id", photo.id);
     if (error) { toast.error("Failed to delete"); return; }
     toast.success("Photo deleted");
     fetchPhotos();
@@ -125,7 +137,7 @@ export default function PhotoLibrary() {
               )}
               <div className="absolute inset-0 flex items-start justify-between p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gradient-to-b from-foreground/20 to-transparent">
                 <span className="rounded-full bg-background/90 px-2.5 py-1 text-[10px] font-medium text-foreground">{p.photo_type ?? "Uncategorized"}</span>
-                <button onClick={() => handleDelete(p.id)} className="rounded-full bg-background/90 p-1.5 text-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors">
+                <button onClick={() => handleDelete(p)} className="rounded-full bg-background/90 p-1.5 text-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors">
                   <X className="h-3 w-3" />
                 </button>
               </div>
