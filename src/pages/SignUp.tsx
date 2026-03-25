@@ -11,8 +11,7 @@ const industries = ["Bakery", "Restaurant", "Salon", "Gym", "Boutique", "Photogr
 const brandTones = ["Warm and friendly", "Professional and formal", "Fun and playful", "Luxury and premium"];
 const marketingGoals = ["Drive foot traffic", "Get more leads", "Grow social following", "Increase online sales", "Build brand awareness"];
 
-// TODO: Replace with your actual n8n Workflow 3 webhook URL
-const N8N_SIGNUP_WEBHOOK_URL = "https://YOUR_N8N_WEBHOOK_URL/webhook/signup";
+const N8N_SIGNUP_WEBHOOK_URL = "https://ideal.app.n8n.cloud/webhook/new-user-signup";
 
 export default function SignUp() {
   const navigate = useNavigate();
