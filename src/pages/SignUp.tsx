@@ -79,7 +79,7 @@ export default function SignUp() {
             target_audience: form.targetAudience,
             brand_tone: form.brandTone,
             marketing_goal: form.marketingGoal,
-            monthly_ad_budget: form.adBudget,
+            plan: "free",
           }),
         });
       } catch (webhookErr) {
