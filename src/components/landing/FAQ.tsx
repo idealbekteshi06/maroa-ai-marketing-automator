@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { Plus, Minus } from "lucide-react";
 
 const faqs = [
   { q: "How does maroa.ai create content for my business?", a: "Our AI learns your brand voice, industry, and audience. It generates captions, blog posts, and ad copy that sound like you wrote them." },
@@ -16,28 +16,32 @@ export function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section id="faq" className="border-t border-border py-24 md:py-32">
+    <section id="faq" className="py-28 md:py-40 bg-card">
       <div className="container">
-        <h2 className="text-center text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-          Frequently asked questions
+        <h2 className="text-center text-4xl font-semibold tracking-tight text-foreground md:text-5xl">
+          Questions? Answers.
         </h2>
-        <div className="mx-auto mt-16 max-w-2xl divide-y divide-border">
+        <div className="mx-auto mt-20 max-w-2xl">
           {faqs.map((faq, i) => (
-            <div key={i}>
+            <div key={i} className={`${i > 0 ? "border-t border-border" : ""}`}>
               <button
                 onClick={() => setOpenIndex(openIndex === i ? null : i)}
-                className="flex w-full items-center justify-between py-5 text-left"
+                className="flex w-full items-center justify-between py-6 text-left group"
               >
-                <span className="font-medium text-foreground pr-4">{faq.q}</span>
-                <ChevronDown
-                  className={`h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200 ${
-                    openIndex === i ? "rotate-180" : ""
-                  }`}
-                />
+                <span className="text-base font-medium text-foreground pr-8 group-hover:text-primary transition-colors">{faq.q}</span>
+                {openIndex === i ? (
+                  <Minus className="h-5 w-5 shrink-0 text-primary" strokeWidth={1.5} />
+                ) : (
+                  <Plus className="h-5 w-5 shrink-0 text-muted-foreground group-hover:text-primary transition-colors" strokeWidth={1.5} />
+                )}
               </button>
-              {openIndex === i && (
-                <p className="pb-5 text-sm text-muted-foreground leading-relaxed">{faq.a}</p>
-              )}
+              <div
+                className={`overflow-hidden transition-all duration-300 ${
+                  openIndex === i ? "max-h-40 pb-6" : "max-h-0"
+                }`}
+              >
+                <p className="text-sm leading-relaxed text-muted-foreground">{faq.a}</p>
+              </div>
             </div>
           ))}
         </div>

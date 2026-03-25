@@ -8,41 +8,39 @@ export function Navbar() {
   const [open, setOpen] = useState(false);
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-lg">
-      <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="text-xl font-bold tracking-tight text-foreground">
+    <nav className="sticky top-0 z-50 bg-background/70 backdrop-blur-xl backdrop-saturate-150">
+      <div className="container flex h-12 items-center justify-between">
+        <Link to="/" className="text-sm font-semibold tracking-tight text-foreground">
           maroa<span className="text-primary">.ai</span>
         </Link>
 
-        {/* Desktop */}
-        <div className="hidden items-center gap-8 md:flex">
-          <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</a>
-          <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
-          <a href="#faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors">FAQ</a>
+        <div className="hidden items-center gap-7 md:flex">
+          <a href="#features" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Features</a>
+          <a href="#how-it-works" className="text-xs text-muted-foreground hover:text-foreground transition-colors">How it works</a>
+          <a href="#pricing" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
           <ThemeToggle />
           <Link to="/login">
-            <Button variant="ghost" size="sm">Log in</Button>
+            <Button variant="ghost" size="sm" className="text-xs">Log in</Button>
           </Link>
           <Link to="/signup">
-            <Button size="sm">Start free trial</Button>
+            <Button size="sm" className="text-xs h-8">Start free trial</Button>
           </Link>
         </div>
 
-        {/* Mobile */}
         <div className="flex items-center gap-2 md:hidden">
           <ThemeToggle />
-          <Button variant="ghost" size="icon" onClick={() => setOpen(!open)}>
-            {open ? <X /> : <Menu />}
+          <Button variant="ghost" size="icon" onClick={() => setOpen(!open)} className="h-8 w-8">
+            {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </Button>
         </div>
       </div>
 
       {open && (
-        <div className="border-t border-border bg-background px-6 pb-6 pt-4 md:hidden">
+        <div className="bg-background px-6 pb-6 pt-2 md:hidden">
           <div className="flex flex-col gap-4">
             <a href="#features" onClick={() => setOpen(false)} className="text-sm text-muted-foreground">Features</a>
+            <a href="#how-it-works" onClick={() => setOpen(false)} className="text-sm text-muted-foreground">How it works</a>
             <a href="#pricing" onClick={() => setOpen(false)} className="text-sm text-muted-foreground">Pricing</a>
-            <a href="#faq" onClick={() => setOpen(false)} className="text-sm text-muted-foreground">FAQ</a>
             <Link to="/login" onClick={() => setOpen(false)}>
               <Button variant="outline" className="w-full">Log in</Button>
             </Link>
