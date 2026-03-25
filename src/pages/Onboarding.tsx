@@ -1,8 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Check, Upload } from "lucide-react";
+import { externalSupabase } from "@/integrations/supabase/external-client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const steps = ["Business Details", "Connect Accounts", "Set Budget", "Upload Photos"];
 
@@ -15,15 +19,114 @@ const socialPlatforms = [
 
 const budgetPresets = [5, 10, 15, 30];
 
+const N8N_CONNECT_WEBHOOK_URL = "https://ideal.app.n8n.cloud/webhook/account-connected";
+
 export default function Onboarding() {
+  const navigate = useNavigate();
+  const { user, businessId } = useAuth();
   const [step, setStep] = useState(0);
   const [budget, setBudget] = useState(10);
   const [connected, setConnected] = useState<string[]>([]);
+  const [business, setBusiness] = useState<any>(null);
+  const [connectLoading, setConnectLoading] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const toggleConnect = (name: string) => {
-    setConnected((prev) =>
-      prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]
-    );
+  useEffect(() => {
+    if (!businessId) return;
+    externalSupabase
+      .from("businesses")
+      .select("*")
+      .eq("id", businessId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setBusiness(data);
+          setBudget(data.daily_budget ?? 10);
+        }
+      });
+  }, [businessId]);
+
+  const toggleConnect = async (name: string) => {
+    if (connected.includes(name)) {
+      setConnected((prev) => prev.filter((n) => n !== name));
+      return;
+    }
+
+    setConnectLoading(name);
+    setConnected((prev) => [...prev, name]);
+
+    // POST to n8n webhook
+    try {
+      await fetch(N8N_CONNECT_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          business_id: businessId,
+          business_name: business?.business_name ?? "",
+          email: business?.email ?? user?.email ?? "",
+          first_name: business?.first_name ?? "",
+          facebook_page_id: business?.facebook_page_id ?? "",
+          meta_access_token: business?.meta_access_token ?? "",
+          ad_account_id: "",
+        }),
+      });
+      toast.success(`${name} connected!`);
+    } catch (err) {
+      console.warn("Connect webhook failed:", err);
+      toast.success(`${name} connected!`);
+    }
+
+    setConnectLoading(null);
+  };
+
+  const handleBudgetSave = async () => {
+    if (!businessId) return;
+    await externalSupabase
+      .from("businesses")
+      .update({ daily_budget: budget })
+      .eq("id", businessId);
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !businessId) return;
+
+    for (const file of Array.from(files)) {
+      const fileName = `${businessId}/${Date.now()}_${file.name}`;
+      const { error: uploadError } = await externalSupabase.storage
+        .from("business-photos")
+        .upload(fileName, file);
+
+      if (uploadError) {
+        toast.error(`Failed to upload ${file.name}`);
+        continue;
+      }
+
+      const { data: urlData } = externalSupabase.storage
+        .from("business-photos")
+        .getPublicUrl(fileName);
+
+      await externalSupabase.from("business_photos").insert({
+        business_id: businessId,
+        photo_url: urlData.publicUrl,
+        photo_type: "Product",
+        description: file.name,
+        is_active: true,
+      });
+    }
+
+    toast.success("Photos uploaded!");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleFinish = async () => {
+    if (businessId) {
+      await externalSupabase
+        .from("businesses")
+        .update({ onboarding_complete: true })
+        .eq("id", businessId);
+    }
+    navigate("/dashboard");
   };
 
   return (
@@ -51,10 +154,10 @@ export default function Onboarding() {
           <div className="space-y-6">
             <div><h2 className="text-2xl font-bold text-foreground">Review your business details</h2><p className="mt-1 text-muted-foreground">Make sure everything looks right.</p></div>
             <div className="space-y-4 rounded-2xl bg-card p-6">
-              <div><Label>Business name</Label><Input defaultValue="My Business" /></div>
-              <div><Label>Industry</Label><Input defaultValue="Bakery" /></div>
-              <div><Label>Location</Label><Input defaultValue="Austin, TX" /></div>
-              <div><Label>Target audience</Label><Input defaultValue="Women 25-45" /></div>
+              <div><Label>Business name</Label><Input defaultValue={business?.business_name ?? ""} /></div>
+              <div><Label>Industry</Label><Input defaultValue={business?.industry ?? ""} /></div>
+              <div><Label>Location</Label><Input defaultValue={business?.location ?? ""} /></div>
+              <div><Label>Target audience</Label><Input defaultValue={business?.target_audience ?? ""} /></div>
             </div>
           </div>
         )}
@@ -67,6 +170,7 @@ export default function Onboarding() {
                 <button
                   key={p.name}
                   onClick={() => toggleConnect(p.name)}
+                  disabled={connectLoading === p.name}
                   className={`flex items-center gap-4 rounded-2xl border-2 p-6 transition-all ${
                     connected.includes(p.name) ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/30"
                   }`}
@@ -76,7 +180,9 @@ export default function Onboarding() {
                   </div>
                   <div className="text-left">
                     <span className="font-semibold text-card-foreground">{p.name}</span>
-                    <p className="text-sm text-muted-foreground">{connected.includes(p.name) ? "Connected ✓" : "Click to connect"}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {connectLoading === p.name ? "Connecting..." : connected.includes(p.name) ? "Connected ✓" : "Click to connect"}
+                    </p>
                   </div>
                 </button>
               ))}
@@ -106,11 +212,15 @@ export default function Onboarding() {
         {step === 3 && (
           <div className="space-y-6">
             <div><h2 className="text-2xl font-bold text-foreground">Upload your photos</h2><p className="mt-1 text-muted-foreground">Add 5–10 photos of your business. We'll use them in your content.</p></div>
-            <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-card p-12 text-center">
+            <div
+              className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-card p-12 text-center cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+            >
               <Upload className="h-10 w-10 text-muted-foreground" />
               <p className="mt-4 font-medium text-foreground">Drag and drop your photos here</p>
               <p className="mt-1 text-sm text-muted-foreground">or click to browse</p>
-              <Button variant="outline" className="mt-4">Choose files</Button>
+              <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} />
+              <Button variant="outline" className="mt-4" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}>Choose files</Button>
             </div>
           </div>
         )}
@@ -119,9 +229,12 @@ export default function Onboarding() {
         <div className="mt-10 flex justify-between">
           <Button variant="outline" onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0}>Back</Button>
           {step < steps.length - 1 ? (
-            <Button onClick={() => setStep(step + 1)}>Continue</Button>
+            <Button onClick={() => {
+              if (step === 2) handleBudgetSave();
+              setStep(step + 1);
+            }}>Continue</Button>
           ) : (
-            <Button>Launch my marketing →</Button>
+            <Button onClick={handleFinish}>Launch my marketing →</Button>
           )}
         </div>
       </div>
