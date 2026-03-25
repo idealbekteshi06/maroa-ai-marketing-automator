@@ -10,7 +10,7 @@ import { Check } from "lucide-react";
 const tabs = ["Profile", "Billing", "Notifications"];
 
 // TODO: Replace with your Stripe publishable key
-const STRIPE_PUBLISHABLE_KEY = "pk_test_YOUR_STRIPE_PUBLISHABLE_KEY";
+const STRIPE_PUBLISHABLE_KEY = "pk_test_51T8u8ORdWtvqvMKip8L7l2bBsBMQUW7lznYBXpLZqdZSjhweHF2sDpqBVsKysz6K4XYjvzZK34c4jdT0PM9sPxYU00SWfZxY0y";
 
 const plans = [
   { id: "free", name: "Free", price: 0, features: ["1 business", "5 posts/month", "Basic dashboard"] },
