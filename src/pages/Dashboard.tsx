@@ -4,7 +4,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, FileText, Megaphone, Share2,
-  Search, Settings, Bell, Menu, X, ImageIcon, LogOut,
+  Search, Settings, Menu, X, ImageIcon, LogOut,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
@@ -14,6 +14,7 @@ import DashboardSocial from "@/components/dashboard/DashboardSocial";
 import DashboardCompetitors from "@/components/dashboard/DashboardCompetitors";
 import DashboardSettings from "@/components/dashboard/DashboardSettings";
 import PhotoLibrary from "@/components/dashboard/PhotoLibrary";
+import NotificationDropdown from "@/components/dashboard/NotificationDropdown";
 
 const navItems = [
   { key: "overview", label: "Overview", icon: LayoutDashboard },
