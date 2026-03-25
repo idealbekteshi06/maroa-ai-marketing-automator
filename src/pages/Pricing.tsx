@@ -1,57 +1,88 @@
 import { Navbar } from "@/components/landing/Navbar";
 import { Footer } from "@/components/landing/Footer";
-import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
-const plans = [
+const PLANS = [
   {
+    key: "free",
     name: "Free",
     monthlyPrice: 0,
     annualPrice: 0,
     desc: "Try it out with one business.",
     features: ["1 business", "5 posts per month", "Basic dashboard", "Email support"],
     popular: false,
+    priceId: null,
   },
   {
+    key: "growth",
     name: "Growth",
     monthlyPrice: 49,
     annualPrice: 41,
     desc: "Everything you need to grow.",
     features: [
-      "Unlimited content generation",
-      "All social platforms",
-      "Meta ad management",
-      "Daily AI optimization",
-      "Weekly strategy reports",
-      "Competitor tracking",
-      "AI image generation",
-      "Priority support",
+      "Unlimited content generation", "All social platforms", "Meta ad management",
+      "Daily AI optimization", "Weekly strategy reports", "Competitor tracking",
+      "AI image generation", "Priority support",
     ],
     popular: true,
+    priceId: "price_1TEzSrRdWtvqvMKio7e5VO2Y",
   },
   {
+    key: "agency",
     name: "Agency",
     monthlyPrice: 99,
     annualPrice: 83,
     desc: "For agencies managing multiple brands.",
     features: [
-      "Everything in Growth",
-      "Unlimited businesses",
-      "White label dashboard",
-      "Client-facing reports",
-      "Custom integrations",
-      "Dedicated account manager",
-      "API access",
-      "Custom branding",
+      "Everything in Growth", "Unlimited businesses", "White label dashboard",
+      "Client-facing reports", "Custom integrations", "Dedicated account manager",
+      "API access", "Custom branding",
     ],
     popular: false,
+    priceId: "price_1TEzTeRdWtvqvMKiWI61UYLk",
   },
 ];
 
 export default function Pricing() {
   const [annual, setAnnual] = useState(false);
+  const [loading, setLoading] = useState<string | null>(null);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleCheckout = async (plan: typeof PLANS[number]) => {
+    if (!plan.priceId) {
+      navigate("/signup");
+      return;
+    }
+
+    if (!user) {
+      navigate("/signup");
+      return;
+    }
+
+    setLoading(plan.key);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { priceId: plan.priceId },
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (error || data?.error) throw new Error(data?.error || "Checkout failed");
+      if (data?.url) window.open(data.url, "_blank");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to start checkout.");
+    }
+    setLoading(null);
+  };
 
   return (
     <>
@@ -66,7 +97,6 @@ export default function Pricing() {
               No hidden fees. No contracts. Cancel anytime.
             </p>
 
-            {/* Toggle */}
             <div className="mt-8 flex items-center justify-center gap-3">
               <span className={`text-sm ${!annual ? "text-foreground font-medium" : "text-muted-foreground"}`}>Monthly</span>
               <button
@@ -82,7 +112,7 @@ export default function Pricing() {
           </div>
 
           <div className="mx-auto mt-16 grid max-w-5xl gap-8 md:grid-cols-3">
-            {plans.map((plan) => {
+            {PLANS.map((plan) => {
               const price = annual ? plan.annualPrice : plan.monthlyPrice;
               return (
                 <div
@@ -109,20 +139,20 @@ export default function Pricing() {
                   <ul className="mt-8 space-y-3">
                     {plan.features.map((f) => (
                       <li key={f} className="flex items-start gap-3 text-sm">
-                        <Check className={`mt-0.5 h-4 w-4 shrink-0 ${plan.popular ? "text-primary" : "text-primary"}`} />
+                        <Check className={`mt-0.5 h-4 w-4 shrink-0 text-primary`} />
                         {f}
                       </li>
                     ))}
                   </ul>
-                  <Link to="/signup" className="mt-8 block">
-                    <Button
-                      className="w-full"
-                      variant={plan.popular ? "hero" : "outline"}
-                      size="lg"
-                    >
-                      {price === 0 ? "Get started free" : "Start free trial"}
-                    </Button>
-                  </Link>
+                  <Button
+                    className="mt-8 w-full"
+                    variant={plan.popular ? "hero" : "outline"}
+                    size="lg"
+                    disabled={loading !== null}
+                    onClick={() => handleCheckout(plan)}
+                  >
+                    {loading === plan.key ? "Redirecting..." : price === 0 ? "Get started free" : "Start free trial"}
+                  </Button>
                 </div>
               );
             })}

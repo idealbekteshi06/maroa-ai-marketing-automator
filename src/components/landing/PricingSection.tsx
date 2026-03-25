@@ -1,9 +1,14 @@
-import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { useState } from "react";
 
 const plans = [
   {
+    key: "free",
     name: "Free",
     price: "$0",
     period: "forever",
@@ -11,8 +16,10 @@ const plans = [
     features: ["1 business", "5 posts per month", "Basic dashboard", "Email support"],
     cta: "Get started",
     popular: false,
+    priceId: null,
   },
   {
+    key: "growth",
     name: "Growth",
     price: "$49",
     period: "/mo",
@@ -20,8 +27,10 @@ const plans = [
     features: ["Unlimited content", "All platforms", "Ad management", "Daily optimization", "Weekly strategy", "Competitor tracking"],
     cta: "Start free trial",
     popular: true,
+    priceId: "price_1TEzSrRdWtvqvMKio7e5VO2Y",
   },
   {
+    key: "agency",
     name: "Agency",
     price: "$99",
     period: "/mo",
@@ -29,10 +38,44 @@ const plans = [
     features: ["Unlimited businesses", "White label", "Client reports", "Everything in Growth", "Priority support", "Custom integrations"],
     cta: "Start free trial",
     popular: false,
+    priceId: "price_1TEzTeRdWtvqvMKiWI61UYLk",
   },
 ];
 
 export function PricingSection() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [loading, setLoading] = useState<string | null>(null);
+
+  const handleCheckout = async (plan: typeof plans[number]) => {
+    if (!plan.priceId) {
+      navigate("/signup");
+      return;
+    }
+
+    if (!user) {
+      navigate("/signup");
+      return;
+    }
+
+    setLoading(plan.key);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { priceId: plan.priceId },
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (error || data?.error) throw new Error(data?.error || "Checkout failed");
+      if (data?.url) window.open(data.url, "_blank");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to start checkout.");
+    }
+    setLoading(null);
+  };
+
   return (
     <section id="pricing" className="py-28 md:py-40">
       <div className="container">
@@ -74,15 +117,15 @@ export function PricingSection() {
                   </li>
                 ))}
               </ul>
-              <Link to="/signup" className="mt-10 block">
-                <Button
-                  className="w-full"
-                  variant={plan.popular ? "hero" : "outline"}
-                  size="lg"
-                >
-                  {plan.cta}
-                </Button>
-              </Link>
+              <Button
+                className="mt-10 w-full"
+                variant={plan.popular ? "hero" : "outline"}
+                size="lg"
+                disabled={loading !== null}
+                onClick={() => handleCheckout(plan)}
+              >
+                {loading === plan.key ? "Redirecting..." : plan.cta}
+              </Button>
             </div>
           ))}
         </div>
