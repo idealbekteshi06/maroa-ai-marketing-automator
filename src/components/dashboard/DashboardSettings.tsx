@@ -11,9 +11,9 @@ import { Check, ExternalLink } from "lucide-react";
 const tabs = ["Profile", "Billing", "Notifications"];
 
 const PLANS = {
-  free: { name: "Free", price: 0, product_id: null, price_id: null, features: ["1 business", "5 posts/month", "Basic dashboard"] },
-  growth: { name: "Growth", price: 49, product_id: "prod_UDQJ9P4MuCqw3G", price_id: "price_1TEzSrRdWtvqvMKio7e5VO2Y", popular: true, features: ["Unlimited content", "All platforms", "Ad management", "Daily optimization", "Weekly strategy", "Competitor tracking"] },
-  agency: { name: "Agency", price: 99, product_id: "prod_UDQKixhKr9Pxg7", price_id: "price_1TEzTeRdWtvqvMKiWI61UYLk", features: ["Unlimited businesses", "White label", "Client reports", "Everything in Growth"] },
+  free: { name: "Free", price: 0, price_id: null, features: ["1 business", "5 posts/month", "Basic dashboard"] },
+  growth: { name: "Growth", price: 49, price_id: "price_1TEzSrRdWtvqvMKio7e5VO2Y", popular: true, features: ["Unlimited content", "All platforms", "Ad management", "Daily optimization", "Weekly strategy", "Competitor tracking"] },
+  agency: { name: "Agency", price: 99, price_id: "price_1TEzTeRdWtvqvMKiWI61UYLk", features: ["Unlimited businesses", "White label", "Client reports", "Everything in Growth"] },
 } as const;
 
 type PlanKey = keyof typeof PLANS;
@@ -25,8 +25,6 @@ export default function DashboardSettings() {
   const [profileForm, setProfileForm] = useState({ business_name: "", email: "", location: "", industry: "" });
   const [saving, setSaving] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<PlanKey>("free");
-  const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
-  const [checkingPlan, setCheckingPlan] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
   useEffect(() => {
@@ -45,50 +43,16 @@ export default function DashboardSettings() {
             location: data.location ?? "",
             industry: data.industry ?? "",
           });
+          // Read plan directly from the businesses table
+          const plan = data.plan as string;
+          if (plan === "growth" || plan === "agency") {
+            setCurrentPlan(plan);
+          } else {
+            setCurrentPlan("free");
+          }
         }
       });
   }, [businessId]);
-
-  // Check subscription status
-  const checkSubscription = async () => {
-    setCheckingPlan(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { setCheckingPlan(false); return; }
-
-      const { data, error } = await supabase.functions.invoke("check-subscription", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-
-      if (error || data?.error) {
-        console.warn("Subscription check failed:", error || data?.error);
-        setCheckingPlan(false);
-        return;
-      }
-
-      if (data?.subscribed && data?.product_id) {
-        const matchedPlan = (Object.entries(PLANS) as [PlanKey, typeof PLANS[PlanKey]][]).find(
-          ([_, p]) => p.product_id === data.product_id
-        );
-        if (matchedPlan) {
-          setCurrentPlan(matchedPlan[0]);
-          setSubscriptionEnd(data.subscription_end);
-        }
-      } else {
-        setCurrentPlan("free");
-        setSubscriptionEnd(null);
-      }
-    } catch (err) {
-      console.warn("Subscription check error:", err);
-    }
-    setCheckingPlan(false);
-  };
-
-  useEffect(() => {
-    checkSubscription();
-    const interval = setInterval(checkSubscription, 60000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleSaveProfile = async () => {
     if (!businessId) return;
@@ -118,7 +82,6 @@ export default function DashboardSettings() {
       if (businessId) {
         await externalSupabase.from("businesses").update({ plan: "free", plan_price: 0 }).eq("id", businessId);
         setCurrentPlan("free");
-        setSubscriptionEnd(null);
         toast.success("Downgraded to Free plan.");
       }
       return;
@@ -126,19 +89,24 @@ export default function DashboardSettings() {
 
     setCheckoutLoading(planKey);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Not authenticated");
+      const email = business?.email || user?.email;
+      if (!email) throw new Error("No email found");
 
-      const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: { priceId: plan.price_id },
-        headers: { Authorization: `Bearer ${session.access_token}` },
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/create-checkout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": anonKey,
+        },
+        body: JSON.stringify({ priceId: plan.price_id, email }),
       });
 
-      if (error || data?.error) throw new Error(data?.error || "Checkout failed");
-
-      if (data?.url) {
-        window.open(data.url, "_blank");
-      }
+      const data = await response.json();
+      if (data?.error) throw new Error(data.error);
+      if (data?.url) window.open(data.url, "_blank");
     } catch (err: any) {
       toast.error(err.message || "Failed to start checkout.");
     }
@@ -147,23 +115,28 @@ export default function DashboardSettings() {
 
   const handleManageSubscription = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Not authenticated");
+      const email = business?.email || user?.email;
+      if (!email) throw new Error("No email found");
 
-      const { data, error } = await supabase.functions.invoke("customer-portal", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/customer-portal`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": anonKey,
+        },
+        body: JSON.stringify({ email }),
       });
 
-      if (error || data?.error) throw new Error(data?.error || "Portal failed");
+      const data = await response.json();
+      if (data?.error) throw new Error(data.error);
       if (data?.url) window.open(data.url, "_blank");
     } catch (err: any) {
       toast.error(err.message || "Failed to open billing portal.");
     }
   };
-
-  const formattedEnd = subscriptionEnd
-    ? new Date(subscriptionEnd).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
-    : null;
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
@@ -199,7 +172,6 @@ export default function DashboardSettings() {
 
       {activeTab === "Billing" && (
         <div className="space-y-6">
-          {/* Current Plan */}
           <div className="rounded-2xl bg-card p-6">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-card-foreground">Current Plan</h3>
@@ -213,59 +185,37 @@ export default function DashboardSettings() {
               <div>
                 <p className="font-medium text-foreground capitalize">{PLANS[currentPlan].name} Plan</p>
                 <p className="text-sm text-muted-foreground">
-                  {PLANS[currentPlan].price > 0
-                    ? `$${PLANS[currentPlan].price}/month${formattedEnd ? ` · Next billing: ${formattedEnd}` : ""}`
-                    : "Free forever"}
+                  {PLANS[currentPlan].price > 0 ? `$${PLANS[currentPlan].price}/month` : "Free forever"}
                 </p>
               </div>
               {currentPlan !== "free" && (
                 <span className="rounded-full bg-success/10 px-3 py-1 text-xs font-medium text-success">Active</span>
               )}
             </div>
-            <Button variant="ghost" size="sm" className="mt-2" onClick={checkSubscription} disabled={checkingPlan}>
-              {checkingPlan ? "Checking..." : "Refresh status"}
-            </Button>
           </div>
 
-          {/* Plan Options */}
           <div className="grid gap-4 sm:grid-cols-3">
             {(Object.entries(PLANS) as [PlanKey, typeof PLANS[PlanKey]][]).map(([key, plan]) => (
-              <div
-                key={key}
+              <div key={key}
                 className={`relative rounded-2xl border-2 p-6 transition-all ${
                   currentPlan === key ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/30"
-                }`}
-              >
+                }`}>
                 {"popular" in plan && plan.popular && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-1 text-[10px] font-semibold text-primary-foreground">
-                    Most popular
-                  </span>
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-1 text-[10px] font-semibold text-primary-foreground">Most popular</span>
                 )}
                 <h4 className="text-lg font-bold text-card-foreground">{plan.name}</h4>
-                <p className="mt-1 text-2xl font-bold text-foreground">
-                  ${plan.price}<span className="text-sm font-normal text-muted-foreground">/mo</span>
-                </p>
+                <p className="mt-1 text-2xl font-bold text-foreground">${plan.price}<span className="text-sm font-normal text-muted-foreground">/mo</span></p>
                 <ul className="mt-4 space-y-2">
                   {plan.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Check className="h-3 w-3 text-primary" /> {f}
-                    </li>
+                    <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground"><Check className="h-3 w-3 text-primary" /> {f}</li>
                   ))}
                 </ul>
                 <Button
                   variant={currentPlan === key ? "outline" : "default"}
-                  size="sm"
-                  className="mt-4 w-full"
+                  size="sm" className="mt-4 w-full"
                   disabled={currentPlan === key || checkoutLoading !== null}
-                  onClick={() => handleUpgrade(key)}
-                >
-                  {checkoutLoading === key
-                    ? "Redirecting..."
-                    : currentPlan === key
-                    ? "Current plan"
-                    : plan.price < PLANS[currentPlan].price
-                    ? "Downgrade"
-                    : "Upgrade"}
+                  onClick={() => handleUpgrade(key)}>
+                  {checkoutLoading === key ? "Redirecting..." : currentPlan === key ? "Current plan" : plan.price < PLANS[currentPlan].price ? "Downgrade" : "Upgrade"}
                 </Button>
               </div>
             ))}

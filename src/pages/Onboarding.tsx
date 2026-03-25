@@ -36,6 +36,9 @@ export default function Onboarding() {
   const [showConfetti, setShowConfetti] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Step 1 editable fields
+  const [bizForm, setBizForm] = useState({ business_name: "", industry: "", location: "", target_audience: "" });
+
   const progress = Math.round(((step + 1) / steps.length) * 100);
 
   useEffect(() => {
@@ -49,9 +52,24 @@ export default function Onboarding() {
         if (data) {
           setBusiness(data);
           setBudget(data.daily_budget ?? 10);
+          setBizForm({
+            business_name: data.business_name ?? "",
+            industry: data.industry ?? "",
+            location: data.location ?? "",
+            target_audience: data.target_audience ?? "",
+          });
         }
       });
   }, [businessId]);
+
+  const handleSaveStep1 = async () => {
+    if (!businessId) return;
+    const { error } = await externalSupabase
+      .from("businesses")
+      .update(bizForm)
+      .eq("id", businessId);
+    if (error) console.error("Step 1 save error:", error);
+  };
 
   const toggleConnect = async (name: string) => {
     if (connected.includes(name)) {
@@ -84,7 +102,8 @@ export default function Onboarding() {
 
   const handleBudgetSave = async () => {
     if (!businessId) return;
-    await externalSupabase.from("businesses").update({ daily_budget: budget }).eq("id", businessId);
+    const { error } = await externalSupabase.from("businesses").update({ daily_budget: budget }).eq("id", businessId);
+    if (error) toast.error("Failed to save budget");
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -109,6 +128,12 @@ export default function Onboarding() {
       await externalSupabase.from("businesses").update({ onboarding_complete: true }).eq("id", businessId);
     }
     setTimeout(() => navigate("/dashboard"), 2500);
+  };
+
+  const handleNext = () => {
+    if (step === 0) handleSaveStep1();
+    if (step === 2) handleBudgetSave();
+    setStep(step + 1);
   };
 
   return (
@@ -148,10 +173,10 @@ export default function Onboarding() {
               <p className="mt-2 text-sm text-muted-foreground">Make sure everything looks right before we start.</p>
             </div>
             <div className="space-y-4 rounded-2xl border border-border bg-card p-6">
-              <div><Label>Business name</Label><Input defaultValue={business?.business_name ?? ""} className="mt-1" /></div>
-              <div><Label>Industry</Label><Input defaultValue={business?.industry ?? ""} className="mt-1" /></div>
-              <div><Label>Location</Label><Input defaultValue={business?.location ?? ""} className="mt-1" /></div>
-              <div><Label>Target audience</Label><Input defaultValue={business?.target_audience ?? ""} className="mt-1" /></div>
+              <div><Label>Business name</Label><Input value={bizForm.business_name} onChange={(e) => setBizForm(f => ({ ...f, business_name: e.target.value }))} className="mt-1" /></div>
+              <div><Label>Industry</Label><Input value={bizForm.industry} onChange={(e) => setBizForm(f => ({ ...f, industry: e.target.value }))} className="mt-1" /></div>
+              <div><Label>Location</Label><Input value={bizForm.location} onChange={(e) => setBizForm(f => ({ ...f, location: e.target.value }))} className="mt-1" /></div>
+              <div><Label>Target audience</Label><Input value={bizForm.target_audience} onChange={(e) => setBizForm(f => ({ ...f, target_audience: e.target.value }))} className="mt-1" /></div>
             </div>
           </div>
         )}
@@ -248,10 +273,7 @@ export default function Onboarding() {
           <div className="mt-10 flex justify-between">
             <Button variant="outline" onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0}>Back</Button>
             {step < steps.length - 1 ? (
-              <Button onClick={() => {
-                if (step === 2) handleBudgetSave();
-                setStep(step + 1);
-              }}>Continue</Button>
+              <Button onClick={handleNext}>Continue</Button>
             ) : (
               <Button onClick={handleFinish}>Launch my marketing →</Button>
             )}
