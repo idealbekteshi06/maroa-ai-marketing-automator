@@ -68,7 +68,7 @@ export default function SignUp() {
         console.warn("Webhook POST failed:", webhookErr);
       }
 
-      toast.success("Account created! Check your email to verify.");
+      toast.success("Account created! Welcome to maroa.ai");
       navigate("/onboarding");
     } catch (err: any) {
       toast.error(err.message || "Signup failed. Please try again.");
