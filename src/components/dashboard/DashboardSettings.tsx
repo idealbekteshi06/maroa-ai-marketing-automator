@@ -20,7 +20,7 @@ type PlanKey = keyof typeof PLANS;
 
 export default function DashboardSettings() {
   const [activeTab, setActiveTab] = useState("Profile");
-  const { user, businessId } = useAuth();
+  const { user, businessId, isReady } = useAuth();
   const [business, setBusiness] = useState<any>(null);
   const [profileForm, setProfileForm] = useState({ business_name: "", email: "", location: "", industry: "" });
   const [saving, setSaving] = useState(false);
