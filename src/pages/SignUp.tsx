@@ -37,9 +37,13 @@ export default function SignUp() {
         },
       });
 
-      if (authError) throw authError;
-      const userId = authData.user?.id;
+      // If auth error but user was still created (e.g. email send failure), continue
+      const userId = authData?.user?.id;
+      if (authError && !userId) throw authError;
       if (!userId) throw new Error("Signup failed — no user returned.");
+      if (authError) {
+        console.warn("Auth warning (user created, continuing):", authError.message);
+      }
 
       const businessData = {
         user_id: userId,
