@@ -13,9 +13,9 @@ import {
 
 const AUTH_TIMEOUT_MS = 10_000;
 
-const withTimeout = <T,>(promise: Promise<T>, message: string) =>
+const withTimeout = <T,>(promise: PromiseLike<T>, message: string): Promise<T> =>
   Promise.race<T>([
-    promise,
+    Promise.resolve(promise),
     new Promise<T>((_, reject) =>
       setTimeout(() => reject(new Error(message)), AUTH_TIMEOUT_MS)
     ),
@@ -83,11 +83,13 @@ export default function Login() {
       }
 
       const { data: biz, error: bizError } = await withTimeout(
-        externalSupabase
-          .from("businesses")
-          .select("onboarding_complete")
-          .eq("user_id", sessionUser.id)
-          .maybeSingle(),
+        Promise.resolve(
+          externalSupabase
+            .from("businesses")
+            .select("onboarding_complete")
+            .eq("user_id", sessionUser.id)
+            .maybeSingle()
+        ),
         "Loading your account timed out."
       );
 
