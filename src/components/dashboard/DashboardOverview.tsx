@@ -95,13 +95,13 @@ export default function DashboardOverview() {
       }
 
       const [statsRes, photosRes, contentRes] = await Promise.all([
-        queryWithRetry(() =>
+        queryWithRetry<DailyStat[]>(() =>
           externalSupabase
             .from("daily_stats")
             .select("*")
             .eq("business_id", resolvedBusinessId)
             .order("recorded_at", { ascending: false })
-            .limit(30)
+            .limit(30) as unknown as Promise<{ data: DailyStat[] | null; error: any }>
         ),
         externalSupabase
           .from("business_photos")
@@ -117,7 +117,7 @@ export default function DashboardOverview() {
       if (photosRes.error) console.error("Photos count error:", photosRes.error);
       if (contentRes.error) console.error("Content count error:", contentRes.error);
 
-      setStats(statsRes.data ?? []);
+      setStats((statsRes.data as DailyStat[]) ?? []);
       setPhotoCount(photosRes.count ?? 0);
       setContentCount(contentRes.count ?? 0);
     } catch (err) {
