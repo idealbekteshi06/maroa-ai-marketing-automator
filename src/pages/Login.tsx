@@ -11,6 +11,32 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 
+const AUTH_TIMEOUT_MS = 10_000;
+
+const withTimeout = <T,>(promise: Promise<T>, message: string) =>
+  Promise.race<T>([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(message)), AUTH_TIMEOUT_MS)
+    ),
+  ]);
+
+const toAuthErrorMessage = (error: unknown) => {
+  if (error instanceof Error) {
+    if (error.message.includes("Invalid login") || error.message.includes("invalid_credentials")) {
+      return "Incorrect email or password. Please try again.";
+    }
+
+    if (error.message.toLowerCase().includes("timed out")) {
+      return "Something went wrong, please try again.";
+    }
+
+    return error.message;
+  }
+
+  return "Something went wrong, please try again.";
+};
+
 export default function Login() {
   const navigate = useNavigate();
   const { user, onboardingComplete, loading: authLoading } = useAuth();
@@ -35,30 +61,48 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
     try {
-      const { data, error } = await externalSupabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        if (error.message.includes("Invalid login") || error.message.includes("invalid_credentials")) {
-          throw new Error("Incorrect email or password. Please try again.");
-        }
-        throw error;
+      const { error: signInError } = await withTimeout(
+        externalSupabase.auth.signInWithPassword({ email, password }),
+        "Login timed out."
+      );
+
+      if (signInError) throw signInError;
+
+      const { data: sessionData, error: sessionError } = await withTimeout(
+        externalSupabase.auth.getSession(),
+        "Session restore timed out."
+      );
+
+      if (sessionError) throw sessionError;
+
+      const sessionUser = sessionData.session?.user;
+      if (!sessionUser) {
+        throw new Error("Could not create your session. Please try again.");
       }
-      toast.success("Welcome back!");
-      // Navigate immediately after successful login
-      if (data?.user) {
-        const { data: biz } = await externalSupabase
+
+      const { data: biz, error: bizError } = await withTimeout(
+        externalSupabase
           .from("businesses")
           .select("onboarding_complete")
-          .eq("user_id", data.user.id)
-          .maybeSingle();
-        if (biz?.onboarding_complete === false) {
-          navigate("/onboarding", { replace: true });
-        } else {
-          navigate("/dashboard", { replace: true });
-        }
+          .eq("user_id", sessionUser.id)
+          .maybeSingle(),
+        "Loading your account timed out."
+      );
+
+      if (bizError) throw bizError;
+
+      toast.success("Welcome back!");
+
+      if (biz?.onboarding_complete === false) {
+        navigate("/onboarding", { replace: true });
+        return;
       }
-    } catch (err: any) {
-      toast.error(err.message || "Login failed.");
+
+      navigate("/dashboard", { replace: true });
+    } catch (error) {
+      toast.error(toAuthErrorMessage(error));
     } finally {
       setLoading(false);
     }
