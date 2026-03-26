@@ -40,7 +40,7 @@ function getRedirectUri() {
 }
 
 export default function DashboardSocial() {
-  const { businessId } = useAuth();
+  const { businessId, isReady } = useAuth();
   const [business, setBusiness] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState<string | null>(null);
