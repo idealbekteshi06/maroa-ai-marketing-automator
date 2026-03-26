@@ -85,9 +85,19 @@ export default function DashboardSocial() {
 
   const connectedCount = accounts.filter(a => isConnected(a)).length;
 
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="h-6 w-48 rounded bg-muted animate-pulse-soft" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-20 rounded-2xl border border-border bg-card animate-pulse-soft" />)}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
-      <p className="text-sm text-muted-foreground">Manage your connected social media accounts.</p>
       <div className="grid gap-4 sm:grid-cols-2">
         {accounts.map((a) => {
           const connected = isConnected(a);
