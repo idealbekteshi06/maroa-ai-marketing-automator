@@ -10,6 +10,31 @@ import { toast } from "sonner";
 const industries = ["Bakery", "Restaurant", "Café", "Salon & Spa", "Gym & Fitness", "Boutique & Retail", "Photography", "Real Estate", "Coaching & Consulting", "Medical & Dental", "Auto Services", "Home Services", "Other"];
 
 const N8N_SIGNUP_WEBHOOK_URL = "https://ideal.app.n8n.cloud/webhook/new-user-signup";
+const AUTH_TIMEOUT_MS = 10_000;
+
+const withTimeout = <T,>(promise: PromiseLike<T>, message: string): Promise<T> =>
+  Promise.race<T>([
+    Promise.resolve(promise),
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(message)), AUTH_TIMEOUT_MS)
+    ),
+  ]);
+
+const toAuthErrorMessage = (error: unknown) => {
+  if (error instanceof Error) {
+    if (error.message.includes("User already registered")) {
+      return "An account with this email already exists. Please log in instead.";
+    }
+
+    if (error.message.toLowerCase().includes("timed out")) {
+      return "Something went wrong, please try again.";
+    }
+
+    return error.message;
+  }
+
+  return "Something went wrong, please try again.";
+};
 
 export default function SignUp() {
   const navigate = useNavigate();
@@ -26,13 +51,16 @@ export default function SignUp() {
     setLoading(true);
 
     try {
-      const { data: authData, error: authError } = await externalSupabase.auth.signUp({
-        email: form.email,
-        password: form.password,
-        options: {
-          data: { first_name: form.firstName, last_name: form.lastName },
-        },
-      });
+      const { data: authData, error: authError } = await withTimeout(
+        externalSupabase.auth.signUp({
+          email: form.email,
+          password: form.password,
+          options: {
+            data: { first_name: form.firstName, last_name: form.lastName },
+          },
+        }),
+        "Signup timed out."
+      );
 
       const userId = authData?.user?.id;
       if (authError && !userId) throw authError;
@@ -57,30 +85,32 @@ export default function SignUp() {
         social_accounts_connected: false,
       };
 
-      const { error: bizError } = await externalSupabase.from("businesses").insert([businessData]);
+      const { error: bizError } = await withTimeout(
+        Promise.resolve(externalSupabase.from("businesses").insert([businessData])),
+        "Creating your account timed out."
+      );
+
       if (bizError) {
         console.error("Businesses insert error:", bizError);
         throw new Error(`Businesses insert failed: ${bizError.message}`);
       }
 
-      try {
-        await fetch(N8N_SIGNUP_WEBHOOK_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            user_id: userId, email: form.email, first_name: form.firstName,
-            last_name: form.lastName, business_name: form.businessName,
-            industry: form.industry, location: form.location, plan: "free",
-          }),
-        });
-      } catch (webhookErr) {
+      void fetch(N8N_SIGNUP_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: userId, email: form.email, first_name: form.firstName,
+          last_name: form.lastName, business_name: form.businessName,
+          industry: form.industry, location: form.location, plan: "free",
+        }),
+      }).catch((webhookErr) => {
         console.warn("Webhook POST failed:", webhookErr);
-      }
+      });
 
       toast.success("Account created! Let's set up your marketing.");
       navigate("/onboarding");
-    } catch (err: any) {
-      toast.error(err.message || "Signup failed. Please try again.");
+    } catch (error) {
+      toast.error(toAuthErrorMessage(error));
     } finally {
       setLoading(false);
     }
