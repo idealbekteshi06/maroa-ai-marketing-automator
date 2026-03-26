@@ -1,8 +1,13 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
-export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+interface Props {
+  children: React.ReactNode;
+  allowIncompleteOnboarding?: boolean;
+}
+
+export default function ProtectedRoute({ children, allowIncompleteOnboarding = false }: Props) {
+  const { user, loading, onboardingComplete } = useAuth();
 
   if (loading) {
     return (
@@ -13,5 +18,11 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   }
 
   if (!user) return <Navigate to="/login" replace />;
+
+  // Force onboarding if not complete (unless we're already going to onboarding)
+  if (!allowIncompleteOnboarding && onboardingComplete === false) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
   return <>{children}</>;
 }

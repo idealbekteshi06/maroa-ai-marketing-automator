@@ -95,12 +95,12 @@ export default function DashboardAds() {
 
       {campaigns.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card py-20 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/8">
-            <Megaphone className="h-6 w-6 text-primary" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/8">
+            <Megaphone className="h-7 w-7 text-primary" />
           </div>
-          <p className="mt-5 text-base font-semibold text-foreground">No campaigns yet</p>
-          <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-            Campaigns will appear here once maroa.ai launches your first ad. Connect your Meta account to get started.
+          <h3 className="mt-5 text-lg font-semibold text-foreground">No ad campaigns yet</h3>
+          <p className="mt-2 max-w-md text-sm text-muted-foreground leading-relaxed">
+            Connect your Facebook account and set your budget to activate AI-powered ad management. maroa.ai will create, monitor and optimize your ads daily.
           </p>
         </div>
       ) : (

@@ -85,9 +85,19 @@ export default function DashboardSocial() {
 
   const connectedCount = accounts.filter(a => isConnected(a)).length;
 
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="h-6 w-48 rounded bg-muted animate-pulse-soft" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-20 rounded-2xl border border-border bg-card animate-pulse-soft" />)}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
-      <p className="text-sm text-muted-foreground">Manage your connected social media accounts.</p>
       <div className="grid gap-4 sm:grid-cols-2">
         {accounts.map((a) => {
           const connected = isConnected(a);
@@ -120,12 +130,12 @@ export default function DashboardSocial() {
 
       {connectedCount === 0 && (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card py-20 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/8">
-            <Share2 className="h-6 w-6 text-primary" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/8">
+            <Share2 className="h-7 w-7 text-primary" />
           </div>
-          <p className="mt-5 text-base font-semibold text-foreground">Connect your social accounts</p>
-          <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-            Link your social media accounts so maroa.ai can post content and manage ads for you automatically.
+          <h3 className="mt-5 text-lg font-semibold text-foreground">Connect your accounts to start posting automatically</h3>
+          <p className="mt-2 max-w-md text-sm text-muted-foreground leading-relaxed">
+            maroa.ai will post to Instagram and Facebook at the perfect times for your audience every week.
           </p>
         </div>
       )}

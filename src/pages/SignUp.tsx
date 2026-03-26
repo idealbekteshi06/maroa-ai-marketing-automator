@@ -7,9 +7,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { toast } from "sonner";
 
-const industries = ["Bakery", "Restaurant", "Salon", "Gym", "Boutique", "Photography", "Real Estate", "Coaching", "Other"];
-const brandTones = ["Warm and friendly", "Professional and formal", "Fun and playful", "Luxury and premium"];
-const marketingGoals = ["Drive foot traffic", "Get more leads", "Grow social following", "Increase online sales", "Build brand awareness"];
+const industries = ["Bakery", "Restaurant", "Café", "Salon & Spa", "Gym & Fitness", "Boutique & Retail", "Photography", "Real Estate", "Coaching & Consulting", "Medical & Dental", "Auto Services", "Home Services", "Other"];
 
 const N8N_SIGNUP_WEBHOOK_URL = "https://ideal.app.n8n.cloud/webhook/new-user-signup";
 
@@ -18,11 +16,10 @@ export default function SignUp() {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     firstName: "", lastName: "", email: "", password: "",
-    businessName: "", industry: "", location: "", targetAudience: "",
-    brandTone: "", marketingGoal: "", adBudget: 100,
+    businessName: "", industry: "", location: "",
   });
 
-  const update = (key: string, value: string | number) => setForm((f) => ({ ...f, [key]: value }));
+  const update = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,13 +34,10 @@ export default function SignUp() {
         },
       });
 
-      // If auth error but user was still created (e.g. email send failure), continue
       const userId = authData?.user?.id;
       if (authError && !userId) throw authError;
       if (!userId) throw new Error("Signup failed — no user returned.");
-      if (authError) {
-        console.warn("Auth warning (user created, continuing):", authError.message);
-      }
+      if (authError) console.warn("Auth warning (user created, continuing):", authError.message);
 
       const businessData = {
         user_id: userId,
@@ -52,9 +46,9 @@ export default function SignUp() {
         business_name: form.businessName,
         industry: form.industry,
         location: form.location,
-        target_audience: form.targetAudience,
-        brand_tone: form.brandTone,
-        marketing_goal: form.marketingGoal,
+        target_audience: "",
+        brand_tone: "",
+        marketing_goal: "",
         is_active: true,
         plan: "free",
         plan_price: 0,
@@ -63,18 +57,11 @@ export default function SignUp() {
         social_accounts_connected: false,
       };
 
-      console.log("Businesses insert payload:", businessData);
-
-      const { error: bizError } = await externalSupabase
-        .from("businesses")
-        .insert([businessData]);
-
+      const { error: bizError } = await externalSupabase.from("businesses").insert([businessData]);
       if (bizError) {
         console.error("Businesses insert error:", bizError);
         throw new Error(`Businesses insert failed: ${bizError.message}`);
       }
-
-      console.log("Businesses insert succeeded for user:", userId);
 
       try {
         await fetch(N8N_SIGNUP_WEBHOOK_URL, {
@@ -83,22 +70,30 @@ export default function SignUp() {
           body: JSON.stringify({
             user_id: userId, email: form.email, first_name: form.firstName,
             last_name: form.lastName, business_name: form.businessName,
-            industry: form.industry, location: form.location,
-            target_audience: form.targetAudience, brand_tone: form.brandTone,
-            marketing_goal: form.marketingGoal, plan: "free",
+            industry: form.industry, location: form.location, plan: "free",
           }),
         });
       } catch (webhookErr) {
         console.warn("Webhook POST failed:", webhookErr);
       }
 
-      toast.success("Account created! Welcome to maroa.ai");
+      toast.success("Account created! Let's set up your marketing.");
       navigate("/onboarding");
     } catch (err: any) {
       toast.error(err.message || "Signup failed. Please try again.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleSignUp = async () => {
+    const { error } = await externalSupabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/onboarding`,
+      },
+    });
+    if (error) toast.error(error.message || "Google sign-up failed.");
   };
 
   const selectClass = "flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring";
@@ -130,7 +125,7 @@ export default function SignUp() {
           <p className="mt-2 text-sm text-muted-foreground">Start your free trial — no credit card needed.</p>
 
           <div className="mt-8 flex flex-col gap-3">
-            <Button variant="outline" size="lg" className="w-full h-11" disabled>
+            <Button variant="outline" size="lg" className="w-full h-11" onClick={handleGoogleSignUp}>
               <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
               Sign up with Google
             </Button>
@@ -160,27 +155,7 @@ export default function SignUp() {
                 {industries.map((i) => <option key={i} value={i}>{i}</option>)}
               </select>
             </div>
-            <div><Label htmlFor="loc">Location</Label><Input id="loc" placeholder="City, State" value={form.location} onChange={(e) => update("location", e.target.value)} className="mt-1 h-11" /></div>
-            <div><Label htmlFor="audience">Target audience</Label><Input id="audience" placeholder="e.g. Women 25-45 who love fitness" value={form.targetAudience} onChange={(e) => update("targetAudience", e.target.value)} className="mt-1 h-11" /></div>
-            <div>
-              <Label htmlFor="tone">Brand tone</Label>
-              <select id="tone" value={form.brandTone} onChange={(e) => update("brandTone", e.target.value)} className={selectClass + " mt-1"}>
-                <option value="">Select tone</option>
-                {brandTones.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-            <div>
-              <Label htmlFor="goal">Marketing goal</Label>
-              <select id="goal" value={form.marketingGoal} onChange={(e) => update("marketingGoal", e.target.value)} className={selectClass + " mt-1"}>
-                <option value="">Select goal</option>
-                {marketingGoals.map((g) => <option key={g} value={g}>{g}</option>)}
-              </select>
-            </div>
-            <div>
-              <Label>Monthly ad budget: ${form.adBudget}</Label>
-              <input type="range" min={0} max={500} step={10} value={form.adBudget} onChange={(e) => update("adBudget", +e.target.value)} className="mt-2 w-full" />
-              <div className="flex justify-between text-xs text-muted-foreground"><span>$0</span><span>$500</span></div>
-            </div>
+            <div><Label htmlFor="loc">Location</Label><Input id="loc" placeholder="City, Country" value={form.location} onChange={(e) => update("location", e.target.value)} className="mt-1 h-11" required /></div>
             <Button type="submit" size="lg" className="mt-4 w-full h-11" disabled={loading}>
               {loading ? "Creating account..." : "Create account"}
             </Button>
