@@ -36,15 +36,27 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await externalSupabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await externalSupabase.auth.signInWithPassword({ email, password });
       if (error) {
-        if (error.message.includes("Invalid login")) {
+        if (error.message.includes("Invalid login") || error.message.includes("invalid_credentials")) {
           throw new Error("Incorrect email or password. Please try again.");
         }
         throw error;
       }
       toast.success("Welcome back!");
-      // Navigation handled by useEffect after auth state updates
+      // Navigate immediately after successful login
+      if (data?.user) {
+        const { data: biz } = await externalSupabase
+          .from("businesses")
+          .select("onboarding_complete")
+          .eq("user_id", data.user.id)
+          .maybeSingle();
+        if (biz?.onboarding_complete === false) {
+          navigate("/onboarding", { replace: true });
+        } else {
+          navigate("/dashboard", { replace: true });
+        }
+      }
     } catch (err: any) {
       toast.error(err.message || "Login failed.");
     } finally {
