@@ -44,7 +44,7 @@ function SkeletonRow() {
 }
 
 export default function DashboardAds() {
-  const { businessId } = useAuth();
+  const { businessId, isReady } = useAuth();
   const [campaigns, setCampaigns] = useState<(Campaign & { perf?: PerfLog })[]>([]);
   const [loading, setLoading] = useState(true);
 
