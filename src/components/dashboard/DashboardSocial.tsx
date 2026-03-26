@@ -49,7 +49,7 @@ export default function DashboardSocial() {
   const [saving, setSaving] = useState(false);
 
   const fetchBusiness = async () => {
-    if (!businessId) return;
+    if (!businessId || !isReady) return;
     setLoading(true);
     const { data } = await externalSupabase
       .from("businesses")
