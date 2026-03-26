@@ -95,12 +95,14 @@ export default function DashboardOverview() {
       }
 
       const [statsRes, photosRes, contentRes] = await Promise.all([
-        externalSupabase
-          .from("daily_stats")
-          .select("*")
-          .eq("business_id", resolvedBusinessId)
-          .order("recorded_at", { ascending: false })
-          .limit(30),
+        queryWithRetry(() =>
+          externalSupabase
+            .from("daily_stats")
+            .select("*")
+            .eq("business_id", resolvedBusinessId)
+            .order("recorded_at", { ascending: false })
+            .limit(30)
+        ),
         externalSupabase
           .from("business_photos")
           .select("id", { count: "exact", head: true })
