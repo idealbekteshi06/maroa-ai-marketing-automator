@@ -44,7 +44,7 @@ export default function DashboardContent() {
   const [editSaving, setEditSaving] = useState(false);
 
   const fetchContent = async () => {
-    if (!businessId) return;
+    if (!businessId || !isReady) return;
     setLoading(true);
     const { data, error } = await externalSupabase
       .from("generated_content")
