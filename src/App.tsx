@@ -32,6 +32,7 @@ const Loading = () => (
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
+      <ErrorBoundary>
       <TooltipProvider>
         <Toaster />
         <Sonner />
