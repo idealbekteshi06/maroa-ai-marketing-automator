@@ -34,7 +34,7 @@ export default function PhotoLibrary() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchPhotos = useCallback(async () => {
-    if (!businessId) return;
+    if (!businessId || !isReady) return;
     setLoading(true);
     try {
       const { data, error } = await externalSupabase
