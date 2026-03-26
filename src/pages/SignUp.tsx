@@ -42,15 +42,36 @@ export default function SignUp() {
       const userId = authData.user?.id;
       if (!userId) throw new Error("Signup failed — no user returned.");
 
-      const { error: bizError } = await externalSupabase.from("businesses").insert({
-        user_id: userId, email: form.email, first_name: form.firstName,
+      const businessData = {
+        user_id: userId,
+        email: form.email,
+        first_name: form.firstName,
         business_name: form.businessName,
-        industry: form.industry, location: form.location,
-        target_audience: form.targetAudience, brand_tone: form.brandTone,
-        marketing_goal: form.marketingGoal, daily_budget: 0,
-        plan: "free", plan_price: 0, is_active: true, onboarding_complete: false,
-      });
-      if (bizError) console.error("Business insert error:", bizError);
+        industry: form.industry,
+        location: form.location,
+        target_audience: form.targetAudience,
+        brand_tone: form.brandTone,
+        marketing_goal: form.marketingGoal,
+        is_active: true,
+        plan: "free",
+        plan_price: 0,
+        daily_budget: 0,
+        onboarding_complete: false,
+        social_accounts_connected: false,
+      };
+
+      console.log("Businesses insert payload:", businessData);
+
+      const { error: bizError } = await externalSupabase
+        .from("businesses")
+        .insert([businessData]);
+
+      if (bizError) {
+        console.error("Businesses insert error:", bizError);
+        throw new Error(`Businesses insert failed: ${bizError.message}`);
+      }
+
+      console.log("Businesses insert succeeded for user:", userId);
 
       try {
         await fetch(N8N_SIGNUP_WEBHOOK_URL, {
