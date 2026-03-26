@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Rocket, Eye, DollarSign, TrendingUp, ArrowRight, Sparkles, CheckCircle2, Circle, Share2, ImageIcon, CreditCard, FileText, CalendarCheck } from "lucide-react";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
+import { queryWithRetry } from "@/lib/queryWithRetry";
 
 interface DailyStat {
   recorded_at: string;
