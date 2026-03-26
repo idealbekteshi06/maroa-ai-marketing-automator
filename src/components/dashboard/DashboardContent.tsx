@@ -171,14 +171,13 @@ export default function DashboardContent() {
         </div>
       ) : content.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card py-20 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/8">
-            <FileText className="h-6 w-6 text-primary" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/8">
+            <FileText className="h-7 w-7 text-primary" />
           </div>
-          <p className="mt-5 text-base font-semibold text-foreground">Your content will appear here</p>
-          <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-            Your first week of content will appear here after maroa.ai generates it on Monday morning.
+          <h3 className="mt-5 text-lg font-semibold text-foreground">Your first week of content is being prepared</h3>
+          <p className="mt-2 max-w-md text-sm text-muted-foreground leading-relaxed">
+            maroa.ai generates your posts every Monday at 9am. Check back Monday morning to see your Instagram captions, Facebook posts, emails and Google ads — all written in your brand voice automatically.
           </p>
-          <Button className="mt-6" size="sm">Generate your first post</Button>
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-12 text-center">

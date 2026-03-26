@@ -50,12 +50,12 @@ export default function DashboardCompetitors() {
 
       {insights.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card py-20 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/8">
-            <Search className="h-6 w-6 text-primary" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/8">
+            <Search className="h-7 w-7 text-primary" />
           </div>
-          <p className="mt-5 text-base font-semibold text-foreground">No competitor insights yet</p>
-          <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-            AI is analyzing your competitors. Your first competitive insights report will appear here within 48 hours.
+          <h3 className="mt-5 text-lg font-semibold text-foreground">Competitor tracking activates after your first week</h3>
+          <p className="mt-2 max-w-md text-sm text-muted-foreground leading-relaxed">
+            Add your competitors in Settings and maroa.ai will monitor them every Friday and tell you exactly what is working for them.
           </p>
         </div>
       ) : (
