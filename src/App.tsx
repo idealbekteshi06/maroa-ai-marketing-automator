@@ -47,6 +47,7 @@ const App = () => (
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/delete-data" element={<DeleteData />} />
+              <Route path="/social-callback" element={<SocialCallback />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
