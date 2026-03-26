@@ -18,6 +18,7 @@ const Pricing = lazy(() => import("./pages/Pricing"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const DeleteData = lazy(() => import("./pages/DeleteData"));
+const SocialCallback = lazy(() => import("./pages/SocialCallback"));
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/delete-data" element={<DeleteData />} />
+              <Route path="/social-callback" element={<SocialCallback />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
