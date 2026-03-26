@@ -32,11 +32,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchBusiness = async (userId: string) => {
-    const { data } = await externalSupabase
+    const { data, error } = await externalSupabase
       .from("businesses")
       .select("id, onboarding_complete")
       .eq("user_id", userId)
       .maybeSingle();
+
+    if (error) {
+      console.error("Failed to fetch business:", error.message);
+      setBusinessId(null);
+      setOnboardingComplete(null);
+      return;
+    }
+
     setBusinessId(data?.id ?? null);
     setOnboardingComplete(data?.onboarding_complete ?? null);
   };
@@ -46,38 +54,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    let initialized = false;
+    let mounted = true;
 
     const { data: { subscription } } = externalSupabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await fetchBusiness(session.user.id);
+      (_event, nextSession) => {
+        if (!mounted) return;
+
+        setSession(nextSession);
+        const nextUser = nextSession?.user ?? null;
+        setUser(nextUser);
+
+        if (nextUser) {
+          void fetchBusiness(nextUser.id);
         } else {
           setBusinessId(null);
           setOnboardingComplete(null);
         }
-        initialized = true;
-        setLoading(false);
       }
     );
 
-    // Only use getSession as fallback if onAuthStateChange hasn't fired yet
-    const timeout = setTimeout(async () => {
-      if (!initialized) {
-        const { data: { session } } = await externalSupabase.auth.getSession();
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await fetchBusiness(session.user.id);
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: initialSession }, error } = await externalSupabase.auth.getSession();
+        if (error) throw error;
+        if (!mounted) return;
+
+        setSession(initialSession);
+        const initialUser = initialSession?.user ?? null;
+        setUser(initialUser);
+
+        if (initialUser) {
+          await fetchBusiness(initialUser.id);
+        } else {
+          setBusinessId(null);
+          setOnboardingComplete(null);
         }
-        setLoading(false);
+      } catch (error) {
+        console.error("Failed to initialize auth state:", error);
+        if (!mounted) return;
+        setSession(null);
+        setUser(null);
+        setBusinessId(null);
+        setOnboardingComplete(null);
+      } finally {
+        if (mounted) setLoading(false);
       }
-    }, 500);
+    };
+
+    void initializeAuth();
 
     return () => {
-      clearTimeout(timeout);
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
