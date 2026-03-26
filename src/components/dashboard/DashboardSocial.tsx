@@ -12,12 +12,9 @@ import {
 
 const META_APP_ID = "1455056152668725";
 const META_PERMISSIONS = [
-  "pages_manage_posts",
-  "pages_read_engagement",
-  "ads_management",
-  "ads_read",
-  "instagram_basic",
-  "instagram_content_publish",
+  "email",
+  "public_profile",
+  "pages_show_list",
 ].join(",");
 
 interface AccountConfig {
