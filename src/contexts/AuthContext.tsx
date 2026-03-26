@@ -6,16 +6,20 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   businessId: string | null;
+  onboardingComplete: boolean | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  refreshBusiness: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   businessId: null,
+  onboardingComplete: null,
   loading: true,
   signOut: async () => {},
+  refreshBusiness: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -24,38 +28,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [businessId, setBusinessId] = useState<string | null>(null);
+  const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const fetchBusiness = async (userId: string) => {
+    const { data } = await externalSupabase
+      .from("businesses")
+      .select("id, onboarding_complete")
+      .eq("user_id", userId)
+      .maybeSingle();
+    setBusinessId(data?.id ?? null);
+    setOnboardingComplete(data?.onboarding_complete ?? null);
+  };
+
+  const refreshBusiness = async () => {
+    if (user?.id) await fetchBusiness(user.id);
+  };
 
   useEffect(() => {
     const { data: { subscription } } = externalSupabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-
         if (session?.user) {
-          const { data } = await externalSupabase
-            .from("businesses")
-            .select("id")
-            .eq("user_id", session.user.id)
-            .maybeSingle();
-          setBusinessId(data?.id ?? null);
+          await fetchBusiness(session.user.id);
         } else {
           setBusinessId(null);
+          setOnboardingComplete(null);
         }
         setLoading(false);
       }
     );
 
-    externalSupabase.auth.getSession().then(({ data: { session } }) => {
+    externalSupabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        externalSupabase
-          .from("businesses")
-          .select("id")
-          .eq("user_id", session.user.id)
-          .maybeSingle()
-          .then(({ data }) => setBusinessId(data?.id ?? null));
+        await fetchBusiness(session.user.id);
       }
       setLoading(false);
     });
@@ -68,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, businessId, loading, signOut }}>
+    <AuthContext.Provider value={{ user, session, businessId, onboardingComplete, loading, signOut, refreshBusiness }}>
       {children}
     </AuthContext.Provider>
   );
