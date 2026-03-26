@@ -22,7 +22,7 @@ export default function NotificationDropdown() {
   const [open, setOpen] = useState(false);
 
   const fetchNotifications = async () => {
-    if (!businessId) return;
+    if (!businessId || !isReady) return;
     const { data } = await externalSupabase
       .from("win_notifications")
       .select("*")
