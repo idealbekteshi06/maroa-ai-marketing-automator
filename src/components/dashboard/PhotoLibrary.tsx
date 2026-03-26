@@ -27,7 +27,7 @@ function SkeletonGrid() {
 }
 
 export default function PhotoLibrary() {
-  const { businessId } = useAuth();
+  const { businessId, isReady } = useAuth();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
