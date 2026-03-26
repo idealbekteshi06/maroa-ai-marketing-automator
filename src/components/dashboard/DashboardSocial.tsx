@@ -40,7 +40,7 @@ function getRedirectUri() {
 }
 
 export default function DashboardSocial() {
-  const { businessId } = useAuth();
+  const { businessId, isReady } = useAuth();
   const [business, setBusiness] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState<string | null>(null);
@@ -49,7 +49,7 @@ export default function DashboardSocial() {
   const [saving, setSaving] = useState(false);
 
   const fetchBusiness = async () => {
-    if (!businessId) return;
+    if (!businessId || !isReady) return;
     setLoading(true);
     const { data } = await externalSupabase
       .from("businesses")
@@ -60,7 +60,7 @@ export default function DashboardSocial() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchBusiness(); }, [businessId]);
+  useEffect(() => { fetchBusiness(); }, [businessId, isReady]);
 
   const isConnected = (account: AccountConfig) => {
     if (!business) return false;

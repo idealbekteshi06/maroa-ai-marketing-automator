@@ -27,14 +27,14 @@ function SkeletonGrid() {
 }
 
 export default function PhotoLibrary() {
-  const { businessId } = useAuth();
+  const { businessId, isReady } = useAuth();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchPhotos = useCallback(async () => {
-    if (!businessId) return;
+    if (!businessId || !isReady) return;
     setLoading(true);
     try {
       const { data, error } = await externalSupabase
@@ -53,7 +53,7 @@ export default function PhotoLibrary() {
     } finally {
       setLoading(false);
     }
-  }, [businessId]);
+  }, [businessId, isReady]);
 
   useEffect(() => { fetchPhotos(); }, [fetchPhotos]);
 

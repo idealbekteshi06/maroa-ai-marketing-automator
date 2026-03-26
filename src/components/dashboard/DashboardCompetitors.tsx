@@ -17,12 +17,12 @@ function SkeletonRow() {
 }
 
 export default function DashboardCompetitors() {
-  const { businessId } = useAuth();
+  const { businessId, isReady } = useAuth();
   const [insights, setInsights] = useState<Insight[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!businessId) return;
+    if (!businessId || !isReady) return;
     const fetch = async () => {
       setLoading(true);
       const { data } = await externalSupabase
@@ -34,7 +34,7 @@ export default function DashboardCompetitors() {
       setLoading(false);
     };
     fetch();
-  }, [businessId]);
+  }, [businessId, isReady]);
 
   if (loading) {
     return (

@@ -17,12 +17,12 @@ interface Notification {
 }
 
 export default function NotificationDropdown() {
-  const { businessId } = useAuth();
+  const { businessId, isReady } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
 
   const fetchNotifications = async () => {
-    if (!businessId) return;
+    if (!businessId || !isReady) return;
     const { data } = await externalSupabase
       .from("win_notifications")
       .select("*")
@@ -33,10 +33,11 @@ export default function NotificationDropdown() {
   };
 
   useEffect(() => {
+    if (!isReady || !businessId) return;
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
-  }, [businessId]);
+  }, [businessId, isReady]);
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 

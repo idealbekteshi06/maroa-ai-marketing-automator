@@ -44,12 +44,12 @@ function SkeletonRow() {
 }
 
 export default function DashboardAds() {
-  const { businessId } = useAuth();
+  const { businessId, isReady } = useAuth();
   const [campaigns, setCampaigns] = useState<(Campaign & { perf?: PerfLog })[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!businessId) return;
+    if (!businessId || !isReady) return;
     const fetchData = async () => {
       setLoading(true);
       const { data: camps } = await externalSupabase
@@ -77,7 +77,7 @@ export default function DashboardAds() {
       setLoading(false);
     };
     fetchData();
-  }, [businessId]);
+  }, [businessId, isReady]);
 
   const maxSpend = Math.max(...campaigns.map((c) => c.perf?.spend ?? 0), 1);
 

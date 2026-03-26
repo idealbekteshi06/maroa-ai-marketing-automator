@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Rocket, Eye, DollarSign, TrendingUp, ArrowRight, Sparkles, CheckCircle2, Circle, Share2, ImageIcon, CreditCard, FileText, CalendarCheck } from "lucide-react";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
+import { queryWithRetry } from "@/lib/queryWithRetry";
 
 interface DailyStat {
   recorded_at: string;
@@ -41,7 +42,7 @@ function EmptyOverview() {
 }
 
 export default function DashboardOverview() {
-  const { businessId, user } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const [stats, setStats] = useState<DailyStat[]>([]);
   const [businessData, setBusinessData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -50,6 +51,7 @@ export default function DashboardOverview() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
+    if (!isReady) return;
     if (!businessId && !user?.id) {
       setLoading(false);
       return;
@@ -93,12 +95,14 @@ export default function DashboardOverview() {
       }
 
       const [statsRes, photosRes, contentRes] = await Promise.all([
-        externalSupabase
-          .from("daily_stats")
-          .select("*")
-          .eq("business_id", resolvedBusinessId)
-          .order("recorded_at", { ascending: false })
-          .limit(30),
+        queryWithRetry<DailyStat[]>(() =>
+          externalSupabase
+            .from("daily_stats")
+            .select("*")
+            .eq("business_id", resolvedBusinessId)
+            .order("recorded_at", { ascending: false })
+            .limit(30) as unknown as Promise<{ data: DailyStat[] | null; error: any }>
+        ),
         externalSupabase
           .from("business_photos")
           .select("id", { count: "exact", head: true })
@@ -113,7 +117,7 @@ export default function DashboardOverview() {
       if (photosRes.error) console.error("Photos count error:", photosRes.error);
       if (contentRes.error) console.error("Content count error:", contentRes.error);
 
-      setStats(statsRes.data ?? []);
+      setStats((statsRes.data as DailyStat[]) ?? []);
       setPhotoCount(photosRes.count ?? 0);
       setContentCount(contentRes.count ?? 0);
     } catch (err) {
@@ -122,7 +126,7 @@ export default function DashboardOverview() {
     } finally {
       setLoading(false);
     }
-  }, [businessId, user?.id]);
+  }, [businessId, user?.id, isReady]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

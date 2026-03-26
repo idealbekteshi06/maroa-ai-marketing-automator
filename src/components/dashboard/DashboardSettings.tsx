@@ -20,7 +20,7 @@ type PlanKey = keyof typeof PLANS;
 
 export default function DashboardSettings() {
   const [activeTab, setActiveTab] = useState("Profile");
-  const { user, businessId } = useAuth();
+  const { user, businessId, isReady } = useAuth();
   const [business, setBusiness] = useState<any>(null);
   const [profileForm, setProfileForm] = useState({ business_name: "", email: "", location: "", industry: "" });
   const [saving, setSaving] = useState(false);
@@ -28,7 +28,7 @@ export default function DashboardSettings() {
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!businessId) return;
+    if (!businessId || !isReady) return;
     externalSupabase
       .from("businesses")
       .select("*")
@@ -52,7 +52,7 @@ export default function DashboardSettings() {
           }
         }
       });
-  }, [businessId]);
+  }, [businessId, isReady]);
 
   const handleSaveProfile = async () => {
     if (!businessId) return;

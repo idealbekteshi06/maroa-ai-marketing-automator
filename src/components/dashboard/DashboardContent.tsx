@@ -34,7 +34,7 @@ function SkeletonRow() {
 }
 
 export default function DashboardContent() {
-  const { businessId } = useAuth();
+  const { businessId, isReady } = useAuth();
   const [content, setContent] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -44,7 +44,7 @@ export default function DashboardContent() {
   const [editSaving, setEditSaving] = useState(false);
 
   const fetchContent = async () => {
-    if (!businessId) return;
+    if (!businessId || !isReady) return;
     setLoading(true);
     const { data, error } = await externalSupabase
       .from("generated_content")
@@ -57,7 +57,7 @@ export default function DashboardContent() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchContent(); }, [businessId]);
+  useEffect(() => { fetchContent(); }, [businessId, isReady]);
 
   const handleApprove = async (id: string) => {
     const { error } = await externalSupabase
