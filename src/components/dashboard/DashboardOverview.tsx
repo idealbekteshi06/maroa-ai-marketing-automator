@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Rocket, Eye, DollarSign, TrendingUp, ArrowRight, Sparkles, CheckCircle2, Circle, Share2, ImageIcon, CreditCard, FileText, CalendarCheck } from "lucide-react";
 import { externalSupabase } from "@/integrations/supabase/external-client";
@@ -41,32 +41,90 @@ function EmptyOverview() {
 }
 
 export default function DashboardOverview() {
-  const { businessId } = useAuth();
+  const { businessId, user } = useAuth();
   const [stats, setStats] = useState<DailyStat[]>([]);
   const [businessData, setBusinessData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [photoCount, setPhotoCount] = useState(0);
   const [contentCount, setContentCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!businessId) return;
+  const fetchData = useCallback(async () => {
+    if (!businessId && !user?.id) {
+      setLoading(false);
+      return;
+    }
 
-    const fetchData = async () => {
-      setLoading(true);
-      const [statsRes, bizRes, photosRes, contentRes] = await Promise.all([
-        externalSupabase.from("daily_stats").select("*").eq("business_id", businessId).order("recorded_at", { ascending: false }).limit(30),
-        externalSupabase.from("businesses").select("*").eq("id", businessId).maybeSingle(),
-        externalSupabase.from("business_photos").select("id", { count: "exact", head: true }).eq("business_id", businessId),
-        externalSupabase.from("generated_content").select("id", { count: "exact", head: true }).eq("business_id", businessId),
+    setLoading(true);
+    setError(null);
+
+    try {
+      // If we have businessId, use it directly. Otherwise query by user_id.
+      let bizData: any = null;
+      let resolvedBusinessId = businessId;
+
+      if (businessId) {
+        const { data, error: bizError } = await externalSupabase
+          .from("businesses")
+          .select("*")
+          .eq("id", businessId)
+          .maybeSingle();
+        if (bizError) console.error("Business fetch error:", bizError);
+        bizData = data;
+      } else if (user?.id) {
+        const { data, error: bizError } = await externalSupabase
+          .from("businesses")
+          .select("*")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (bizError) console.error("Business fetch by user_id error:", bizError);
+        bizData = data;
+        resolvedBusinessId = data?.id ?? null;
+      }
+
+      setBusinessData(bizData);
+
+      if (!resolvedBusinessId) {
+        setStats([]);
+        setPhotoCount(0);
+        setContentCount(0);
+        setLoading(false);
+        return;
+      }
+
+      const [statsRes, photosRes, contentRes] = await Promise.all([
+        externalSupabase
+          .from("daily_stats")
+          .select("*")
+          .eq("business_id", resolvedBusinessId)
+          .order("recorded_at", { ascending: false })
+          .limit(30),
+        externalSupabase
+          .from("business_photos")
+          .select("id", { count: "exact", head: true })
+          .eq("business_id", resolvedBusinessId),
+        externalSupabase
+          .from("generated_content")
+          .select("id", { count: "exact", head: true })
+          .eq("business_id", resolvedBusinessId),
       ]);
+
+      if (statsRes.error) console.error("Stats fetch error:", statsRes.error);
+      if (photosRes.error) console.error("Photos count error:", photosRes.error);
+      if (contentRes.error) console.error("Content count error:", contentRes.error);
+
       setStats(statsRes.data ?? []);
-      setBusinessData(bizRes.data);
       setPhotoCount(photosRes.count ?? 0);
       setContentCount(contentRes.count ?? 0);
+    } catch (err) {
+      console.error("Dashboard data fetch error:", err);
+      setError("Failed to load dashboard data");
+    } finally {
       setLoading(false);
-    };
-    fetchData();
-  }, [businessId]);
+    }
+  }, [businessId, user?.id]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const checklist: ChecklistItem[] = [
     { key: "social", label: "Connect social accounts", icon: Share2, done: !!businessData?.social_accounts_connected || !!businessData?.facebook_page_id },
@@ -80,10 +138,10 @@ export default function DashboardOverview() {
   const showChecklist = completedChecklist < checklist.length;
 
   const summaryCards = [
-    { label: "Total Reach", value: businessData?.total_reach?.toLocaleString() ?? "—", icon: Eye, change: "+24% this week" },
-    { label: "Posts Published", value: businessData?.posts_published?.toString() ?? "—", icon: Sparkles, change: "AI generated" },
-    { label: "Total Spend", value: businessData?.total_spend != null ? `$${businessData.total_spend}` : "—", icon: DollarSign, change: "Optimized daily" },
-    { label: "Avg ROAS", value: businessData?.avg_roas != null ? `${businessData.avg_roas}x` : "—", icon: TrendingUp, change: "Return on ad spend" },
+    { label: "Total Reach", value: businessData?.total_reach?.toLocaleString() ?? "0", icon: Eye, change: "+24% this week" },
+    { label: "Posts Published", value: businessData?.posts_published?.toString() ?? "0", icon: Sparkles, change: "AI generated" },
+    { label: "Total Spend", value: businessData?.total_spend != null ? `$${businessData.total_spend}` : "$0", icon: DollarSign, change: "Optimized daily" },
+    { label: "Avg ROAS", value: businessData?.avg_roas != null ? `${businessData.avg_roas}x` : "0x", icon: TrendingUp, change: "Return on ad spend" },
   ];
 
   if (loading) {
@@ -94,6 +152,15 @@ export default function DashboardOverview() {
           {[1, 2, 3, 4].map((i) => <SkeletonCard key={i} />)}
         </div>
         <div className="h-64 rounded-2xl border border-border bg-card animate-pulse-soft" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card py-16 text-center">
+        <p className="text-sm text-destructive">{error}</p>
+        <Button variant="outline" size="sm" className="mt-4" onClick={fetchData}>Try again</Button>
       </div>
     );
   }

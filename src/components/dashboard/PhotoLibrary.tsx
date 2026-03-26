@@ -1,6 +1,6 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Upload, X, ImageIcon } from "lucide-react";
+import { Upload, X, ImageIcon, Loader2 } from "lucide-react";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -30,57 +30,92 @@ export default function PhotoLibrary() {
   const { businessId } = useAuth();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const fetchPhotos = async () => {
+  const fetchPhotos = useCallback(async () => {
     if (!businessId) return;
     setLoading(true);
-    const { data } = await externalSupabase
-      .from("business_photos")
-      .select("*")
-      .eq("business_id", businessId)
-      .order("uploaded_at", { ascending: false });
-    setPhotos((data as Photo[]) ?? []);
-    setLoading(false);
-  };
+    try {
+      const { data, error } = await externalSupabase
+        .from("business_photos")
+        .select("*")
+        .eq("business_id", businessId)
+        .order("uploaded_at", { ascending: false });
+      if (error) {
+        console.error("Failed to fetch photos:", error);
+        toast.error("Failed to load photos");
+        return;
+      }
+      setPhotos((data as Photo[]) ?? []);
+    } catch (err) {
+      console.error("Photo fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [businessId]);
 
-  useEffect(() => { fetchPhotos(); }, [businessId]);
+  useEffect(() => { fetchPhotos(); }, [fetchPhotos]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files || !businessId) return;
+    if (!files || files.length === 0 || !businessId) return;
+
+    setUploading(true);
+    let successCount = 0;
 
     for (const file of Array.from(files)) {
-      const fileName = `${businessId}/${Date.now()}_${file.name}`;
-      const { error: uploadError } = await externalSupabase.storage
-        .from("business-photos")
-        .upload(fileName, file);
+      try {
+        const fileName = `${businessId}/${Date.now()}_${file.name}`;
+        const { error: uploadError } = await externalSupabase.storage
+          .from("business-photos")
+          .upload(fileName, file);
 
-      if (uploadError) {
+        if (uploadError) {
+          console.error(`Upload error for ${file.name}:`, uploadError);
+          toast.error(`Failed to upload ${file.name}: ${uploadError.message}`);
+          continue;
+        }
+
+        // Get the full public URL
+        const { data: urlData } = externalSupabase.storage
+          .from("business-photos")
+          .getPublicUrl(fileName);
+
+        const publicUrl = urlData.publicUrl;
+
+        const { error: insertError } = await externalSupabase.from("business_photos").insert({
+          business_id: businessId,
+          photo_url: publicUrl,
+          photo_type: "Product",
+          description: file.name,
+          is_active: true,
+        });
+
+        if (insertError) {
+          console.error(`DB insert error for ${file.name}:`, insertError);
+          toast.error(`Failed to save ${file.name}: ${insertError.message}`);
+          continue;
+        }
+
+        successCount++;
+      } catch (err) {
+        console.error(`Unexpected error uploading ${file.name}:`, err);
         toast.error(`Failed to upload ${file.name}`);
-        continue;
       }
-
-      const { data: urlData } = externalSupabase.storage
-        .from("business-photos")
-        .getPublicUrl(fileName);
-
-      await externalSupabase.from("business_photos").insert({
-        business_id: businessId,
-        photo_url: urlData.publicUrl,
-        photo_type: "Product",
-        description: file.name,
-        is_active: true,
-      });
     }
 
-    toast.success("Photos uploaded!");
-    fetchPhotos();
+    if (successCount > 0) {
+      toast.success(`${successCount} photo${successCount > 1 ? "s" : ""} uploaded!`);
+      // Immediately refresh the grid
+      await fetchPhotos();
+    }
+
+    setUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleDelete = async (photo: Photo) => {
-    // Extract storage path from the public URL
     try {
       const url = new URL(photo.photo_url);
       const pathParts = url.pathname.split("/storage/v1/object/public/business-photos/");
@@ -94,11 +129,13 @@ export default function PhotoLibrary() {
 
     const { error } = await externalSupabase.from("business_photos").delete().eq("id", photo.id);
     if (error) { toast.error("Failed to delete"); return; }
+    
+    // Optimistic removal from state
+    setPhotos(prev => prev.filter(p => p.id !== photo.id));
     toast.success("Photo deleted");
-    fetchPhotos();
   };
 
-  if (loading) return <SkeletonGrid />;
+  if (loading && photos.length === 0) return <SkeletonGrid />;
 
   return (
     <div className="space-y-5">
@@ -106,8 +143,8 @@ export default function PhotoLibrary() {
         <p className="text-sm text-muted-foreground">Your business photos used in AI-generated content.</p>
         <div>
           <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleUpload} />
-          <Button size="sm" className="h-9 text-xs" onClick={() => fileInputRef.current?.click()}>
-            <Upload className="mr-2 h-3.5 w-3.5" /> Upload
+          <Button size="sm" className="h-9 text-xs" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+            {uploading ? <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Uploading...</> : <><Upload className="mr-2 h-3.5 w-3.5" /> Upload</>}
           </Button>
         </div>
       </div>
