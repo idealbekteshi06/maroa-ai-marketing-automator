@@ -42,7 +42,7 @@ function EmptyOverview() {
 }
 
 export default function DashboardOverview() {
-  const { businessId, user } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const [stats, setStats] = useState<DailyStat[]>([]);
   const [businessData, setBusinessData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -51,6 +51,7 @@ export default function DashboardOverview() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
+    if (!isReady) return;
     if (!businessId && !user?.id) {
       setLoading(false);
       return;
