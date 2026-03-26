@@ -33,7 +33,6 @@ export default function SignUp() {
         email: form.email,
         password: form.password,
         options: {
-          emailRedirectTo: window.location.origin,
           data: { first_name: form.firstName, last_name: form.lastName },
         },
       });
