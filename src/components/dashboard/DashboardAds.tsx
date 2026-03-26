@@ -49,7 +49,7 @@ export default function DashboardAds() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!businessId) return;
+    if (!businessId || !isReady) return;
     const fetchData = async () => {
       setLoading(true);
       const { data: camps } = await externalSupabase
