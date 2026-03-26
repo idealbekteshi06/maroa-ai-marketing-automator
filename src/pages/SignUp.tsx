@@ -43,12 +43,12 @@ export default function SignUp() {
       if (!userId) throw new Error("Signup failed — no user returned.");
 
       const { error: bizError } = await externalSupabase.from("businesses").insert({
-        user_id: userId, email: form.email,
+        user_id: userId, email: form.email, first_name: form.firstName,
         business_name: form.businessName,
         industry: form.industry, location: form.location,
         target_audience: form.targetAudience, brand_tone: form.brandTone,
-        marketing_goal: form.marketingGoal, daily_budget: form.adBudget,
-        plan: "free", is_active: true,
+        marketing_goal: form.marketingGoal, daily_budget: 0,
+        plan: "free", plan_price: 0, is_active: true, onboarding_complete: false,
       });
       if (bizError) console.error("Business insert error:", bizError);
 
