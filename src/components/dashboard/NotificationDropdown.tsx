@@ -17,7 +17,7 @@ interface Notification {
 }
 
 export default function NotificationDropdown() {
-  const { businessId } = useAuth();
+  const { businessId, isReady } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
 
