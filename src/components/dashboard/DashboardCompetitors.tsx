@@ -17,7 +17,7 @@ function SkeletonRow() {
 }
 
 export default function DashboardCompetitors() {
-  const { businessId } = useAuth();
+  const { businessId, isReady } = useAuth();
   const [insights, setInsights] = useState<Insight[]>([]);
   const [loading, setLoading] = useState(true);
 
