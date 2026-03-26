@@ -18,6 +18,7 @@ const Pricing = lazy(() => import("./pages/Pricing"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const DeleteData = lazy(() => import("./pages/DeleteData"));
+const SocialCallback = lazy(() => import("./pages/SocialCallback"));
 
 const queryClient = new QueryClient();
 
