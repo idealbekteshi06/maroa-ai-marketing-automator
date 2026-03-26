@@ -28,7 +28,7 @@ export default function DashboardSettings() {
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!businessId) return;
+    if (!businessId || !isReady) return;
     externalSupabase
       .from("businesses")
       .select("*")
