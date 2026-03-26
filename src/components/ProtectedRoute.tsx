@@ -7,11 +7,12 @@ interface Props {
 }
 
 export default function ProtectedRoute({ children, allowIncompleteOnboarding = false }: Props) {
-  const { user, loading, onboardingComplete } = useAuth();
+  const { user, loading, isReady, onboardingComplete } = useAuth();
 
-  if (loading) {
+  // Wait until auth is fully restored from storage
+  if (!isReady || loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     );
@@ -19,7 +20,6 @@ export default function ProtectedRoute({ children, allowIncompleteOnboarding = f
 
   if (!user) return <Navigate to="/login" replace />;
 
-  // Force onboarding if not complete (unless we're already going to onboarding)
   if (!allowIncompleteOnboarding && onboardingComplete === false) {
     return <Navigate to="/onboarding" replace />;
   }

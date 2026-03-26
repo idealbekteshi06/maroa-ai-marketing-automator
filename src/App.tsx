@@ -55,6 +55,7 @@ const App = () => (
           </Suspense>
         </BrowserRouter>
       </TooltipProvider>
+      </ErrorBoundary>
     </AuthProvider>
   </QueryClientProvider>
 );
