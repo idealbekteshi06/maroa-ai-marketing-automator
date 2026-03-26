@@ -34,7 +34,7 @@ function SkeletonRow() {
 }
 
 export default function DashboardContent() {
-  const { businessId } = useAuth();
+  const { businessId, isReady } = useAuth();
   const [content, setContent] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
