@@ -46,6 +46,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    let initialized = false;
+
     const { data: { subscription } } = externalSupabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
@@ -56,20 +58,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setBusinessId(null);
           setOnboardingComplete(null);
         }
+        initialized = true;
         setLoading(false);
       }
     );
 
-    externalSupabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await fetchBusiness(session.user.id);
+    // Only use getSession as fallback if onAuthStateChange hasn't fired yet
+    const timeout = setTimeout(async () => {
+      if (!initialized) {
+        const { data: { session } } = await externalSupabase.auth.getSession();
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          await fetchBusiness(session.user.id);
+        }
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    }, 500);
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
