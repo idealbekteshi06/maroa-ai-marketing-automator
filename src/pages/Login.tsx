@@ -110,15 +110,6 @@ export default function Login() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    const { error } = await externalSupabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/dashboard`,
-      },
-    });
-    if (error) toast.error(error.message || "Google sign-in failed.");
-  };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
