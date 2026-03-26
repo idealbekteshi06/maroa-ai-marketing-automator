@@ -47,11 +47,19 @@ const pageTitles: Record<string, string> = {
 };
 
 export default function Dashboard() {
-  const [active, setActive] = useState("overview");
+  const [searchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get("tab");
+  const [active, setActive] = useState(tabFromUrl && pages[tabFromUrl] ? tabFromUrl : "overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const Page = pages[active] || DashboardOverview;
+
+  useEffect(() => {
+    if (tabFromUrl && pages[tabFromUrl]) {
+      setActive(tabFromUrl);
+    }
+  }, [tabFromUrl]);
 
   const firstName = user?.user_metadata?.first_name || user?.email?.split("@")[0] || "there";
   const initials = user?.user_metadata?.first_name
