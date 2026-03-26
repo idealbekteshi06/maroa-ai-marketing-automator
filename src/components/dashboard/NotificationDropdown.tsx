@@ -33,10 +33,11 @@ export default function NotificationDropdown() {
   };
 
   useEffect(() => {
+    if (!isReady || !businessId) return;
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
-  }, [businessId]);
+  }, [businessId, isReady]);
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 

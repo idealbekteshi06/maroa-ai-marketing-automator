@@ -34,7 +34,7 @@ export default function DashboardCompetitors() {
       setLoading(false);
     };
     fetch();
-  }, [businessId]);
+  }, [businessId, isReady]);
 
   if (loading) {
     return (

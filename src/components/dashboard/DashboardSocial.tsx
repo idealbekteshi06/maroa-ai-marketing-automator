@@ -60,7 +60,7 @@ export default function DashboardSocial() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchBusiness(); }, [businessId]);
+  useEffect(() => { fetchBusiness(); }, [businessId, isReady]);
 
   const isConnected = (account: AccountConfig) => {
     if (!business) return false;

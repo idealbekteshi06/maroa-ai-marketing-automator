@@ -52,7 +52,7 @@ export default function DashboardSettings() {
           }
         }
       });
-  }, [businessId]);
+  }, [businessId, isReady]);
 
   const handleSaveProfile = async () => {
     if (!businessId) return;

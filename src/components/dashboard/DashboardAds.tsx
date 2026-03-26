@@ -77,7 +77,7 @@ export default function DashboardAds() {
       setLoading(false);
     };
     fetchData();
-  }, [businessId]);
+  }, [businessId, isReady]);
 
   const maxSpend = Math.max(...campaigns.map((c) => c.perf?.spend ?? 0), 1);
 

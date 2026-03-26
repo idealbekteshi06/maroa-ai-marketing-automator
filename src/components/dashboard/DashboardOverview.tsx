@@ -126,7 +126,7 @@ export default function DashboardOverview() {
     } finally {
       setLoading(false);
     }
-  }, [businessId, user?.id]);
+  }, [businessId, user?.id, isReady]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

@@ -53,7 +53,7 @@ export default function PhotoLibrary() {
     } finally {
       setLoading(false);
     }
-  }, [businessId]);
+  }, [businessId, isReady]);
 
   useEffect(() => { fetchPhotos(); }, [fetchPhotos]);
 

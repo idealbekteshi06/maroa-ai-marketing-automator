@@ -57,7 +57,7 @@ export default function DashboardContent() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchContent(); }, [businessId]);
+  useEffect(() => { fetchContent(); }, [businessId, isReady]);
 
   const handleApprove = async (id: string) => {
     const { error } = await externalSupabase
