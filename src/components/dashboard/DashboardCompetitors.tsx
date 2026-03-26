@@ -22,7 +22,7 @@ export default function DashboardCompetitors() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!businessId) return;
+    if (!businessId || !isReady) return;
     const fetch = async () => {
       setLoading(true);
       const { data } = await externalSupabase
