@@ -2,21 +2,32 @@ import { useState } from "react";
 import { Plus, Minus } from "lucide-react";
 
 const faqs = [
-  { q: "How does maroa.ai create content for my business?", a: "Our AI learns your brand voice, industry, and audience. It generates captions, blog posts, and ad copy that sound like you wrote them. Every piece goes through your approval queue first." },
-  { q: "Which social platforms do you support?", a: "Facebook, Instagram, Google Ads, and TikTok. We're adding LinkedIn and Twitter soon." },
-  { q: "Can I review content before it's posted?", a: "Absolutely. Every piece of content goes to your approval queue first. You can approve, edit, or reject with one tap." },
-  { q: "How does ad management work?", a: "We create and manage Meta ad campaigns for you. Our AI optimizes targeting, budget, and creative daily based on performance data." },
-  { q: "Is there a contract or commitment?", a: "No contracts. Cancel anytime with one click. Your content and data are always yours." },
-  { q: "How quickly will I see results?", a: "Most businesses see improved engagement within the first week. Ad performance typically improves within 2-3 weeks as our AI learns what works for your audience." },
-  { q: "Can I use my own photos?", a: "Yes! Upload your business photos and our AI will use them alongside AI-generated visuals for the best results." },
-  { q: "What if I need help?", a: "Growth and Agency plans include priority support. Free plan users get email support with 24-hour response time." },
+  { q: "What is maroa.ai?", a: "maroa.ai is an AI-powered marketing platform that automates content creation, social media posting, and ad management for small businesses. It replaces the need for a marketing agency at a fraction of the cost." },
+  { q: "How long does setup take?", a: "Setup takes under 5 minutes. Answer a few questions about your business, connect your social accounts, and our AI starts working immediately. Your first batch of content is ready within 24 hours." },
+  { q: "Do I need marketing experience?", a: "Not at all. maroa.ai is designed for business owners with zero marketing experience. Our AI handles strategy, content creation, posting schedules, and ad optimization automatically." },
+  { q: "What platforms does it post to?", a: "Currently we support Facebook, Instagram, Google Ads, and TikTok. We're adding LinkedIn and Twitter soon. All posts are scheduled at optimal times for your specific audience." },
+  { q: "How does the AI learn my business?", a: "During onboarding, you tell us about your industry, target audience, brand tone, and goals. Our AI uses this to craft content that sounds authentically like your brand and improves each week based on performance data." },
+  { q: "Can I edit content before it posts?", a: "Absolutely. Every piece of content goes to your approval queue first. You can approve, edit, or reject with one tap. Nothing gets published without your explicit approval." },
+  { q: "What happens to my existing ads?", a: "Your existing ads continue running. When you connect your ad account, our AI monitors performance and gradually introduces optimized campaigns alongside your current ones. We never delete or modify existing campaigns without your permission." },
+  { q: "How do I cancel?", a: "No contracts, no commitments. Cancel anytime with one click from your Settings page. Your content and data are always yours to keep." },
 ];
 
 export function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.q,
+      acceptedAnswer: { "@type": "Answer", text: faq.a },
+    })),
+  };
+
   return (
     <section id="faq" className="py-20 sm:py-28 md:py-40">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       <div className="container">
         <div className="mx-auto max-w-2xl text-center px-4">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-foreground">
@@ -40,11 +51,7 @@ export function FAQ() {
                   )}
                 </div>
               </button>
-              <div
-                className={`overflow-hidden transition-all duration-300 ease-out ${
-                  openIndex === i ? "max-h-48 pb-5 sm:pb-6" : "max-h-0"
-                }`}
-              >
+              <div className={`overflow-hidden transition-all duration-300 ease-out ${openIndex === i ? "max-h-48 pb-5 sm:pb-6" : "max-h-0"}`}>
                 <p className="text-sm leading-relaxed text-muted-foreground pr-8 sm:pr-12">{faq.a}</p>
               </div>
             </div>

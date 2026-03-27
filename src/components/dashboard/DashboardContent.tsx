@@ -6,14 +6,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { FileText, Search as SearchIcon } from "lucide-react";
+import { FileText, Search as SearchIcon, Calendar, List, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import PostPreviewModal from "@/components/dashboard/PostPreviewModal";
 
 interface ContentItem {
   id: string;
   instagram_caption: string | null;
+  instagram_caption_2: string | null;
   facebook_post: string | null;
   email_subject: string | null;
   email_body: string | null;
@@ -33,6 +36,16 @@ function SkeletonRow() {
   return <div className="h-24 rounded-2xl border border-border bg-card animate-pulse-soft" />;
 }
 
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function getMonthDays(year: number, month: number) {
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const days: (number | null)[] = Array(firstDay).fill(null);
+  for (let d = 1; d <= daysInMonth; d++) days.push(d);
+  return days;
+}
+
 export default function DashboardContent() {
   const { businessId, isReady } = useAuth();
   const [content, setContent] = useState<ContentItem[]>([]);
@@ -42,28 +55,34 @@ export default function DashboardContent() {
   const [editItem, setEditItem] = useState<ContentItem | null>(null);
   const [editForm, setEditForm] = useState({ instagram_caption: "", facebook_post: "", email_subject: "", email_body: "" });
   const [editSaving, setEditSaving] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const [previewItem, setPreviewItem] = useState<ContentItem | null>(null);
+  const [calMonth, setCalMonth] = useState(new Date().getMonth());
+  const [calYear, setCalYear] = useState(new Date().getFullYear());
+  const [businessName, setBusinessName] = useState("");
 
   const fetchContent = async () => {
     if (!businessId || !isReady) return;
     setLoading(true);
-    const { data, error } = await externalSupabase
+    const { data } = await externalSupabase
       .from("generated_content")
       .select("*")
       .eq("business_id", businessId)
       .order("created_at", { ascending: false });
-
-    if (error) console.error("Content fetch error:", error);
     setContent((data as ContentItem[]) ?? []);
     setLoading(false);
   };
 
-  useEffect(() => { fetchContent(); }, [businessId, isReady]);
+  useEffect(() => {
+    fetchContent();
+    if (businessId && isReady) {
+      externalSupabase.from("businesses").select("business_name").eq("id", businessId).maybeSingle()
+        .then(({ data }) => setBusinessName(data?.business_name || ""));
+    }
+  }, [businessId, isReady]);
 
   const handleApprove = async (id: string) => {
-    const { error } = await externalSupabase
-      .from("generated_content")
-      .update({ status: "approved" })
-      .eq("id", id);
+    const { error } = await externalSupabase.from("generated_content").update({ status: "approved" }).eq("id", id);
     if (error) { toast.error("Failed to approve"); return; }
     toast.success("Content approved!");
     fetchContent();
@@ -106,12 +125,29 @@ export default function DashboardContent() {
     return matchesSearch && matchesStatus;
   });
 
+  // Calendar helpers
+  const monthDays = getMonthDays(calYear, calMonth);
+  const contentByDay: Record<number, ContentItem[]> = {};
+  content.forEach((c) => {
+    const d = new Date(c.created_at);
+    if (d.getMonth() === calMonth && d.getFullYear() === calYear) {
+      const day = d.getDate();
+      if (!contentByDay[day]) contentByDay[day] = [];
+      contentByDay[day].push(c);
+    }
+  });
+
+  const prevMonth = () => {
+    if (calMonth === 0) { setCalMonth(11); setCalYear(calYear - 1); }
+    else setCalMonth(calMonth - 1);
+  };
+  const nextMonth = () => {
+    if (calMonth === 11) { setCalMonth(0); setCalYear(calYear + 1); }
+    else setCalMonth(calMonth + 1);
+  };
+
   if (loading) {
-    return (
-      <div className="space-y-3">
-        {[1, 2, 3].map((i) => <SkeletonRow key={i} />)}
-      </div>
-    );
+    return <div className="space-y-3">{[1, 2, 3].map((i) => <SkeletonRow key={i} />)}</div>;
   }
 
   return (
@@ -131,13 +167,81 @@ export default function DashboardContent() {
             ))}
           </div>
         </div>
-        <Button size="sm" className="h-9 text-xs">Generate new</Button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-0.5 rounded-xl border border-border bg-card p-0.5">
+            <button onClick={() => setViewMode("list")} className={`rounded-lg p-1.5 transition-colors ${viewMode === "list" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+              <List className="h-4 w-4" />
+            </button>
+            <button onClick={() => setViewMode("calendar")} className={`rounded-lg p-1.5 transition-colors ${viewMode === "calendar" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+              <Calendar className="h-4 w-4" />
+            </button>
+          </div>
+          <Button size="sm" className="h-9 text-xs">Generate new</Button>
+        </div>
       </div>
 
-      {filtered.length > 0 ? (
+      {viewMode === "calendar" ? (
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <div className="flex items-center justify-between mb-4">
+            <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-muted transition-colors"><ChevronLeft className="h-4 w-4" /></button>
+            <h3 className="text-sm font-semibold text-card-foreground">
+              {new Date(calYear, calMonth).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+            </h3>
+            <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-muted transition-colors"><ChevronRight className="h-4 w-4" /></button>
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {DAYS.map((d) => (
+              <div key={d} className="py-2 text-center text-[10px] font-medium text-muted-foreground">{d}</div>
+            ))}
+            {monthDays.map((day, i) => {
+              const items = day ? contentByDay[day] : undefined;
+              return (
+                <Popover key={i}>
+                  <PopoverTrigger asChild>
+                    <div className={`min-h-[48px] rounded-lg border border-transparent p-1 text-center text-xs transition-colors ${
+                      day ? "cursor-pointer hover:bg-muted" : ""
+                    } ${items?.length ? "border-primary/20 bg-primary/5" : ""}`}>
+                      {day && (
+                        <>
+                          <span className="text-foreground">{day}</span>
+                          {items && (
+                            <div className="mt-1 flex justify-center gap-0.5 flex-wrap">
+                              {items.slice(0, 3).map((c) => (
+                                <span key={c.id} className={`h-1.5 w-1.5 rounded-full ${
+                                  c.facebook_post ? "bg-primary" : c.email_subject ? "bg-success" : "bg-pink-500"
+                                }`} />
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </PopoverTrigger>
+                  {items && items.length > 0 && (
+                    <PopoverContent className="w-72 p-3">
+                      <p className="text-xs font-semibold text-foreground mb-2">{items.length} piece{items.length > 1 ? "s" : ""} of content</p>
+                      {items.map((c) => (
+                        <div key={c.id} className="mb-2 last:mb-0 rounded-lg bg-muted/50 p-2 cursor-pointer hover:bg-muted transition-colors" onClick={() => setPreviewItem(c)}>
+                          <p className="text-xs text-foreground truncate">{c.instagram_caption || c.facebook_post || c.email_subject || "Content"}</p>
+                          <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[9px] font-medium capitalize ${statusColors[c.status] ?? statusColors.pending}`}>{c.status}</span>
+                        </div>
+                      ))}
+                    </PopoverContent>
+                  )}
+                </Popover>
+              );
+            })}
+          </div>
+          <div className="mt-3 flex items-center gap-4 text-[10px] text-muted-foreground">
+            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-pink-500" /> Instagram</span>
+            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-primary" /> Facebook</span>
+            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-success" /> Email</span>
+          </div>
+        </div>
+      ) : filtered.length > 0 ? (
         <div className="space-y-3">
           {filtered.map((c) => (
-            <div key={c.id} className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 transition-all hover:shadow-card sm:flex-row sm:items-center sm:justify-between">
+            <div key={c.id} className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 transition-all hover:shadow-card sm:flex-row sm:items-center sm:justify-between cursor-pointer" onClick={() => setPreviewItem(c)}>
               <div className="flex gap-4 flex-1 min-w-0">
                 {c.image_url && (
                   <img src={c.image_url} alt="Content" className="h-16 w-16 shrink-0 rounded-xl object-cover" loading="lazy" />
@@ -157,7 +261,7 @@ export default function DashboardContent() {
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
                 <span className={`rounded-full px-3 py-1 text-[11px] font-medium capitalize ${statusColors[c.status] ?? statusColors.pending}`}>
                   {c.status === "pending" ? "Pending" : c.status}
                 </span>
@@ -176,7 +280,7 @@ export default function DashboardContent() {
           </div>
           <h3 className="mt-5 text-lg font-semibold text-foreground">Your first week of content is being prepared</h3>
           <p className="mt-2 max-w-md text-sm text-muted-foreground leading-relaxed">
-            maroa.ai generates your posts every Monday at 9am. Check back Monday morning to see your Instagram captions, Facebook posts, emails and Google ads — all written in your brand voice automatically.
+            maroa.ai generates your posts every Monday at 9am. Check back Monday morning.
           </p>
         </div>
       ) : (
@@ -185,29 +289,25 @@ export default function DashboardContent() {
         </div>
       )}
 
+      {/* Post Preview Modal */}
+      {previewItem && (
+        <PostPreviewModal
+          item={previewItem}
+          businessName={businessName}
+          onClose={() => setPreviewItem(null)}
+          onApproved={() => { setPreviewItem(null); fetchContent(); }}
+        />
+      )}
+
       {/* Edit Modal */}
       <Dialog open={!!editItem} onOpenChange={(open) => { if (!open) setEditItem(null); }}>
         <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Content</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Edit Content</DialogTitle></DialogHeader>
           <div className="space-y-4 mt-4">
-            <div>
-              <Label>Instagram Caption</Label>
-              <Textarea value={editForm.instagram_caption} onChange={(e) => setEditForm(f => ({ ...f, instagram_caption: e.target.value }))} className="mt-1" rows={3} />
-            </div>
-            <div>
-              <Label>Facebook Post</Label>
-              <Textarea value={editForm.facebook_post} onChange={(e) => setEditForm(f => ({ ...f, facebook_post: e.target.value }))} className="mt-1" rows={3} />
-            </div>
-            <div>
-              <Label>Email Subject</Label>
-              <Input value={editForm.email_subject} onChange={(e) => setEditForm(f => ({ ...f, email_subject: e.target.value }))} className="mt-1" />
-            </div>
-            <div>
-              <Label>Email Body</Label>
-              <Textarea value={editForm.email_body} onChange={(e) => setEditForm(f => ({ ...f, email_body: e.target.value }))} className="mt-1" rows={4} />
-            </div>
+            <div><Label>Instagram Caption</Label><Textarea value={editForm.instagram_caption} onChange={(e) => setEditForm(f => ({ ...f, instagram_caption: e.target.value }))} className="mt-1" rows={3} /></div>
+            <div><Label>Facebook Post</Label><Textarea value={editForm.facebook_post} onChange={(e) => setEditForm(f => ({ ...f, facebook_post: e.target.value }))} className="mt-1" rows={3} /></div>
+            <div><Label>Email Subject</Label><Input value={editForm.email_subject} onChange={(e) => setEditForm(f => ({ ...f, email_subject: e.target.value }))} className="mt-1" /></div>
+            <div><Label>Email Body</Label><Textarea value={editForm.email_body} onChange={(e) => setEditForm(f => ({ ...f, email_body: e.target.value }))} className="mt-1" rows={4} /></div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setEditItem(null)}>Cancel</Button>
               <Button onClick={handleEditSave} disabled={editSaving}>{editSaving ? "Saving..." : "Save changes"}</Button>

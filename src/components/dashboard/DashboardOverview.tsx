@@ -4,6 +4,8 @@ import { Rocket, Eye, DollarSign, TrendingUp, ArrowRight, Sparkles, CheckCircle2
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { queryWithRetry } from "@/lib/queryWithRetry";
+import SetupProgress from "@/components/dashboard/SetupProgress";
+import ROICalculator from "@/components/dashboard/ROICalculator";
 
 interface DailyStat {
   recorded_at: string;
@@ -14,13 +16,6 @@ interface DailyStat {
   fb_reach: number;
   fb_engaged: number;
   fb_fan_adds: number;
-}
-
-interface ChecklistItem {
-  key: string;
-  label: string;
-  icon: React.ElementType;
-  done: boolean;
 }
 
 function SkeletonCard() {
@@ -35,7 +30,7 @@ function EmptyOverview() {
       </div>
       <h3 className="mt-5 text-lg font-semibold text-foreground">Welcome to maroa.ai</h3>
       <p className="mt-2 max-w-md text-sm text-muted-foreground leading-relaxed">
-        Your marketing engine is warming up. Complete your onboarding to activate everything — content generation, ad management, and competitor tracking all start automatically.
+        Your marketing engine is warming up. Complete your onboarding to activate everything.
       </p>
     </div>
   );
@@ -48,38 +43,25 @@ export default function DashboardOverview() {
   const [loading, setLoading] = useState(true);
   const [photoCount, setPhotoCount] = useState(0);
   const [contentCount, setContentCount] = useState(0);
+  const [approvedCount, setApprovedCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!isReady) return;
-    if (!businessId && !user?.id) {
-      setLoading(false);
-      return;
-    }
+    if (!businessId && !user?.id) { setLoading(false); return; }
 
     setLoading(true);
     setError(null);
 
     try {
-      // If we have businessId, use it directly. Otherwise query by user_id.
       let bizData: any = null;
       let resolvedBusinessId = businessId;
 
       if (businessId) {
-        const { data, error: bizError } = await externalSupabase
-          .from("businesses")
-          .select("*")
-          .eq("id", businessId)
-          .maybeSingle();
-        if (bizError) console.error("Business fetch error:", bizError);
+        const { data } = await externalSupabase.from("businesses").select("*").eq("id", businessId).maybeSingle();
         bizData = data;
       } else if (user?.id) {
-        const { data, error: bizError } = await externalSupabase
-          .from("businesses")
-          .select("*")
-          .eq("user_id", user.id)
-          .maybeSingle();
-        if (bizError) console.error("Business fetch by user_id error:", bizError);
+        const { data } = await externalSupabase.from("businesses").select("*").eq("user_id", user.id).maybeSingle();
         bizData = data;
         resolvedBusinessId = data?.id ?? null;
       }
@@ -87,39 +69,23 @@ export default function DashboardOverview() {
       setBusinessData(bizData);
 
       if (!resolvedBusinessId) {
-        setStats([]);
-        setPhotoCount(0);
-        setContentCount(0);
-        setLoading(false);
+        setStats([]); setPhotoCount(0); setContentCount(0); setApprovedCount(0); setLoading(false);
         return;
       }
 
-      const [statsRes, photosRes, contentRes] = await Promise.all([
+      const [statsRes, photosRes, contentRes, approvedRes] = await Promise.all([
         queryWithRetry<DailyStat[]>(() =>
-          externalSupabase
-            .from("daily_stats")
-            .select("*")
-            .eq("business_id", resolvedBusinessId)
-            .order("recorded_at", { ascending: false })
-            .limit(30) as unknown as Promise<{ data: DailyStat[] | null; error: any }>
+          externalSupabase.from("daily_stats").select("*").eq("business_id", resolvedBusinessId).order("recorded_at", { ascending: false }).limit(30) as unknown as Promise<{ data: DailyStat[] | null; error: any }>
         ),
-        externalSupabase
-          .from("business_photos")
-          .select("id", { count: "exact", head: true })
-          .eq("business_id", resolvedBusinessId),
-        externalSupabase
-          .from("generated_content")
-          .select("id", { count: "exact", head: true })
-          .eq("business_id", resolvedBusinessId),
+        externalSupabase.from("business_photos").select("id", { count: "exact", head: true }).eq("business_id", resolvedBusinessId),
+        externalSupabase.from("generated_content").select("id", { count: "exact", head: true }).eq("business_id", resolvedBusinessId),
+        externalSupabase.from("generated_content").select("id", { count: "exact", head: true }).eq("business_id", resolvedBusinessId).eq("status", "approved"),
       ]);
-
-      if (statsRes.error) console.error("Stats fetch error:", statsRes.error);
-      if (photosRes.error) console.error("Photos count error:", photosRes.error);
-      if (contentRes.error) console.error("Content count error:", contentRes.error);
 
       setStats((statsRes.data as DailyStat[]) ?? []);
       setPhotoCount(photosRes.count ?? 0);
       setContentCount(contentRes.count ?? 0);
+      setApprovedCount(approvedRes.count ?? 0);
     } catch (err) {
       console.error("Dashboard data fetch error:", err);
       setError("Failed to load dashboard data");
@@ -129,17 +95,6 @@ export default function DashboardOverview() {
   }, [businessId, user?.id, isReady]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-
-  const checklist: ChecklistItem[] = [
-    { key: "social", label: "Connect social accounts", icon: Share2, done: !!businessData?.social_accounts_connected || !!businessData?.facebook_page_id },
-    { key: "photos", label: "Upload business photos", icon: ImageIcon, done: photoCount > 0 },
-    { key: "budget", label: "Set your ad budget", icon: CreditCard, done: (businessData?.daily_budget ?? 0) > 0 },
-    { key: "content", label: "Approve your first content", icon: FileText, done: contentCount > 0 },
-    { key: "monday", label: "Your first week of content arrives Monday", icon: CalendarCheck, done: contentCount > 0 },
-  ];
-
-  const completedChecklist = checklist.filter(c => c.done).length;
-  const showChecklist = completedChecklist < checklist.length;
 
   const summaryCards = [
     { label: "Total Reach", value: businessData?.total_reach?.toLocaleString() ?? "0", icon: Eye, change: "+24% this week" },
@@ -151,11 +106,10 @@ export default function DashboardOverview() {
   if (loading) {
     return (
       <div className="space-y-5">
-        <div className="h-40 rounded-2xl border border-border bg-card animate-pulse-soft" />
+        <div className="h-24 rounded-2xl border border-border bg-card animate-pulse-soft" />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => <SkeletonCard key={i} />)}
         </div>
-        <div className="h-64 rounded-2xl border border-border bg-card animate-pulse-soft" />
       </div>
     );
   }
@@ -170,38 +124,12 @@ export default function DashboardOverview() {
   }
 
   const hasData = stats.length > 0 || (businessData?.total_reach && businessData.total_reach > 0);
+  const postsPublished = parseInt(businessData?.posts_published) || 0;
 
   return (
     <div className="space-y-5">
-      {/* Getting Started Checklist */}
-      {showChecklist && (
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-sm font-semibold text-card-foreground">Getting started</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">{completedChecklist} of {checklist.length} complete</p>
-            </div>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-              <span className="text-xs font-bold text-primary">{Math.round((completedChecklist / checklist.length) * 100)}%</span>
-            </div>
-          </div>
-          <div className="h-1.5 w-full rounded-full bg-border overflow-hidden mb-4">
-            <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${(completedChecklist / checklist.length) * 100}%` }} />
-          </div>
-          <div className="space-y-2">
-            {checklist.map(item => (
-              <div key={item.key} className="flex items-center gap-3 py-1.5">
-                {item.done ? (
-                  <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
-                ) : (
-                  <Circle className="h-5 w-5 text-muted-foreground/40 shrink-0" />
-                )}
-                <span className={`text-sm ${item.done ? "text-muted-foreground line-through" : "text-card-foreground font-medium"}`}>{item.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Setup Progress */}
+      <SetupProgress business={businessData} photoCount={photoCount} contentCount={contentCount} approvedCount={approvedCount} />
 
       {/* Summary cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -218,6 +146,9 @@ export default function DashboardOverview() {
           </div>
         ))}
       </div>
+
+      {/* ROI Calculator */}
+      <ROICalculator postsPublished={postsPublished} />
 
       {!hasData ? (
         <EmptyOverview />

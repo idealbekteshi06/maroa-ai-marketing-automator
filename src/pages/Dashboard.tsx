@@ -4,7 +4,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, FileText, Megaphone, Share2,
-  Search, Settings, Menu, X, ImageIcon, LogOut,
+  Search, Settings, Menu, X, ImageIcon, LogOut, Gift,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
@@ -14,7 +14,9 @@ import DashboardSocial from "@/components/dashboard/DashboardSocial";
 import DashboardCompetitors from "@/components/dashboard/DashboardCompetitors";
 import DashboardSettings from "@/components/dashboard/DashboardSettings";
 import PhotoLibrary from "@/components/dashboard/PhotoLibrary";
+import ReferralPage from "@/components/dashboard/ReferralPage";
 import NotificationDropdown from "@/components/dashboard/NotificationDropdown";
+import AIChatAssistant from "@/components/dashboard/AIChatAssistant";
 
 const navItems = [
   { key: "overview", label: "Overview", icon: LayoutDashboard },
@@ -23,6 +25,7 @@ const navItems = [
   { key: "social", label: "Social Accounts", icon: Share2 },
   { key: "competitors", label: "Competitor Intel", icon: Search },
   { key: "photos", label: "Photo Library", icon: ImageIcon },
+  { key: "referral", label: "Refer & Earn", icon: Gift },
   { key: "settings", label: "Settings", icon: Settings },
 ];
 
@@ -33,6 +36,7 @@ const pages: Record<string, React.FC> = {
   social: DashboardSocial,
   competitors: DashboardCompetitors,
   photos: PhotoLibrary,
+  referral: ReferralPage,
   settings: DashboardSettings,
 };
 
@@ -43,6 +47,7 @@ const pageTitles: Record<string, string> = {
   social: "Social Accounts",
   competitors: "Competitor Intel",
   photos: "Photo Library",
+  referral: "Refer & Earn",
   settings: "Settings",
 };
 
@@ -173,6 +178,9 @@ export default function Dashboard() {
           </button>
         ))}
       </div>
+
+      {/* AI Chat Assistant */}
+      <AIChatAssistant />
     </div>
   );
 }
