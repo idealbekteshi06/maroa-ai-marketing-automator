@@ -20,7 +20,7 @@ serve(async (req) => {
       });
     }
 
-    const META_APP_ID = "1455056152668725";
+    const META_APP_ID = "26551713411132003";
     const META_APP_SECRET = Deno.env.get("META_APP_SECRET");
     if (!META_APP_SECRET) {
       return new Response(JSON.stringify({ error: "META_APP_SECRET not configured" }), {
