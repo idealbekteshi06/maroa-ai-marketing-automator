@@ -10,7 +10,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 
-const META_APP_ID = "1455056152668725";
+const META_APP_ID = "26551713411132003";
 const META_PERMISSIONS = [
   "email",
   "public_profile",
