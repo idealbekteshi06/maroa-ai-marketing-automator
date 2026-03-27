@@ -7,7 +7,6 @@ import { lazy, Suspense } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { HelmetProvider } from "react-helmet-async";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
@@ -32,37 +31,35 @@ const Loading = () => (
 );
 
 const App = () => (
-  <HelmetProvider>
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ErrorBoundary>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Suspense fallback={<Loading />}>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/signup" element={<SignUp />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                <Route path="/onboarding" element={<ProtectedRoute allowIncompleteOnboarding><Onboarding /></ProtectedRoute>} />
-                <Route path="/pricing" element={<Pricing />} />
-                <Route path="/privacy" element={<Privacy />} />
-                <Route path="/terms" element={<Terms />} />
-                <Route path="/delete-data" element={<DeleteData />} />
-                <Route path="/social-callback" element={<SocialCallback />} />
-                <Route path="/compare" element={<Compare />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
-          </BrowserRouter>
-        </TooltipProvider>
-        </ErrorBoundary>
-      </AuthProvider>
-    </QueryClientProvider>
-  </HelmetProvider>
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <ErrorBoundary>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Suspense fallback={<Loading />}>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/signup" element={<SignUp />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/onboarding" element={<ProtectedRoute allowIncompleteOnboarding><Onboarding /></ProtectedRoute>} />
+              <Route path="/pricing" element={<Pricing />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/delete-data" element={<DeleteData />} />
+              <Route path="/social-callback" element={<SocialCallback />} />
+              <Route path="/compare" element={<Compare />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+        </BrowserRouter>
+      </TooltipProvider>
+      </ErrorBoundary>
+    </AuthProvider>
+  </QueryClientProvider>
 );
 
 export default App;
