@@ -59,8 +59,24 @@ export default function DashboardSocial() {
 
   useEffect(() => { fetchBusiness(); }, [businessId, isReady]);
 
+  // Re-fetch when page becomes visible (e.g. returning from OAuth redirect)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") fetchBusiness();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("focus", handleVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("focus", handleVisibility);
+    };
+  }, [businessId, isReady]);
+
   const isConnected = (account: AccountConfig) => {
     if (!business) return false;
+    if (account.name === "Facebook") {
+      return !!business.meta_access_token && business.meta_access_token !== "" && !!business.facebook_page_id && business.facebook_page_id !== "";
+    }
     if (account.name === "Instagram") {
       return !!business.instagram_account_id && business.instagram_account_id !== "";
     }
