@@ -75,7 +75,7 @@ export default function DashboardSocial() {
   const isConnected = (account: AccountConfig) => {
     if (!business) return false;
     if (account.name === "Facebook") {
-      return !!business.meta_access_token && business.meta_access_token !== "" && !!business.facebook_page_id && business.facebook_page_id !== "";
+      return !!business.meta_access_token && business.meta_access_token !== "";
     }
     if (account.name === "Instagram") {
       return !!business.instagram_account_id && business.instagram_account_id !== "";
