@@ -20,16 +20,16 @@ const META_PERMISSIONS = [
 interface AccountConfig {
   name: string;
   color: string;
-  dbField: string;
+  dbFields: string[];
   icon: React.ReactNode;
   type: "meta_oauth" | "manual";
 }
 
 const accounts: AccountConfig[] = [
-  { name: "Facebook", color: "#1877F2", dbField: "facebook_page_id", icon: <Facebook className="h-5 w-5" />, type: "meta_oauth" },
-  { name: "Instagram", color: "#E4405F", dbField: "instagram_account_id", icon: <Instagram className="h-5 w-5" />, type: "meta_oauth" },
-  { name: "Google Ads", color: "#4285F4", dbField: "google_ads_id", icon: <span className="text-sm font-bold">G</span>, type: "manual" },
-  { name: "TikTok", color: "#000000", dbField: "tiktok_handle", icon: <span className="text-sm font-bold">T</span>, type: "manual" },
+  { name: "Facebook", color: "#1877F2", dbFields: ["meta_access_token", "facebook_page_id"], icon: <Facebook className="h-5 w-5" />, type: "meta_oauth" },
+  { name: "Instagram", color: "#E4405F", dbFields: ["instagram_account_id", "meta_access_token"], icon: <Instagram className="h-5 w-5" />, type: "meta_oauth" },
+  { name: "Google Ads", color: "#4285F4", dbFields: ["ad_account_id", "google_ads_id"], icon: <span className="text-sm font-bold">G</span>, type: "manual" },
+  { name: "TikTok", color: "#000000", dbFields: ["tiktok_handle", "tiktok_username"], icon: <span className="text-sm font-bold">T</span>, type: "manual" },
 ];
 
 function getRedirectUri() {
@@ -72,15 +72,19 @@ export default function DashboardSocial() {
     };
   }, [businessId, isReady]);
 
+  const hasValue = (value: unknown) => {
+    if (typeof value === "string") return value.trim() !== "";
+    return value !== null && value !== undefined;
+  };
+
   const isConnected = (account: AccountConfig) => {
     if (!business) return false;
-    if (account.name === "Facebook") {
-      return !!business.meta_access_token && business.meta_access_token !== "";
-    }
-    if (account.name === "Instagram") {
-      return !!business.instagram_account_id && business.instagram_account_id !== "";
-    }
-    return !!business[account.dbField] && business[account.dbField] !== "";
+    return account.dbFields.some((field) => hasValue(business[field]));
+  };
+
+  const getExistingField = (fields: string[]) => {
+    if (!business) return fields[0];
+    return fields.find((field) => Object.prototype.hasOwnProperty.call(business, field)) ?? fields[0];
   };
 
   // Facebook/Instagram OAuth
@@ -155,8 +159,8 @@ export default function DashboardSocial() {
         }
 
         localStorage.removeItem("meta_oauth_business_id");
+        await fetchBusiness();
         toast.success("Facebook & Instagram connected successfully!");
-        fetchBusiness();
       } catch (err: any) {
         console.error("Meta OAuth error:", err);
         toast.error(err.message || "Failed to connect Facebook");
@@ -180,12 +184,16 @@ export default function DashboardSocial() {
   const handleSaveConnection = async () => {
     if (!businessId || !connectDialog) return;
     setSaving(true);
-    const updateData: Record<string, string> = {};
+    const updateData: Record<string, string | boolean> = {
+      social_accounts_connected: true,
+    };
 
     if (connectDialog.name === "Google Ads") {
-      updateData.google_ads_id = connectForm.account_id || "";
+      const googleAdsField = getExistingField(["ad_account_id", "google_ads_id"]);
+      updateData[googleAdsField] = (connectForm.account_id || "").trim();
     } else if (connectDialog.name === "TikTok") {
-      updateData.tiktok_handle = connectForm.handle || "";
+      const tikTokField = getExistingField(["tiktok_handle", "tiktok_username"]);
+      updateData[tikTokField] = (connectForm.handle || "").trim();
     }
 
     const { error } = await externalSupabase
@@ -197,7 +205,7 @@ export default function DashboardSocial() {
     if (error) { toast.error("Failed to save connection"); return; }
     toast.success(`${connectDialog.name} connected!`);
     setConnectDialog(null);
-    fetchBusiness();
+    await fetchBusiness();
   };
 
   const connectedCount = accounts.filter(a => isConnected(a)).length;
