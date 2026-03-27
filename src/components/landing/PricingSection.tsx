@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Check, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -84,15 +84,20 @@ export function PricingSection() {
 
     setLoading(plan.key);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Not authenticated");
+      const email = user.email;
+      if (!email) throw new Error("No email found");
 
-      const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: { priceId: plan.priceId },
-        headers: { Authorization: `Bearer ${session.access_token}` },
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/create-checkout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": anonKey },
+        body: JSON.stringify({ priceId: plan.priceId, email }),
       });
 
-      if (error || data?.error) throw new Error(data?.error || "Checkout failed");
+      const data = await response.json();
+      if (data?.error) throw new Error(data.error);
       if (data?.url) window.open(data.url, "_blank");
     } catch (err: any) {
       toast.error(err.message || "Failed to start checkout.");

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { externalSupabase } from "@/integrations/supabase/external-client";
-import { supabase } from "@/integrations/supabase/client";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Check, ExternalLink } from "lucide-react";

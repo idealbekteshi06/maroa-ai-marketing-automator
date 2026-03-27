@@ -40,7 +40,7 @@ export function Footer() {
               <h4 className="text-sm font-semibold text-foreground">Product</h4>
               <ul className="mt-3 sm:mt-4 space-y-2.5 sm:space-y-3">
                 <li><a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</a></li>
-                <li><a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Pricing</a></li>
+                <li><Link to="/pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Pricing</Link></li>
                 <li><a href="#how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors">How it works</a></li>
                 <li><a href="#faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors">FAQ</a></li>
               </ul>
@@ -48,18 +48,15 @@ export function Footer() {
             <div>
               <h4 className="text-sm font-semibold text-foreground">Company</h4>
               <ul className="mt-3 sm:mt-4 space-y-2.5 sm:space-y-3">
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">About</a></li>
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Blog</a></li>
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Careers</a></li>
-                <li><a href="mailto:support@maroa.ai" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Contact</a></li>
+                <li><a href="mailto:hello@maroa.ai" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Contact</a></li>
               </ul>
             </div>
             <div>
               <h4 className="text-sm font-semibold text-foreground">Legal</h4>
               <ul className="mt-3 sm:mt-4 space-y-2.5 sm:space-y-3">
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms of Service</a></li>
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Cookie Policy</a></li>
+                <li><Link to="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy Policy</Link></li>
+                <li><Link to="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms of Service</Link></li>
+                <li><Link to="/delete-data" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Data Deletion</Link></li>
               </ul>
             </div>
           </div>
