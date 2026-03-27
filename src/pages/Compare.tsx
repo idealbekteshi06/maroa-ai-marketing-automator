@@ -1,9 +1,9 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Navbar } from "@/components/landing/Navbar";
 import { Footer } from "@/components/landing/Footer";
 import { Button } from "@/components/ui/button";
 import { Check, X } from "lucide-react";
-import { Helmet } from "react-helmet-async";
 
 const tools = ["maroa.ai", "Marketing Agency", "Hootsuite", "Buffer", "Jasper"];
 
@@ -33,20 +33,26 @@ function CellValue({ val }: { val: boolean | string }) {
 }
 
 export default function Compare() {
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "WebPage",
-    name: "maroa.ai vs Marketing Agencies & Tools | Comparison",
-    description: "Compare maroa.ai with marketing agencies, Hootsuite, Buffer, and Jasper. See why maroa.ai is the best AI marketing platform for small businesses.",
-  };
+  useEffect(() => {
+    document.title = "maroa.ai vs Marketing Agency vs Hootsuite vs Buffer | Compare";
+    const meta = document.querySelector('meta[name="description"]');
+    if (meta) meta.setAttribute("content", "Compare maroa.ai with marketing agencies, Hootsuite, Buffer, and Jasper. AI content, auto-posting, ad management — all for $49/mo.");
+    
+    // Add JSON-LD
+    const script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      name: "maroa.ai vs Marketing Agencies & Tools | Comparison",
+      description: "Compare maroa.ai with marketing agencies, Hootsuite, Buffer, and Jasper.",
+    });
+    document.head.appendChild(script);
+    return () => { document.head.removeChild(script); };
+  }, []);
 
   return (
     <>
-      <Helmet>
-        <title>maroa.ai vs Marketing Agency vs Hootsuite vs Buffer | Compare</title>
-        <meta name="description" content="Compare maroa.ai with marketing agencies, Hootsuite, Buffer, and Jasper. AI content, auto-posting, ad management — all for $49/mo." />
-        <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
-      </Helmet>
       <Navbar />
       <main className="py-20 sm:py-28">
         <div className="container">
@@ -59,7 +65,6 @@ export default function Compare() {
             </p>
           </div>
 
-          {/* Comparison Table */}
           <div className="mx-auto mt-12 max-w-5xl overflow-x-auto px-2">
             <table className="w-full border-collapse text-sm">
               <thead>
@@ -87,7 +92,6 @@ export default function Compare() {
             </table>
           </div>
 
-          {/* CTA */}
           <div className="mt-12 text-center">
             <Link to="/signup">
               <Button variant="hero" size="xl">Start free with maroa.ai</Button>
