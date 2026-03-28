@@ -33,6 +33,7 @@ const navItems = [
 
 const pages: Record<string, React.FC> = {
   overview: DashboardOverview,
+  publish: DashboardPublish,
   content: DashboardContent,
   ads: DashboardAds,
   social: DashboardSocial,
