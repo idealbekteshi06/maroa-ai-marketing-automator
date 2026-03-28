@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
+import ReactMarkdown from "react-markdown";
 
 interface Message {
   role: "user" | "assistant";
@@ -53,7 +54,7 @@ export default function AIChatAssistant() {
         ? `User's business: ${business.business_name || "Unknown"}, Industry: ${business.industry || "Unknown"}, Location: ${business.location || "Unknown"}, Target audience: ${business.target_audience || "Unknown"}, Brand tone: ${business.brand_tone || "Unknown"}, Marketing goal: ${business.marketing_goal || "Unknown"}.`
         : "";
 
-      const systemPrompt = `You are the maroa.ai marketing assistant. You are an expert digital marketer helping small business owners. ${businessContext} Always give specific actionable advice tailored to their exact business. Be warm, confident, and direct. Never be generic. When writing captions or ad copy always match their brand tone. Keep responses concise.`;
+      const systemPrompt = `You are the maroa.ai marketing assistant. You are an expert digital marketer helping small business owners. ${businessContext} Always give specific actionable advice tailored to their exact business. Be warm, confident, and direct. Never be generic. When writing captions or ad copy always match their brand tone. Keep responses concise. Use markdown formatting for clarity.`;
 
       const allMessages = [
         ...messages.map((m) => ({ role: m.role, content: m.content })),
@@ -66,7 +67,6 @@ export default function AIChatAssistant() {
 
       if (error) throw error;
 
-      // Handle non-streaming response
       const assistantContent =
         data?.choices?.[0]?.message?.content ||
         data?.content ||
@@ -75,10 +75,12 @@ export default function AIChatAssistant() {
       setMessages((prev) => [...prev, { role: "assistant", content: assistantContent }]);
     } catch (err: any) {
       console.error("Chat error:", err);
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Sorry, something went wrong. Please try again." },
-      ]);
+      const errorMsg = err?.message?.includes("429")
+        ? "I'm getting too many requests right now. Please wait a moment and try again."
+        : err?.message?.includes("402")
+        ? "AI credits have been used up. Please add more credits in your workspace settings."
+        : "Sorry, something went wrong. Please try again.";
+      setMessages((prev) => [...prev, { role: "assistant", content: errorMsg }]);
     } finally {
       setLoading(false);
     }
@@ -95,6 +97,7 @@ export default function AIChatAssistant() {
         <button
           onClick={() => setOpen(true)}
           className="fixed bottom-20 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-elevated transition-transform hover:scale-105 active:scale-95 md:bottom-5"
+          aria-label="Open AI chat assistant"
         >
           <MessageCircle className="h-6 w-6" />
         </button>
@@ -112,6 +115,7 @@ export default function AIChatAssistant() {
             <button
               onClick={() => setOpen(false)}
               className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted transition-colors"
+              aria-label="Close chat"
             >
               <X className="h-4 w-4 text-muted-foreground" />
             </button>
@@ -120,11 +124,22 @@ export default function AIChatAssistant() {
           {/* Messages */}
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
             {messages.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full text-center">
+              <div className="flex flex-col items-center justify-center h-full text-center px-4">
                 <MessageCircle className="h-8 w-8 text-muted-foreground/30" />
                 <p className="mt-3 text-sm text-muted-foreground">
                   Ask me anything about your marketing strategy, content ideas, or ad performance.
                 </p>
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  {["Write me an Instagram caption", "How do I get more followers?", "Optimize my ad budget"].map((q) => (
+                    <button
+                      key={q}
+                      onClick={() => { setInput(q); inputRef.current?.focus(); }}
+                      className="rounded-full border border-border bg-muted/50 px-3 py-1.5 text-[11px] text-muted-foreground hover:border-primary/30 hover:text-foreground transition-colors"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
             {messages.map((msg, i) => (
@@ -136,7 +151,13 @@ export default function AIChatAssistant() {
                       : "bg-muted text-foreground rounded-bl-md"
                   }`}
                 >
-                  {msg.content}
+                  {msg.role === "assistant" ? (
+                    <div className="prose prose-sm dark:prose-invert max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_h1]:text-sm [&_h2]:text-sm [&_h3]:text-xs [&_code]:text-xs [&_pre]:text-xs">
+                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    msg.content
+                  )}
                 </div>
               </div>
             ))}
@@ -154,10 +175,7 @@ export default function AIChatAssistant() {
           {/* Input */}
           <div className="border-t border-border p-3 shrink-0 safe-area-inset-bottom">
             <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                sendMessage();
-              }}
+              onSubmit={(e) => { e.preventDefault(); sendMessage(); }}
               className="flex items-center gap-2"
             >
               <input
