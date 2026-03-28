@@ -4,7 +4,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, FileText, Megaphone, Share2,
-  Search, Settings, Menu, X, ImageIcon, LogOut, Gift,
+  Search, Settings, Menu, X, ImageIcon, LogOut, Gift, PenSquare,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
@@ -15,11 +15,13 @@ import DashboardCompetitors from "@/components/dashboard/DashboardCompetitors";
 import DashboardSettings from "@/components/dashboard/DashboardSettings";
 import PhotoLibrary from "@/components/dashboard/PhotoLibrary";
 import ReferralPage from "@/components/dashboard/ReferralPage";
+import DashboardPublish from "@/components/dashboard/DashboardPublish";
 import NotificationDropdown from "@/components/dashboard/NotificationDropdown";
 import AIChatAssistant from "@/components/dashboard/AIChatAssistant";
 
 const navItems = [
   { key: "overview", label: "Overview", icon: LayoutDashboard },
+  { key: "publish", label: "Publish", icon: PenSquare },
   { key: "content", label: "Content", icon: FileText },
   { key: "ads", label: "Ad Campaigns", icon: Megaphone },
   { key: "social", label: "Social Accounts", icon: Share2 },
@@ -31,6 +33,7 @@ const navItems = [
 
 const pages: Record<string, React.FC> = {
   overview: DashboardOverview,
+  publish: DashboardPublish,
   content: DashboardContent,
   ads: DashboardAds,
   social: DashboardSocial,
@@ -42,6 +45,7 @@ const pages: Record<string, React.FC> = {
 
 const pageTitles: Record<string, string> = {
   overview: "Overview",
+  publish: "Publish",
   content: "Content",
   ads: "Ad Campaigns",
   social: "Social Accounts",
