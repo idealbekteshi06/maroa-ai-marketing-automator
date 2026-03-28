@@ -21,6 +21,7 @@ import AIChatAssistant from "@/components/dashboard/AIChatAssistant";
 
 const navItems = [
   { key: "overview", label: "Overview", icon: LayoutDashboard },
+  { key: "publish", label: "Publish", icon: PenSquare },
   { key: "content", label: "Content", icon: FileText },
   { key: "ads", label: "Ad Campaigns", icon: Megaphone },
   { key: "social", label: "Social Accounts", icon: Share2 },
