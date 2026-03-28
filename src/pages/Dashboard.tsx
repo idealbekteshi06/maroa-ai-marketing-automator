@@ -45,6 +45,7 @@ const pages: Record<string, React.FC> = {
 
 const pageTitles: Record<string, string> = {
   overview: "Overview",
+  publish: "Publish",
   content: "Content",
   ads: "Ad Campaigns",
   social: "Social Accounts",
