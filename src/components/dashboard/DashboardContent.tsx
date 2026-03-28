@@ -35,6 +35,7 @@ const statusColors: Record<string, string> = {
 function SkeletonRow() {
   return <div className="h-24 rounded-2xl border border-border bg-card animate-pulse-soft" />;
 }
+const SkeletonRowMemo = SkeletonRow;
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
