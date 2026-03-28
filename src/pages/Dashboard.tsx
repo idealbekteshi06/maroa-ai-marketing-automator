@@ -15,6 +15,7 @@ import DashboardCompetitors from "@/components/dashboard/DashboardCompetitors";
 import DashboardSettings from "@/components/dashboard/DashboardSettings";
 import PhotoLibrary from "@/components/dashboard/PhotoLibrary";
 import ReferralPage from "@/components/dashboard/ReferralPage";
+import DashboardPublish from "@/components/dashboard/DashboardPublish";
 import NotificationDropdown from "@/components/dashboard/NotificationDropdown";
 import AIChatAssistant from "@/components/dashboard/AIChatAssistant";
 
