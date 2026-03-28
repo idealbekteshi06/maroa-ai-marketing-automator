@@ -4,7 +4,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, FileText, Megaphone, Share2,
-  Search, Settings, Menu, X, ImageIcon, LogOut, Gift,
+  Search, Settings, Menu, X, ImageIcon, LogOut, Gift, PenSquare,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
