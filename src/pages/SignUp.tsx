@@ -96,6 +96,13 @@ export default function SignUp() {
         throw new Error(`Businesses insert failed: ${bizError.message}`);
       }
 
+      // Fetch the new business_id for webhooks
+      const { data: newBiz } = await externalSupabase
+        .from("businesses")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
+
       void fetch(N8N_SIGNUP_WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -104,9 +111,16 @@ export default function SignUp() {
           last_name: form.lastName, business_name: form.businessName,
           industry: form.industry, location: form.location, plan: "free",
         }),
-      }).catch((webhookErr) => {
-        console.warn("Webhook POST failed:", webhookErr);
-      });
+      }).catch((err) => console.warn("Signup webhook failed:", err));
+
+      // Trigger instant content generation
+      if (newBiz?.id) {
+        void fetch("https://ideal.app.n8n.cloud/webhook/instant-content", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ business_id: newBiz.id, email: form.email }),
+        }).catch((err) => console.warn("Instant content webhook failed:", err));
+      }
 
       toast.success("Account created! Let's set up your marketing.");
       navigate("/onboarding");
