@@ -66,6 +66,11 @@ export default function DashboardSettings() {
             email: data.email ?? "",
             location: data.location ?? "",
             industry: data.industry ?? "",
+            target_audience: data.target_audience ?? "",
+            brand_tone: data.brand_tone ?? "",
+            marketing_goal: data.marketing_goal ?? "",
+            competitors: data.competitors ?? "",
+            daily_budget: data.daily_budget ?? 0,
           });
           const plan = data.plan as string;
           setCurrentPlan(plan === "growth" || plan === "agency" ? plan : "free");
