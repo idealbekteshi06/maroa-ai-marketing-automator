@@ -149,17 +149,29 @@ export default function DashboardSettings() {
     try {
       const email = business?.email || user?.email;
       if (!email) throw new Error("No email found");
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/customer-portal`, {
+      const response = await fetch(`https://zqhyrbttuqkvmdewiytf.supabase.co/functions/v1/customer-portal`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "apikey": anonKey },
+        headers: { "Content-Type": "application/json", "apikey": "sb_publishable_4O2w1ObpYPQ7eOIlOhwl5A_8GxCt-gs" },
         body: JSON.stringify({ email }),
       });
       const data = await response.json();
       if (data?.error) throw new Error(data.error);
       if (data?.url) window.open(data.url, "_blank");
     } catch (err: any) { toast.error(err.message || "Failed to open billing portal."); }
+  };
+
+  const handleChangePassword = async () => {
+    const email = user?.email;
+    if (!email) { toast.error("No email found"); return; }
+    try {
+      const { error } = await externalSupabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast.success("Password reset link sent to your email!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send reset email");
+    }
   };
 
   return (
