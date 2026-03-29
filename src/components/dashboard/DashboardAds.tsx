@@ -92,9 +92,32 @@ export default function DashboardAds() {
     );
   }
 
+  const [budgetInput, setBudgetInput] = useState("");
+  const [budgetSaving, setBudgetSaving] = useState(false);
+
+  const handleSetBudget = async () => {
+    const budget = Number(budgetInput);
+    if (!businessId || isNaN(budget) || budget < 0) { toast.error("Enter a valid budget"); return; }
+    setBudgetSaving(true);
+    const { error } = await externalSupabase.from("businesses").update({ daily_budget: budget }).eq("id", businessId);
+    if (error) { toast.error("Failed to update budget"); setBudgetSaving(false); return; }
+    void fetch("https://ideal.app.n8n.cloud/webhook/budget-updated", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ business_id: businessId, daily_budget: budget }),
+    }).catch(console.warn);
+    toast.success(`Daily budget set to $${budget}`);
+    setBudgetSaving(false);
+  };
+
   return (
     <div className="space-y-5">
-      <p className="text-sm text-muted-foreground">Your AI-managed ad campaigns.</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <p className="text-sm text-muted-foreground">Your AI-managed ad campaigns.</p>
+        <div className="flex items-center gap-2">
+          <Input type="number" placeholder="Daily budget ($)" value={budgetInput} onChange={(e) => setBudgetInput(e.target.value)} className="w-36 h-9 text-sm" />
+          <Button size="sm" className="h-9 text-xs" onClick={handleSetBudget} disabled={budgetSaving}>{budgetSaving ? "Saving..." : "Set Budget"}</Button>
+        </div>
+      </div>
 
       {campaigns.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card py-20 text-center">
