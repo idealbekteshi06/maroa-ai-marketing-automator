@@ -11,9 +11,10 @@ interface Notification {
   id: string;
   title: string | null;
   message: string | null;
+  win_type: string | null;
   type: string | null;
   is_read: boolean;
-  created_at: string;
+  notified_at: string;
 }
 
 export default function NotificationDropdown() {
