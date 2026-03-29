@@ -46,7 +46,10 @@ export default function DashboardSettings() {
   const [activeTab, setActiveTab] = useState("Profile");
   const { user, businessId, isReady } = useAuth();
   const [business, setBusiness] = useState<any>(null);
-  const [profileForm, setProfileForm] = useState({ business_name: "", email: "", location: "", industry: "" });
+  const [profileForm, setProfileForm] = useState({
+    business_name: "", email: "", location: "", industry: "",
+    target_audience: "", brand_tone: "", marketing_goal: "", competitors: "", daily_budget: 0,
+  });
   const [saving, setSaving] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<PlanKey>("free");
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
