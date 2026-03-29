@@ -153,7 +153,7 @@ export default function Onboarding() {
             plan: bizData.plan,
           }),
         }).catch(console.warn);
-        void fetch("https://ideal.app.n8n.cloud/webhook/instant-content", {
+        void fetch("https://ideal.app.n8n.cloud/webhook/maroa-content-2026", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ business_id: businessId, email: bizData.email }),
