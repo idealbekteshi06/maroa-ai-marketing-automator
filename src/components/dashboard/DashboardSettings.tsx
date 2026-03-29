@@ -133,11 +133,9 @@ export default function DashboardSettings() {
     try {
       const email = business?.email || user?.email;
       if (!email) throw new Error("No email found");
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/create-checkout`, {
+      const response = await fetch(`https://zqhyrbttuqkvmdewiytf.supabase.co/functions/v1/create-checkout`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "apikey": anonKey },
+        headers: { "Content-Type": "application/json", "apikey": "sb_publishable_4O2w1ObpYPQ7eOIlOhwl5A_8GxCt-gs" },
         body: JSON.stringify({ priceId: plan.price_id, email }),
       });
       const data = await response.json();
@@ -151,17 +149,29 @@ export default function DashboardSettings() {
     try {
       const email = business?.email || user?.email;
       if (!email) throw new Error("No email found");
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/customer-portal`, {
+      const response = await fetch(`https://zqhyrbttuqkvmdewiytf.supabase.co/functions/v1/customer-portal`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "apikey": anonKey },
+        headers: { "Content-Type": "application/json", "apikey": "sb_publishable_4O2w1ObpYPQ7eOIlOhwl5A_8GxCt-gs" },
         body: JSON.stringify({ email }),
       });
       const data = await response.json();
       if (data?.error) throw new Error(data.error);
       if (data?.url) window.open(data.url, "_blank");
     } catch (err: any) { toast.error(err.message || "Failed to open billing portal."); }
+  };
+
+  const handleChangePassword = async () => {
+    const email = user?.email;
+    if (!email) { toast.error("No email found"); return; }
+    try {
+      const { error } = await externalSupabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast.success("Password reset link sent to your email!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send reset email");
+    }
   };
 
   return (
@@ -189,7 +199,12 @@ export default function DashboardSettings() {
           <div><Label>Competitors</Label><Input value={profileForm.competitors} onChange={(e) => setProfileForm((f) => ({ ...f, competitors: e.target.value }))} placeholder="e.g. Joe's Bakery, Sweet Flour" /></div>
           <div><Label>Daily Ad Budget ($)</Label><Input type="number" value={profileForm.daily_budget} onChange={(e) => setProfileForm((f) => ({ ...f, daily_budget: Number(e.target.value) }))} /></div>
           <Button onClick={handleSaveProfile} disabled={saving}>{saving ? "Saving..." : "Save changes"}</Button>
-          <div className="mt-8 rounded-2xl border border-destructive/20 p-6">
+          <div className="mt-8 rounded-2xl border border-border p-6">
+            <h3 className="font-semibold text-card-foreground">Change Password</h3>
+            <p className="mt-1 text-sm text-muted-foreground">We'll send a password reset link to your email.</p>
+            <Button variant="outline" size="sm" className="mt-4" onClick={handleChangePassword}>Send reset link</Button>
+          </div>
+          <div className="mt-4 rounded-2xl border border-destructive/20 p-6">
             <h3 className="font-semibold text-destructive">Danger zone</h3>
             <p className="mt-1 text-sm text-muted-foreground">Permanently delete your account and all data.</p>
             <Button variant="destructive" size="sm" className="mt-4" onClick={handleDeleteAccount}>Delete account</Button>

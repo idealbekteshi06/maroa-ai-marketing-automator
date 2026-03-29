@@ -16,7 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
+
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Platform {
@@ -172,19 +172,30 @@ export default function DashboardPublish() {
     if (!postText.trim()) { toast.error("Write something first"); return; }
     setAiLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("chat", {
-        body: {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const response = await fetch(`${supabaseUrl}/functions/v1/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
           messages: [{ role: "user", content: `Improve this social media post. Make it more engaging, add relevant emojis, improve the hook, and suggest hashtags. Keep the same core message but make it irresistible. Return ONLY the improved post text, nothing else:\n\n${postText}` }],
           systemPrompt: "You are an expert social media copywriter. When asked to improve a post, return ONLY the improved text. No explanations, no labels, no quotes around it.",
-        },
+        }),
       });
-      if (error) throw error;
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || `AI service error (${response.status})`);
+      }
+      const data = await response.json();
       const improved = data?.choices?.[0]?.message?.content;
       if (improved) { setPostText(improved); toast.success("Post improved by AI!"); }
       else toast.error("AI returned empty response");
     } catch (err: any) {
       console.error("AI assist error:", err);
-      toast.error(err?.message?.includes("429") ? "Too many requests — wait a moment" : "AI assist failed");
+      toast.error(err?.message?.includes("429") ? "Too many requests — wait a moment" : err?.message || "AI assist failed");
     } finally { setAiLoading(false); }
   };
 

@@ -135,13 +135,35 @@ export default function Onboarding() {
   const handleFinish = async () => {
     setShowConfetti(true);
     if (businessId) {
+      await handleSaveStep();
       await externalSupabase.from("businesses").update({ onboarding_complete: true }).eq("id", businessId);
       await refreshBusiness();
+
+      // Trigger signup and instant-content webhooks
+      const { data: bizData } = await externalSupabase.from("businesses").select("*").eq("id", businessId).maybeSingle();
+      if (bizData) {
+        void fetch("https://ideal.app.n8n.cloud/webhook/new-user-signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: bizData.user_id, email: bizData.email, first_name: bizData.first_name,
+            business_name: bizData.business_name, industry: bizData.industry,
+            location: bizData.location, target_audience: bizData.target_audience,
+            brand_tone: bizData.brand_tone, marketing_goal: bizData.marketing_goal,
+            plan: bizData.plan,
+          }),
+        }).catch(console.warn);
+        void fetch("https://ideal.app.n8n.cloud/webhook/instant-content", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ business_id: businessId, email: bizData.email }),
+        }).catch(console.warn);
+      }
     }
     setTimeout(() => navigate("/dashboard"), 2500);
   };
 
-  const handleNext = () => { handleSaveStep(); setStep(step + 1); };
+  const handleNext = async () => { await handleSaveStep(); setStep(step + 1); };
 
   const selectClass = "flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring";
 
