@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { externalSupabase } from "@/integrations/supabase/external-client";
@@ -46,7 +47,10 @@ export default function DashboardSettings() {
   const [activeTab, setActiveTab] = useState("Profile");
   const { user, businessId, isReady } = useAuth();
   const [business, setBusiness] = useState<any>(null);
-  const [profileForm, setProfileForm] = useState({ business_name: "", email: "", location: "", industry: "" });
+  const [profileForm, setProfileForm] = useState({
+    business_name: "", email: "", location: "", industry: "",
+    target_audience: "", brand_tone: "", marketing_goal: "", competitors: "", daily_budget: 0,
+  });
   const [saving, setSaving] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<PlanKey>("free");
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
@@ -63,6 +67,11 @@ export default function DashboardSettings() {
             email: data.email ?? "",
             location: data.location ?? "",
             industry: data.industry ?? "",
+            target_audience: data.target_audience ?? "",
+            brand_tone: data.brand_tone ?? "",
+            marketing_goal: data.marketing_goal ?? "",
+            competitors: data.competitors ?? "",
+            daily_budget: data.daily_budget ?? 0,
           });
           const plan = data.plan as string;
           setCurrentPlan(plan === "growth" || plan === "agency" ? plan : "free");
@@ -178,6 +187,11 @@ export default function DashboardSettings() {
           <div><Label>Email</Label><Input value={profileForm.email} onChange={(e) => setProfileForm((f) => ({ ...f, email: e.target.value }))} /></div>
           <div><Label>Location</Label><Input value={profileForm.location} onChange={(e) => setProfileForm((f) => ({ ...f, location: e.target.value }))} /></div>
           <div><Label>Industry</Label><Input value={profileForm.industry} onChange={(e) => setProfileForm((f) => ({ ...f, industry: e.target.value }))} /></div>
+          <div><Label>Target Audience</Label><Textarea value={profileForm.target_audience} onChange={(e) => setProfileForm((f) => ({ ...f, target_audience: e.target.value }))} className="mt-1" rows={2} /></div>
+          <div><Label>Brand Tone</Label><Input value={profileForm.brand_tone} onChange={(e) => setProfileForm((f) => ({ ...f, brand_tone: e.target.value }))} placeholder="e.g. Friendly, professional, playful" /></div>
+          <div><Label>Marketing Goal</Label><Input value={profileForm.marketing_goal} onChange={(e) => setProfileForm((f) => ({ ...f, marketing_goal: e.target.value }))} /></div>
+          <div><Label>Competitors</Label><Input value={profileForm.competitors} onChange={(e) => setProfileForm((f) => ({ ...f, competitors: e.target.value }))} placeholder="e.g. Joe's Bakery, Sweet Flour" /></div>
+          <div><Label>Daily Ad Budget ($)</Label><Input type="number" value={profileForm.daily_budget} onChange={(e) => setProfileForm((f) => ({ ...f, daily_budget: Number(e.target.value) }))} /></div>
           <Button onClick={handleSaveProfile} disabled={saving}>{saving ? "Saving..." : "Save changes"}</Button>
           <div className="mt-8 rounded-2xl border border-destructive/20 p-6">
             <h3 className="font-semibold text-destructive">Danger zone</h3>

@@ -95,10 +95,21 @@ export default function Onboarding() {
     setConnectLoading(name);
     setConnected(prev => [...prev, name]);
     try {
+      // Fetch latest business data for the webhook
+      const { data: bizData } = await externalSupabase.from("businesses").select("*").eq("id", businessId).maybeSingle();
       await fetch(N8N_CONNECT_WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business_id: businessId, platform: name, email: user?.email ?? "" }),
+        body: JSON.stringify({
+          business_id: businessId,
+          business_name: bizData?.business_name ?? form.business_name,
+          email: bizData?.email ?? user?.email ?? "",
+          first_name: bizData?.first_name ?? "",
+          platform: name,
+          facebook_page_id: bizData?.facebook_page_id ?? null,
+          meta_access_token: bizData?.meta_access_token ?? null,
+          ad_account_id: bizData?.ad_account_id ?? null,
+        }),
       });
       toast.success(`${name} connected!`);
     } catch { toast.success(`${name} connected!`); }

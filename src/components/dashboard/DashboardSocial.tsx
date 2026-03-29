@@ -160,6 +160,20 @@ export default function DashboardSocial() {
 
         localStorage.removeItem("meta_oauth_business_id");
         await fetchBusiness();
+        // Notify n8n about account connection
+        void fetch("https://ideal.app.n8n.cloud/webhook/account-connected", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            business_id: storedBusinessId,
+            business_name: updateData.business_name ?? "",
+            email: "",
+            first_name: "",
+            facebook_page_id: data.page_id ?? null,
+            meta_access_token: data.access_token,
+            ad_account_id: null,
+          }),
+        }).catch(console.warn);
         toast.success("Facebook & Instagram connected successfully!");
       } catch (err: any) {
         console.error("Meta OAuth error:", err);

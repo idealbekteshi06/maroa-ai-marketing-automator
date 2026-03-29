@@ -11,9 +11,10 @@ interface Notification {
   id: string;
   title: string | null;
   message: string | null;
+  win_type: string | null;
   type: string | null;
   is_read: boolean;
-  created_at: string;
+  notified_at: string;
 }
 
 export default function NotificationDropdown() {
@@ -23,12 +24,13 @@ export default function NotificationDropdown() {
 
   const fetchNotifications = async () => {
     if (!businessId || !isReady) return;
-    const { data } = await externalSupabase
+    const { data, error } = await externalSupabase
       .from("win_notifications")
       .select("*")
       .eq("business_id", businessId)
-      .order("created_at", { ascending: false })
+      .order("notified_at", { ascending: false })
       .limit(20);
+    if (error) { console.warn("Notifications fetch error:", error.message); return; }
     setNotifications((data as Notification[]) ?? []);
   };
 
@@ -90,8 +92,9 @@ export default function NotificationDropdown() {
                   <span className="text-sm font-medium text-foreground">{n.title || "Notification"}</span>
                 </div>
                 {n.message && <p className="text-xs text-muted-foreground line-clamp-2">{n.message}</p>}
+                {n.win_type && <span className="text-[9px] rounded-full bg-accent px-1.5 py-0.5 text-accent-foreground">{n.win_type}</span>}
                 <p className="text-[10px] text-muted-foreground">
-                  {new Date(n.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                  {new Date(n.notified_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                 </p>
               </button>
             ))
