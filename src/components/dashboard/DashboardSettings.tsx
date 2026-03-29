@@ -133,11 +133,9 @@ export default function DashboardSettings() {
     try {
       const email = business?.email || user?.email;
       if (!email) throw new Error("No email found");
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/create-checkout`, {
+      const response = await fetch(`https://zqhyrbttuqkvmdewiytf.supabase.co/functions/v1/create-checkout`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "apikey": anonKey },
+        headers: { "Content-Type": "application/json", "apikey": "sb_publishable_4O2w1ObpYPQ7eOIlOhwl5A_8GxCt-gs" },
         body: JSON.stringify({ priceId: plan.price_id, email }),
       });
       const data = await response.json();
