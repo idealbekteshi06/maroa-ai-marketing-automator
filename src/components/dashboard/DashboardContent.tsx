@@ -21,6 +21,7 @@ interface ContentItem {
   email_subject: string | null;
   email_body: string | null;
   image_url: string | null;
+  content_theme: string | null;
   status: string;
   created_at: string;
 }
