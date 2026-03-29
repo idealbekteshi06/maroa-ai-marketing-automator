@@ -50,6 +50,8 @@ export default function DashboardAds() {
   const { businessId, isReady } = useAuth();
   const [campaigns, setCampaigns] = useState<(Campaign & { perf?: PerfLog })[]>([]);
   const [loading, setLoading] = useState(true);
+  const [budgetInput, setBudgetInput] = useState("");
+  const [budgetSaving, setBudgetSaving] = useState(false);
 
   useEffect(() => {
     if (!businessId || !isReady) return;
@@ -91,9 +93,6 @@ export default function DashboardAds() {
       </div>
     );
   }
-
-  const [budgetInput, setBudgetInput] = useState("");
-  const [budgetSaving, setBudgetSaving] = useState(false);
 
   const handleSetBudget = async () => {
     const budget = Number(budgetInput);
