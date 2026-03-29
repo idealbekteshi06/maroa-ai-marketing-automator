@@ -263,7 +263,11 @@ export default function DashboardContent() {
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center gap-2 shrink-0 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                {c.content_theme && (
+                  <span className="rounded-full bg-accent px-2.5 py-0.5 text-[10px] font-medium text-accent-foreground">{c.content_theme}</span>
+                )}
+                <span className="text-[10px] text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</span>
                 <span className={`rounded-full px-3 py-1 text-[11px] font-medium capitalize ${statusColors[c.status] ?? statusColors.pending}`}>
                   {c.status === "pending" ? "Pending" : c.status}
                 </span>
