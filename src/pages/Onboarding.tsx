@@ -142,7 +142,7 @@ export default function Onboarding() {
       // Trigger signup and instant-content webhooks
       const { data: bizData } = await externalSupabase.from("businesses").select("*").eq("id", businessId).maybeSingle();
       if (bizData) {
-        void fetch("https://ideal.app.n8n.cloud/webhook/new-user-signup", {
+        void fetch("https://ideal.app.n8n.cloud/webhook/maroa-signup-2026", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
