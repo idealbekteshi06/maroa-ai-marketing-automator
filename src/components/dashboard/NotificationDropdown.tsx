@@ -92,8 +92,9 @@ export default function NotificationDropdown() {
                   <span className="text-sm font-medium text-foreground">{n.title || "Notification"}</span>
                 </div>
                 {n.message && <p className="text-xs text-muted-foreground line-clamp-2">{n.message}</p>}
+                {n.win_type && <span className="text-[9px] rounded-full bg-accent px-1.5 py-0.5 text-accent-foreground">{n.win_type}</span>}
                 <p className="text-[10px] text-muted-foreground">
-                  {new Date(n.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                  {new Date(n.notified_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                 </p>
               </button>
             ))
