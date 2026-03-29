@@ -24,12 +24,13 @@ export default function NotificationDropdown() {
 
   const fetchNotifications = async () => {
     if (!businessId || !isReady) return;
-    const { data } = await externalSupabase
+    const { data, error } = await externalSupabase
       .from("win_notifications")
       .select("*")
       .eq("business_id", businessId)
-      .order("created_at", { ascending: false })
+      .order("notified_at", { ascending: false })
       .limit(20);
+    if (error) { console.warn("Notifications fetch error:", error.message); return; }
     setNotifications((data as Notification[]) ?? []);
   };
 
