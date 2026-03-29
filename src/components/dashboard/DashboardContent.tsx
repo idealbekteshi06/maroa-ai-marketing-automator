@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { FileText, Search as SearchIcon, Calendar, List, ChevronLeft, ChevronRight } from "lucide-react";
+import { FileText, Search as SearchIcon, Calendar, List, ChevronLeft, ChevronRight, Loader2, Sparkles } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -29,14 +29,22 @@ interface ContentItem {
 const statusColors: Record<string, string> = {
   published: "bg-success/10 text-success",
   approved: "bg-primary/10 text-primary",
-  pending: "bg-muted text-muted-foreground",
-  "pending approval": "bg-muted text-muted-foreground",
+  pending: "bg-amber-500/10 text-amber-600",
+  "pending approval": "bg-amber-500/10 text-amber-600",
+  "pending_approval": "bg-amber-500/10 text-amber-600",
+};
+
+const statusLabels: Record<string, string> = {
+  published: "Published",
+  approved: "Approved",
+  pending: "Pending",
+  "pending approval": "Pending",
+  "pending_approval": "Pending",
 };
 
 function SkeletonRow() {
   return <div className="h-24 rounded-2xl border border-border bg-card animate-pulse-soft" />;
 }
-const SkeletonRowMemo = SkeletonRow;
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -49,7 +57,7 @@ function getMonthDays(year: number, month: number) {
 }
 
 export default function DashboardContent() {
-  const { businessId, isReady } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const [content, setContent] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -62,6 +70,7 @@ export default function DashboardContent() {
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
   const [calYear, setCalYear] = useState(new Date().getFullYear());
   const [businessName, setBusinessName] = useState("");
+  const [generating, setGenerating] = useState(false);
 
   const fetchContent = async () => {
     if (!businessId || !isReady) return;
@@ -83,11 +92,30 @@ export default function DashboardContent() {
     }
   }, [businessId, isReady]);
 
+  const handleGenerateNow = async () => {
+    if (!businessId) return;
+    setGenerating(true);
+    try {
+      const email = user?.email ?? "";
+      await fetch("https://ideal.app.n8n.cloud/webhook/instant-content", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ business_id: businessId, email }),
+      });
+      toast.success("Content generation started! New posts will appear within 5 minutes.");
+      // Auto-refresh after 10 seconds
+      setTimeout(() => fetchContent(), 10000);
+    } catch {
+      toast.error("Failed to trigger content generation");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const handleApprove = async (id: string) => {
     const { error } = await externalSupabase.from("generated_content").update({ status: "approved" }).eq("id", id);
     if (error) { toast.error("Failed to approve"); return; }
     toast.success("Content approved!");
-    // Notify n8n
     void fetch("https://ideal.app.n8n.cloud/webhook/content-approved", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -127,13 +155,14 @@ export default function DashboardContent() {
 
   const filtered = content.filter((c) => {
     const matchesSearch = !searchQuery ||
+      c.content_theme?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.instagram_caption?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.facebook_post?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || c.status === statusFilter;
+    const matchesStatus = statusFilter === "all" || c.status === statusFilter || 
+      (statusFilter === "pending" && (c.status === "pending" || c.status === "pending approval" || c.status === "pending_approval"));
     return matchesSearch && matchesStatus;
   });
 
-  // Calendar helpers
   const monthDays = getMonthDays(calYear, calMonth);
   const contentByDay: Record<number, ContentItem[]> = {};
   content.forEach((c) => {
@@ -164,7 +193,7 @@ export default function DashboardContent() {
         <div className="flex items-center gap-2 flex-1">
           <div className="relative flex-1 max-w-sm">
             <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder="Search content..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 h-9 text-sm" />
+            <Input placeholder="Search by theme..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 h-9 text-sm" />
           </div>
           <div className="flex items-center gap-1 rounded-xl border border-border bg-card p-0.5">
             {["all", "pending", "approved", "published"].map((s) => (
@@ -184,7 +213,9 @@ export default function DashboardContent() {
               <Calendar className="h-4 w-4" />
             </button>
           </div>
-          <Button size="sm" className="h-9 text-xs">Generate new</Button>
+          <Button size="sm" className="h-9 text-xs" onClick={handleGenerateNow} disabled={generating}>
+            {generating ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Generating...</> : <><Sparkles className="mr-1.5 h-3.5 w-3.5" /> Generate Now</>}
+          </Button>
         </div>
       </div>
 
@@ -216,7 +247,7 @@ export default function DashboardContent() {
                             <div className="mt-1 flex justify-center gap-0.5 flex-wrap">
                               {items.slice(0, 3).map((c) => (
                                 <span key={c.id} className={`h-1.5 w-1.5 rounded-full ${
-                                  c.facebook_post ? "bg-primary" : c.email_subject ? "bg-success" : "bg-pink-500"
+                                  c.facebook_post ? "bg-primary" : c.email_subject ? "bg-success" : "bg-destructive"
                                 }`} />
                               ))}
                             </div>
@@ -231,7 +262,7 @@ export default function DashboardContent() {
                       {items.map((c) => (
                         <div key={c.id} className="mb-2 last:mb-0 rounded-lg bg-muted/50 p-2 cursor-pointer hover:bg-muted transition-colors" onClick={() => setPreviewItem(c)}>
                           <p className="text-xs text-foreground truncate">{c.instagram_caption || c.facebook_post || c.email_subject || "Content"}</p>
-                          <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[9px] font-medium capitalize ${statusColors[c.status] ?? statusColors.pending}`}>{c.status}</span>
+                          <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[9px] font-medium capitalize ${statusColors[c.status] ?? statusColors.pending}`}>{statusLabels[c.status] ?? c.status}</span>
                         </div>
                       ))}
                     </PopoverContent>
@@ -241,7 +272,7 @@ export default function DashboardContent() {
             })}
           </div>
           <div className="mt-3 flex items-center gap-4 text-[10px] text-muted-foreground">
-            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-pink-500" /> Instagram</span>
+            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-destructive" /> Instagram</span>
             <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-primary" /> Facebook</span>
             <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-success" /> Email</span>
           </div>
@@ -269,15 +300,15 @@ export default function DashboardContent() {
                   )}
                 </div>
               </div>
-                <div className="flex items-center gap-2 shrink-0 flex-wrap" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-2 shrink-0 flex-wrap" onClick={(e) => e.stopPropagation()}>
                 {c.content_theme && (
                   <span className="rounded-full bg-accent px-2.5 py-0.5 text-[10px] font-medium text-accent-foreground">{c.content_theme}</span>
                 )}
                 <span className="text-[10px] text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</span>
                 <span className={`rounded-full px-3 py-1 text-[11px] font-medium capitalize ${statusColors[c.status] ?? statusColors.pending}`}>
-                  {c.status === "pending" ? "Pending" : c.status}
+                  {statusLabels[c.status] ?? c.status}
                 </span>
-                {(c.status === "pending" || c.status === "pending approval") && (
+                {(c.status === "pending" || c.status === "pending approval" || c.status === "pending_approval") && (
                   <Button size="sm" className="h-8 text-xs" onClick={() => handleApprove(c.id)}>Approve</Button>
                 )}
                 <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => openEdit(c)}>Edit</Button>
@@ -292,7 +323,7 @@ export default function DashboardContent() {
           </div>
           <h3 className="mt-5 text-lg font-semibold text-foreground">Your first week of content is being prepared</h3>
           <p className="mt-2 max-w-md text-sm text-muted-foreground leading-relaxed">
-            maroa.ai generates your posts every Monday at 9am. Check back Monday morning.
+            maroa.ai generates your posts every Monday at 9am. Or click Generate Now above.
           </p>
         </div>
       ) : (
@@ -301,7 +332,6 @@ export default function DashboardContent() {
         </div>
       )}
 
-      {/* Post Preview Modal */}
       {previewItem && (
         <PostPreviewModal
           item={previewItem}
@@ -311,7 +341,6 @@ export default function DashboardContent() {
         />
       )}
 
-      {/* Edit Modal */}
       <Dialog open={!!editItem} onOpenChange={(open) => { if (!open) setEditItem(null); }}>
         <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Edit Content</DialogTitle></DialogHeader>

@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Upload, X, ImageIcon, Loader2 } from "lucide-react";
+import { Upload, X, ImageIcon, Loader2, Send } from "lucide-react";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -18,6 +18,10 @@ interface Photo {
   uploaded_at: string;
 }
 
+interface PhotoLibraryProps {
+  onUseInPost?: (photoUrl: string) => void;
+}
+
 function SkeletonGrid() {
   return (
     <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
@@ -26,7 +30,7 @@ function SkeletonGrid() {
   );
 }
 
-export default function PhotoLibrary() {
+export default function PhotoLibrary({ onUseInPost }: PhotoLibraryProps) {
   const { businessId, isReady } = useAuth();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,21 +42,11 @@ export default function PhotoLibrary() {
     setLoading(true);
     try {
       const { data, error } = await externalSupabase
-        .from("business_photos")
-        .select("*")
-        .eq("business_id", businessId)
-        .order("uploaded_at", { ascending: false });
-      if (error) {
-        console.error("Failed to fetch photos:", error);
-        toast.error("Failed to load photos");
-        return;
-      }
+        .from("business_photos").select("*").eq("business_id", businessId).order("uploaded_at", { ascending: false });
+      if (error) { console.error("Failed to fetch photos:", error); return; }
       setPhotos((data as Photo[]) ?? []);
-    } catch (err) {
-      console.error("Photo fetch error:", err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error("Photo fetch error:", err); }
+    finally { setLoading(false); }
   }, [businessId, isReady]);
 
   useEffect(() => { fetchPhotos(); }, [fetchPhotos]);
@@ -60,57 +54,22 @@ export default function PhotoLibrary() {
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0 || !businessId) return;
-
     setUploading(true);
     let successCount = 0;
-
     for (const file of Array.from(files)) {
       try {
         const fileName = `${businessId}/${Date.now()}_${file.name}`;
-        const { error: uploadError } = await externalSupabase.storage
-          .from("business-photos")
-          .upload(fileName, file);
-
-        if (uploadError) {
-          console.error(`Upload error for ${file.name}:`, uploadError);
-          toast.error(`Failed to upload ${file.name}: ${uploadError.message}`);
-          continue;
-        }
-
-        // Get the full public URL
-        const { data: urlData } = externalSupabase.storage
-          .from("business-photos")
-          .getPublicUrl(fileName);
-
-        const publicUrl = urlData.publicUrl;
-
+        const { error: uploadError } = await externalSupabase.storage.from("business-photos").upload(fileName, file);
+        if (uploadError) { toast.error(`Failed to upload ${file.name}`); continue; }
+        const { data: urlData } = externalSupabase.storage.from("business-photos").getPublicUrl(fileName);
         const { error: insertError } = await externalSupabase.from("business_photos").insert({
-          business_id: businessId,
-          photo_url: publicUrl,
-          photo_type: "Product",
-          description: file.name,
-          is_active: true,
+          business_id: businessId, photo_url: urlData.publicUrl, photo_type: "Product", description: file.name, is_active: true,
         });
-
-        if (insertError) {
-          console.error(`DB insert error for ${file.name}:`, insertError);
-          toast.error(`Failed to save ${file.name}: ${insertError.message}`);
-          continue;
-        }
-
+        if (insertError) { toast.error(`Failed to save ${file.name}`); continue; }
         successCount++;
-      } catch (err) {
-        console.error(`Unexpected error uploading ${file.name}:`, err);
-        toast.error(`Failed to upload ${file.name}`);
-      }
+      } catch { toast.error(`Failed to upload ${file.name}`); }
     }
-
-    if (successCount > 0) {
-      toast.success(`${successCount} photo${successCount > 1 ? "s" : ""} uploaded!`);
-      // Immediately refresh the grid
-      await fetchPhotos();
-    }
-
+    if (successCount > 0) { toast.success(`${successCount} photo${successCount > 1 ? "s" : ""} uploaded!`); await fetchPhotos(); }
     setUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -120,17 +79,11 @@ export default function PhotoLibrary() {
       const url = new URL(photo.photo_url);
       const pathParts = url.pathname.split("/storage/v1/object/public/business-photos/");
       if (pathParts.length > 1) {
-        const storagePath = decodeURIComponent(pathParts[1]);
-        await externalSupabase.storage.from("business-photos").remove([storagePath]);
+        await externalSupabase.storage.from("business-photos").remove([decodeURIComponent(pathParts[1])]);
       }
-    } catch (err) {
-      console.warn("Could not delete from storage:", err);
-    }
-
+    } catch { /* ignore storage delete errors */ }
     const { error } = await externalSupabase.from("business_photos").delete().eq("id", photo.id);
     if (error) { toast.error("Failed to delete"); return; }
-    
-    // Optimistic removal from state
     setPhotos(prev => prev.filter(p => p.id !== photo.id));
     toast.success("Photo deleted");
   };
@@ -172,11 +125,18 @@ export default function PhotoLibrary() {
               ) : (
                 <div className="flex h-full items-center justify-center text-muted-foreground text-xs">{p.description}</div>
               )}
-              <div className="absolute inset-0 flex items-start justify-between p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gradient-to-b from-foreground/20 to-transparent">
-                <span className="rounded-full bg-background/90 px-2.5 py-1 text-[10px] font-medium text-foreground">{p.photo_type ?? "Uncategorized"}</span>
-                <button onClick={() => handleDelete(p)} className="rounded-full bg-background/90 p-1.5 text-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors">
-                  <X className="h-3 w-3" />
-                </button>
+              <div className="absolute inset-0 flex flex-col items-start justify-between p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gradient-to-b from-foreground/30 via-transparent to-foreground/30">
+                <div className="flex w-full items-start justify-between">
+                  <span className="rounded-full bg-background/90 px-2.5 py-1 text-[10px] font-medium text-foreground">{p.photo_type ?? "Uncategorized"}</span>
+                  <button onClick={() => handleDelete(p)} className="rounded-full bg-background/90 p-1.5 text-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors">
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+                {onUseInPost && (
+                  <Button size="sm" className="w-full h-8 text-xs" onClick={() => onUseInPost(p.photo_url)}>
+                    <Send className="mr-1.5 h-3 w-3" /> Use in Post
+                  </Button>
+                )}
               </div>
             </div>
           ))}

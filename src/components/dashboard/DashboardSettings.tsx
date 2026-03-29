@@ -7,9 +7,9 @@ import { Switch } from "@/components/ui/switch";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Check, ExternalLink } from "lucide-react";
+import { Check, ExternalLink, Clock } from "lucide-react";
 
-const tabs = ["Profile", "Billing", "Notifications"];
+const tabs = ["Profile", "Billing", "Notifications", "Workflows"];
 
 const PLANS = {
   free: { name: "Free", price: 0, price_id: null, features: ["1 business", "5 posts/month", "Basic dashboard"] },
@@ -25,14 +25,18 @@ interface NotificationPrefs {
   monthly_strategy_report: boolean;
   daily_ad_summary: boolean;
   competitor_intelligence: boolean;
+  content_generation: boolean;
+  ad_optimization: boolean;
+  strategy_review: boolean;
+  monthly_report: boolean;
+  budget_recommendation: boolean;
 }
 
 const defaultPrefs: NotificationPrefs = {
-  weekly_content_preview: true,
-  win_alerts: true,
-  monthly_strategy_report: true,
-  daily_ad_summary: false,
-  competitor_intelligence: true,
+  weekly_content_preview: true, win_alerts: true, monthly_strategy_report: true,
+  daily_ad_summary: false, competitor_intelligence: true,
+  content_generation: true, ad_optimization: true, strategy_review: true,
+  monthly_report: true, budget_recommendation: true,
 };
 
 const notifConfig = [
@@ -41,6 +45,14 @@ const notifConfig = [
   { key: "monthly_strategy_report" as const, label: "Monthly strategy report", desc: "Receive your monthly performance analysis and updated strategy" },
   { key: "daily_ad_summary" as const, label: "Daily ad summary", desc: "Morning briefing of your ad performance every day at 9am" },
   { key: "competitor_intelligence" as const, label: "Competitor intelligence", desc: "Every Friday get a report on what your competitors are doing" },
+];
+
+const workflowSchedule = [
+  { key: "content_generation" as const, label: "Content Generation", schedule: "Every Monday at 9:00 AM", icon: "📝" },
+  { key: "ad_optimization" as const, label: "Ad Optimization", schedule: "Every day at 8:00 AM", icon: "📊" },
+  { key: "strategy_review" as const, label: "Strategy Review", schedule: "Every Sunday at 10:00 PM", icon: "🎯" },
+  { key: "monthly_report" as const, label: "Monthly Report", schedule: "1st of every month", icon: "📋" },
+  { key: "budget_recommendation" as const, label: "Budget Recommendation", schedule: "28th of every month", icon: "💰" },
 ];
 
 export default function DashboardSettings() {
@@ -63,26 +75,20 @@ export default function DashboardSettings() {
         if (data) {
           setBusiness(data);
           setProfileForm({
-            business_name: data.business_name ?? "",
-            email: data.email ?? "",
-            location: data.location ?? "",
-            industry: data.industry ?? "",
-            target_audience: data.target_audience ?? "",
-            brand_tone: data.brand_tone ?? "",
-            marketing_goal: data.marketing_goal ?? "",
-            competitors: data.competitors ?? "",
+            business_name: data.business_name ?? "", email: data.email ?? "",
+            location: data.location ?? "", industry: data.industry ?? "",
+            target_audience: data.target_audience ?? "", brand_tone: data.brand_tone ?? "",
+            marketing_goal: data.marketing_goal ?? "", competitors: data.competitors ?? "",
             daily_budget: data.daily_budget ?? 0,
           });
           const plan = data.plan as string;
           setCurrentPlan(plan === "growth" || plan === "agency" ? plan : "free");
-          // Load notification preferences
           if (data.notification_preferences) {
             try {
               const prefs = typeof data.notification_preferences === "string"
-                ? JSON.parse(data.notification_preferences)
-                : data.notification_preferences;
+                ? JSON.parse(data.notification_preferences) : data.notification_preferences;
               setNotifPrefs({ ...defaultPrefs, ...prefs });
-            } catch { /* use defaults */ }
+            } catch { /* defaults */ }
           }
         }
       });
@@ -108,14 +114,8 @@ export default function DashboardSettings() {
     const newPrefs = { ...notifPrefs, [key]: checked };
     setNotifPrefs(newPrefs);
     if (businessId) {
-      const { error } = await externalSupabase
-        .from("businesses")
-        .update({ notification_preferences: newPrefs })
-        .eq("id", businessId);
-      if (error) {
-        toast.error("Failed to save preference");
-        setNotifPrefs(notifPrefs); // revert
-      }
+      const { error } = await externalSupabase.from("businesses").update({ notification_preferences: newPrefs }).eq("id", businessId);
+      if (error) { toast.error("Failed to save preference"); setNotifPrefs(notifPrefs); }
     }
   };
 
@@ -143,9 +143,7 @@ export default function DashboardSettings() {
       const data = await response.json();
       if (data?.error) throw new Error(data.error);
       if (data?.url) window.open(data.url, "_blank");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to start checkout.");
-    }
+    } catch (err: any) { toast.error(err.message || "Failed to start checkout."); }
     setCheckoutLoading(null);
   };
 
@@ -163,9 +161,7 @@ export default function DashboardSettings() {
       const data = await response.json();
       if (data?.error) throw new Error(data.error);
       if (data?.url) window.open(data.url, "_blank");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to open billing portal.");
-    }
+    } catch (err: any) { toast.error(err.message || "Failed to open billing portal."); }
   };
 
   return (
@@ -173,7 +169,7 @@ export default function DashboardSettings() {
       <div className="flex gap-1 rounded-xl bg-muted p-1">
         {tabs.map((tab) => (
           <button key={tab} onClick={() => setActiveTab(tab)}
-            className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+            className={`flex-1 rounded-lg px-3 py-2 text-xs sm:text-sm font-medium transition-colors ${
               activeTab === tab ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
             }`}>
             {tab}
@@ -248,6 +244,28 @@ export default function DashboardSettings() {
                 <p className="text-xs text-muted-foreground mt-0.5">{n.desc}</p>
               </div>
               <Switch checked={notifPrefs[n.key]} onCheckedChange={(checked) => handleToggleNotif(n.key, checked)} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {activeTab === "Workflows" && (
+        <div className="space-y-1 rounded-2xl bg-card p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Clock className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold text-card-foreground">Automation Schedule</h3>
+          </div>
+          <p className="text-xs text-muted-foreground mb-4">Toggle each workflow on or off. Active workflows run automatically at the scheduled time.</p>
+          {workflowSchedule.map((w) => (
+            <div key={w.key} className="flex items-center justify-between py-4 border-b border-border last:border-0">
+              <div className="flex items-center gap-3 pr-4">
+                <span className="text-lg">{w.icon}</span>
+                <div>
+                  <p className="text-sm font-medium text-card-foreground">{w.label}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{w.schedule}</p>
+                </div>
+              </div>
+              <Switch checked={notifPrefs[w.key]} onCheckedChange={(checked) => handleToggleNotif(w.key, checked)} />
             </div>
           ))}
         </div>

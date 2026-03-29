@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Share2, CheckCircle2, Facebook, Instagram, Loader2 } from "lucide-react";
+import { Share2, CheckCircle2, Facebook, Instagram, Loader2, XCircle, RefreshCw } from "lucide-react";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -11,11 +11,7 @@ import {
 } from "@/components/ui/dialog";
 
 const META_APP_ID = "26551713411132003";
-const META_PERMISSIONS = [
-  "email",
-  "public_profile",
-  "pages_show_list",
-].join(",");
+const META_PERMISSIONS = ["email", "public_profile", "pages_show_list"].join(",");
 
 interface AccountConfig {
   name: string;
@@ -44,22 +40,18 @@ export default function DashboardSocial() {
   const [connectDialog, setConnectDialog] = useState<AccountConfig | null>(null);
   const [connectForm, setConnectForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [disconnecting, setDisconnecting] = useState<string | null>(null);
 
   const fetchBusiness = async () => {
     if (!businessId || !isReady) return;
     setLoading(true);
-    const { data } = await externalSupabase
-      .from("businesses")
-      .select("*")
-      .eq("id", businessId)
-      .maybeSingle();
+    const { data } = await externalSupabase.from("businesses").select("*").eq("id", businessId).maybeSingle();
     setBusiness(data);
     setLoading(false);
   };
 
   useEffect(() => { fetchBusiness(); }, [businessId, isReady]);
 
-  // Re-fetch when page becomes visible (e.g. returning from OAuth redirect)
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === "visible") fetchBusiness();
@@ -87,134 +79,89 @@ export default function DashboardSocial() {
     return fields.find((field) => Object.prototype.hasOwnProperty.call(business, field)) ?? fields[0];
   };
 
-  // Facebook/Instagram OAuth
   const handleMetaOAuth = useCallback(() => {
     const redirectUri = getRedirectUri();
     const oauthUrl = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${META_PERMISSIONS}&response_type=code`;
-    
-    // Store businessId for callback
     localStorage.setItem("meta_oauth_business_id", businessId || "");
-    
-    // Open OAuth in same window
     window.location.href = oauthUrl;
   }, [businessId]);
 
-  // Handle OAuth callback code from URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
     if (!code) return;
-
-    // Clean URL
     window.history.replaceState({}, "", window.location.pathname);
-
     const storedBusinessId = localStorage.getItem("meta_oauth_business_id") || businessId;
-    if (!storedBusinessId) {
-      toast.error("No business found for OAuth callback");
-      return;
-    }
-
+    if (!storedBusinessId) { toast.error("No business found for OAuth callback"); return; }
     setConnecting("Facebook & Instagram");
-
     const exchangeToken = async () => {
       try {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
         const res = await fetch(`${supabaseUrl}/functions/v1/meta-oauth-callback`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${supabaseKey}`,
-          },
-          body: JSON.stringify({
-            code,
-            redirect_uri: getRedirectUri(),
-          }),
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${supabaseKey}` },
+          body: JSON.stringify({ code, redirect_uri: getRedirectUri() }),
         });
-
         const data = await res.json();
-        console.log("Meta OAuth response:", data);
-
-        if (!res.ok || data.error) {
-          throw new Error(data.error || "OAuth token exchange failed");
-        }
-
-        // Update businesses table
-        const updateData: Record<string, any> = {
-          meta_access_token: data.access_token,
-          social_accounts_connected: true,
-        };
+        if (!res.ok || data.error) throw new Error(data.error || "OAuth token exchange failed");
+        const updateData: Record<string, any> = { meta_access_token: data.access_token, social_accounts_connected: true };
         if (data.page_id) updateData.facebook_page_id = data.page_id;
         if (data.instagram_account_id) updateData.instagram_account_id = data.instagram_account_id;
-
-        const { error } = await externalSupabase
-          .from("businesses")
-          .update(updateData)
-          .eq("id", storedBusinessId);
-
-        if (error) {
-          console.error("DB update error:", error);
-          throw new Error("Failed to save connection");
-        }
-
+        const { error } = await externalSupabase.from("businesses").update(updateData).eq("id", storedBusinessId);
+        if (error) throw new Error("Failed to save connection");
         localStorage.removeItem("meta_oauth_business_id");
         await fetchBusiness();
-        // Notify n8n about account connection
         void fetch("https://ideal.app.n8n.cloud/webhook/account-connected", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            business_id: storedBusinessId,
-            business_name: updateData.business_name ?? "",
-            email: "",
-            first_name: "",
-            facebook_page_id: data.page_id ?? null,
-            meta_access_token: data.access_token,
-            ad_account_id: null,
-          }),
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ business_id: storedBusinessId, facebook_page_id: data.page_id ?? null, meta_access_token: data.access_token, ad_account_id: null }),
         }).catch(console.warn);
         toast.success("Facebook & Instagram connected successfully!");
       } catch (err: any) {
-        console.error("Meta OAuth error:", err);
         toast.error(err.message || "Failed to connect Facebook");
-      } finally {
-        setConnecting(null);
-      }
+      } finally { setConnecting(null); }
     };
-
     exchangeToken();
   }, []);
 
   const handleConnect = (account: AccountConfig) => {
-    if (account.type === "meta_oauth") {
-      handleMetaOAuth();
-    } else {
-      setConnectForm({});
-      setConnectDialog(account);
+    if (account.type === "meta_oauth") handleMetaOAuth();
+    else { setConnectForm({}); setConnectDialog(account); }
+  };
+
+  const handleDisconnect = async (account: AccountConfig) => {
+    if (!businessId) return;
+    setDisconnecting(account.name);
+    const updateData: Record<string, any> = {};
+    if (account.name === "Facebook") {
+      updateData.meta_access_token = null;
+      updateData.facebook_page_id = null;
+    } else if (account.name === "Instagram") {
+      updateData.instagram_account_id = null;
+    } else if (account.name === "Google Ads") {
+      updateData.ad_account_id = null;
+    } else if (account.name === "TikTok") {
+      updateData.tiktok_handle = null;
     }
+    const { error } = await externalSupabase.from("businesses").update(updateData).eq("id", businessId);
+    setDisconnecting(null);
+    if (error) { toast.error("Failed to disconnect"); return; }
+    toast.success(`${account.name} disconnected`);
+    await fetchBusiness();
   };
 
   const handleSaveConnection = async () => {
     if (!businessId || !connectDialog) return;
     setSaving(true);
-    const updateData: Record<string, string | boolean> = {
-      social_accounts_connected: true,
-    };
-
+    const updateData: Record<string, string | boolean> = { social_accounts_connected: true };
     if (connectDialog.name === "Google Ads") {
-      const googleAdsField = getExistingField(["ad_account_id", "google_ads_id"]);
-      updateData[googleAdsField] = (connectForm.account_id || "").trim();
+      const field = getExistingField(["ad_account_id", "google_ads_id"]);
+      updateData[field] = (connectForm.account_id || "").trim();
     } else if (connectDialog.name === "TikTok") {
-      const tikTokField = getExistingField(["tiktok_handle", "tiktok_username"]);
-      updateData[tikTokField] = (connectForm.handle || "").trim();
+      const field = getExistingField(["tiktok_handle", "tiktok_username"]);
+      updateData[field] = (connectForm.handle || "").trim();
     }
-
-    const { error } = await externalSupabase
-      .from("businesses")
-      .update(updateData)
-      .eq("id", businessId);
-
+    const { error } = await externalSupabase.from("businesses").update(updateData).eq("id", businessId);
     setSaving(false);
     if (error) { toast.error("Failed to save connection"); return; }
     toast.success(`${connectDialog.name} connected!`);
@@ -248,28 +195,45 @@ export default function DashboardSocial() {
         {accounts.map((a) => {
           const connected = isConnected(a);
           return (
-            <div key={a.name} className="flex items-center justify-between rounded-2xl border border-border bg-card p-5 transition-all hover:shadow-card">
-              <div className="flex items-center gap-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ backgroundColor: a.color + "15" }}>
-                  <span style={{ color: a.color }}>{a.icon}</span>
+            <div key={a.name} className="rounded-2xl border border-border bg-card p-5 transition-all hover:shadow-card">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ backgroundColor: a.color + "15" }}>
+                    <span style={{ color: a.color }}>{a.icon}</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-card-foreground">{a.name}</p>
+                    {connected ? (
+                      <p className="text-xs text-success flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3" /> Connected
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Not connected</p>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-card-foreground">{a.name}</p>
+                <div className="flex items-center gap-1.5">
                   {connected ? (
-                    <p className="text-xs text-success flex items-center gap-1">
-                      <CheckCircle2 className="h-3 w-3" /> Connected
-                    </p>
+                    <>
+                      <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => handleConnect(a)}>
+                        <RefreshCw className="mr-1 h-3 w-3" /> Reconnect
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-8 text-xs text-destructive hover:text-destructive" onClick={() => handleDisconnect(a)} disabled={disconnecting === a.name}>
+                        {disconnecting === a.name ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
+                      </Button>
+                    </>
                   ) : (
-                    <p className="text-xs text-muted-foreground">Not connected</p>
+                    <Button size="sm" className="h-8 text-xs" onClick={() => handleConnect(a)} disabled={!!connecting}>
+                      {connecting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Connect"}
+                    </Button>
                   )}
                 </div>
               </div>
-              {connected ? (
-                <span className="rounded-full bg-success/10 px-3 py-1 text-[11px] font-medium text-success">Connected</span>
-              ) : (
-                <Button size="sm" className="h-8 text-xs" onClick={() => handleConnect(a)} disabled={!!connecting}>
-                  {connecting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Connect"}
-                </Button>
+              {/* Show extra info for connected Facebook */}
+              {connected && a.name === "Facebook" && business?.facebook_page_id && (
+                <div className="mt-3 rounded-lg bg-muted/50 p-3">
+                  <p className="text-[10px] text-muted-foreground">Page ID: {business.facebook_page_id}</p>
+                </div>
               )}
             </div>
           );
@@ -288,14 +252,11 @@ export default function DashboardSocial() {
         </div>
       )}
 
-      {/* Manual Connect Dialog for Google Ads / TikTok */}
       <Dialog open={!!connectDialog} onOpenChange={(open) => { if (!open) setConnectDialog(null); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Connect {connectDialog?.name}</DialogTitle>
-            <DialogDescription>
-              Enter your {connectDialog?.name} details to connect your account.
-            </DialogDescription>
+            <DialogDescription>Enter your {connectDialog?.name} details to connect.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
             {connectDialog?.name === "Google Ads" && (
