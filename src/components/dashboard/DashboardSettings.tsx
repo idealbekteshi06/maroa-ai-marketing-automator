@@ -186,6 +186,11 @@ export default function DashboardSettings() {
           <div><Label>Email</Label><Input value={profileForm.email} onChange={(e) => setProfileForm((f) => ({ ...f, email: e.target.value }))} /></div>
           <div><Label>Location</Label><Input value={profileForm.location} onChange={(e) => setProfileForm((f) => ({ ...f, location: e.target.value }))} /></div>
           <div><Label>Industry</Label><Input value={profileForm.industry} onChange={(e) => setProfileForm((f) => ({ ...f, industry: e.target.value }))} /></div>
+          <div><Label>Target Audience</Label><Textarea value={profileForm.target_audience} onChange={(e) => setProfileForm((f) => ({ ...f, target_audience: e.target.value }))} className="mt-1" rows={2} /></div>
+          <div><Label>Brand Tone</Label><Input value={profileForm.brand_tone} onChange={(e) => setProfileForm((f) => ({ ...f, brand_tone: e.target.value }))} placeholder="e.g. Friendly, professional, playful" /></div>
+          <div><Label>Marketing Goal</Label><Input value={profileForm.marketing_goal} onChange={(e) => setProfileForm((f) => ({ ...f, marketing_goal: e.target.value }))} /></div>
+          <div><Label>Competitors</Label><Input value={profileForm.competitors} onChange={(e) => setProfileForm((f) => ({ ...f, competitors: e.target.value }))} placeholder="e.g. Joe's Bakery, Sweet Flour" /></div>
+          <div><Label>Daily Ad Budget ($)</Label><Input type="number" value={profileForm.daily_budget} onChange={(e) => setProfileForm((f) => ({ ...f, daily_budget: Number(e.target.value) }))} /></div>
           <Button onClick={handleSaveProfile} disabled={saving}>{saving ? "Saving..." : "Save changes"}</Button>
           <div className="mt-8 rounded-2xl border border-destructive/20 p-6">
             <h3 className="font-semibold text-destructive">Danger zone</h3>
