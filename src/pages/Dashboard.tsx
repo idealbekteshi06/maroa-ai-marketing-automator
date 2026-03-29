@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, FileText, Megaphone, Share2,
   Search, Settings, Menu, X, ImageIcon, LogOut, Gift, PenSquare,
+  Sparkles, Send, Eye, Plus,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
@@ -31,18 +32,6 @@ const navItems = [
   { key: "settings", label: "Settings", icon: Settings },
 ];
 
-const pages: Record<string, React.FC> = {
-  overview: DashboardOverview,
-  publish: DashboardPublish,
-  content: DashboardContent,
-  ads: DashboardAds,
-  social: DashboardSocial,
-  competitors: DashboardCompetitors,
-  photos: PhotoLibrary,
-  referral: ReferralPage,
-  settings: DashboardSettings,
-};
-
 const pageTitles: Record<string, string> = {
   overview: "Overview",
   publish: "Publish",
@@ -55,19 +44,24 @@ const pageTitles: Record<string, string> = {
   settings: "Settings",
 };
 
+const fabConfig: Record<string, { label: string; icon: React.ReactNode }> = {
+  content: { label: "Generate", icon: <Sparkles className="h-5 w-5" /> },
+  publish: { label: "Post", icon: <Send className="h-5 w-5" /> },
+  overview: { label: "Content", icon: <Eye className="h-5 w-5" /> },
+  ads: { label: "New Campaign", icon: <Plus className="h-5 w-5" /> },
+};
+
 export default function Dashboard() {
   const [searchParams] = useSearchParams();
   const tabFromUrl = searchParams.get("tab");
-  const [active, setActive] = useState(tabFromUrl && pages[tabFromUrl] ? tabFromUrl : "overview");
+  const [active, setActive] = useState(tabFromUrl || "overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [publishPhotoUrl, setPublishPhotoUrl] = useState<string | null>(null);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const Page = pages[active] || DashboardOverview;
 
   useEffect(() => {
-    if (tabFromUrl && pages[tabFromUrl]) {
-      setActive(tabFromUrl);
-    }
+    if (tabFromUrl) setActive(tabFromUrl);
   }, [tabFromUrl]);
 
   const firstName = user?.user_metadata?.first_name || user?.email?.split("@")[0] || "there";
@@ -78,6 +72,41 @@ export default function Dashboard() {
   const handleSignOut = async () => {
     await signOut();
     navigate("/login");
+  };
+
+  const handleUseInPost = (photoUrl: string) => {
+    setPublishPhotoUrl(photoUrl);
+    setActive("publish");
+  };
+
+  const handleFabClick = () => {
+    if (active === "content") {
+      // Trigger generate - handled by the page itself
+      setActive("content");
+    } else if (active === "publish") {
+      // Post button - handled by the page
+    } else if (active === "overview") {
+      setActive("content");
+    } else if (active === "ads") {
+      // Open create campaign - will just navigate
+    }
+  };
+
+  const fab = fabConfig[active];
+
+  const renderPage = () => {
+    switch (active) {
+      case "overview": return <DashboardOverview />;
+      case "publish": return <DashboardPublish />;
+      case "content": return <DashboardContent />;
+      case "ads": return <DashboardAds />;
+      case "social": return <DashboardSocial />;
+      case "competitors": return <DashboardCompetitors />;
+      case "photos": return <PhotoLibrary onUseInPost={handleUseInPost} />;
+      case "referral": return <ReferralPage />;
+      case "settings": return <DashboardSettings />;
+      default: return <DashboardOverview />;
+    }
   };
 
   return (
@@ -116,7 +145,7 @@ export default function Dashboard() {
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div className="absolute inset-0 bg-foreground/20 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-          <aside className="absolute left-0 top-0 h-full w-64 border-r border-sidebar-border bg-sidebar animate-slide-up" style={{ animation: "slide-in-right 0.2s ease-out" }}>
+          <aside className="absolute left-0 top-0 h-full w-64 border-r border-sidebar-border bg-sidebar" style={{ animation: "slide-in-right 0.2s ease-out" }}>
             <div className="flex h-14 items-center justify-between px-5">
               <span className="text-base font-bold text-sidebar-foreground">maroa<span className="text-primary">.ai</span></span>
               <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)} className="h-8 w-8"><X className="h-4 w-4" /></Button>
@@ -163,7 +192,7 @@ export default function Dashboard() {
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-5 pb-24 md:pb-5">
-          <Page />
+          {renderPage()}
         </main>
       </div>
 
@@ -182,6 +211,17 @@ export default function Dashboard() {
           </button>
         ))}
       </div>
+
+      {/* Mobile FAB */}
+      {fab && (
+        <button
+          onClick={handleFabClick}
+          className="fixed bottom-20 right-4 z-50 flex h-14 items-center gap-2 rounded-full bg-primary px-5 text-primary-foreground shadow-lg transition-all hover:shadow-xl active:scale-95 md:hidden"
+        >
+          {fab.icon}
+          <span className="text-sm font-semibold">{fab.label}</span>
+        </button>
+      )}
 
       {/* AI Chat Assistant */}
       <AIChatAssistant />
