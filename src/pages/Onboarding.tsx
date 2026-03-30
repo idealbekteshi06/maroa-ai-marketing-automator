@@ -24,7 +24,7 @@ const goalOptions = ["Get more customers through the door", "Grow Instagram foll
 const contentTypeOptions = ["Behind the scenes", "Product showcases", "Customer stories", "Educational tips", "Promotions and offers", "I'm not sure yet"];
 const platformOptions = ["Instagram", "Facebook", "TikTok", "Google", "LinkedIn"];
 
-const N8N_CONNECT_WEBHOOK_URL = "https://ideal.app.n8n.cloud/webhook/maroa-account-2026";
+const N8N_CONNECT_WEBHOOK_URL = "https://maroa-api-production.up.railway.app/webhook/maroa-account-2026";
 
 export default function Onboarding() {
   const navigate = useNavigate();
