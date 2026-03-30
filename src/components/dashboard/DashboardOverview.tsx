@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Rocket, Eye, DollarSign, TrendingUp, ArrowRight, Sparkles, Zap, Clock } from "lucide-react";
+import { Rocket, Eye, Sparkles, Zap, Clock, ArrowRight } from "lucide-react";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { queryWithRetry } from "@/lib/queryWithRetry";
 import SetupProgress from "@/components/dashboard/SetupProgress";
 import ROICalculator from "@/components/dashboard/ROICalculator";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 interface DailyStat {
   recorded_at: string;
@@ -30,8 +31,7 @@ function SkeletonCard() {
 
 function AnimatedCounter({ target, prefix = "", suffix = "" }: { target: number; prefix?: string; suffix?: string }) {
   const [count, setCount] = useState(0);
-  const ref = useRef<HTMLSpanElement>(null);
-  
+
   useEffect(() => {
     if (target === 0) { setCount(0); return; }
     const duration = 1200;
@@ -50,21 +50,7 @@ function AnimatedCounter({ target, prefix = "", suffix = "" }: { target: number;
     return () => clearInterval(timer);
   }, [target]);
 
-  return <span ref={ref}>{prefix}{count.toLocaleString()}{suffix}</span>;
-}
-
-function EmptyOverview() {
-  return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card py-16 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/8">
-        <Rocket className="h-7 w-7 text-primary" />
-      </div>
-      <h3 className="mt-5 text-lg font-semibold text-foreground">Welcome to maroa.ai</h3>
-      <p className="mt-2 max-w-md text-sm text-muted-foreground leading-relaxed">
-        Your marketing engine is warming up. Complete your onboarding to activate everything.
-      </p>
-    </div>
-  );
+  return <span>{prefix}{count.toLocaleString()}{suffix}</span>;
 }
 
 const feedIcons: Record<string, string> = {
@@ -74,6 +60,7 @@ const feedIcons: Record<string, string> = {
   email: "📧",
   strategy: "🎯",
   notification: "🔔",
+  win: "🏆",
 };
 
 export default function DashboardOverview() {
@@ -117,7 +104,7 @@ export default function DashboardOverview() {
 
       const [statsRes, photosRes, contentRes, approvedRes, publishedRes] = await Promise.all([
         queryWithRetry<DailyStat[]>(() =>
-          externalSupabase.from("daily_stats").select("*").eq("business_id", resolvedBusinessId).order("recorded_at", { ascending: false }).limit(30) as unknown as Promise<{ data: DailyStat[] | null; error: any }>
+          externalSupabase.from("daily_stats").select("*").eq("business_id", resolvedBusinessId).order("recorded_at", { ascending: true }).limit(30) as unknown as Promise<{ data: DailyStat[] | null; error: any }>
         ),
         externalSupabase.from("business_photos").select("id", { count: "exact", head: true }).eq("business_id", resolvedBusinessId),
         externalSupabase.from("generated_content").select("id", { count: "exact", head: true }).eq("business_id", resolvedBusinessId),
@@ -134,52 +121,26 @@ export default function DashboardOverview() {
       // Build automation feed
       const feedItems: FeedItem[] = [];
 
-      // Content generated
-      const { data: recentContent } = await externalSupabase
-        .from("generated_content")
-        .select("created_at, content_theme")
-        .eq("business_id", resolvedBusinessId)
-        .order("created_at", { ascending: false })
-        .limit(5);
-      (recentContent ?? []).forEach((c: any) => {
-        feedItems.push({
-          type: "content",
-          message: `Generated weekly content: ${c.content_theme || "New posts"}`,
-          time: c.created_at,
-        });
+      const [recentContentRes, recentInsightsRes, recentRetentionRes, recentWinsRes] = await Promise.all([
+        externalSupabase.from("generated_content").select("created_at, content_theme").eq("business_id", resolvedBusinessId).order("created_at", { ascending: false }).limit(5),
+        externalSupabase.from("competitor_insights").select("recorded_at, competitor_doing_well").eq("business_id", resolvedBusinessId).order("recorded_at", { ascending: false }).limit(3),
+        externalSupabase.from("retention_logs").select("email_type, subject, sent_at").eq("business_id", resolvedBusinessId).order("sent_at", { ascending: false }).limit(3),
+        externalSupabase.from("win_notifications").select("win_type, notified_at").eq("business_id", resolvedBusinessId).order("notified_at", { ascending: false }).limit(3),
+      ]);
+
+      (recentContentRes.data ?? []).forEach((c: any) => {
+        feedItems.push({ type: "content", message: `Generated ${c.content_theme || "new"} content for your business`, time: c.created_at });
+      });
+      (recentInsightsRes.data ?? []).forEach((i: any) => {
+        feedItems.push({ type: "competitor", message: "Detected a competitor move and updated your strategy", time: i.recorded_at });
+      });
+      (recentRetentionRes.data ?? []).forEach((r: any) => {
+        feedItems.push({ type: "email", message: `Sent ${r.email_type || "retention"} email: ${r.subject || "Check-in"}`, time: r.sent_at });
+      });
+      (recentWinsRes.data ?? []).forEach((w: any) => {
+        feedItems.push({ type: "win", message: w.win_type || "New milestone achieved!", time: w.notified_at });
       });
 
-      // Competitor insights
-      const { data: recentInsights } = await externalSupabase
-        .from("competitor_insights")
-        .select("recorded_at")
-        .eq("business_id", resolvedBusinessId)
-        .order("recorded_at", { ascending: false })
-        .limit(3);
-      (recentInsights ?? []).forEach((i: any) => {
-        feedItems.push({
-          type: "competitor",
-          message: "Detected a competitor move and updated your strategy",
-          time: i.recorded_at,
-        });
-      });
-
-      // Retention logs
-      const { data: recentRetention } = await externalSupabase
-        .from("retention_logs")
-        .select("email_type, subject, sent_at")
-        .eq("business_id", resolvedBusinessId)
-        .order("sent_at", { ascending: false })
-        .limit(3);
-      (recentRetention ?? []).forEach((r: any) => {
-        feedItems.push({
-          type: "email",
-          message: `Sent ${r.email_type || "retention"} email: ${r.subject || "Check-in"}`,
-          time: r.sent_at,
-        });
-      });
-
-      // Sort by time desc, take 10
       feedItems.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
       setFeed(feedItems.slice(0, 10));
 
@@ -198,11 +159,17 @@ export default function DashboardOverview() {
   const hoursSaved = postsPublished * 2;
 
   const summaryCards = [
-    { label: "Total Reach", target: totalReach, icon: Eye, change: "From daily_stats", prefix: "" },
+    { label: "Total Reach", target: totalReach, icon: Eye, change: "From daily stats" },
     { label: "Posts Published", target: postsPublished, icon: Sparkles, change: "AI generated" },
     { label: "Active Workflows", target: 28, icon: Zap, change: "Running for you" },
     { label: "Hours Saved", target: hoursSaved, icon: Clock, change: `${postsPublished} posts × 2hrs` },
   ];
+
+  // Prepare chart data
+  const chartData = stats.map(s => ({
+    date: new Date(s.recorded_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    reach: s.total_reach || 0,
+  }));
 
   if (loading) {
     return (
@@ -211,6 +178,7 @@ export default function DashboardOverview() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => <SkeletonCard key={i} />)}
         </div>
+        <div className="h-64 rounded-2xl border border-border bg-card animate-pulse-soft" />
       </div>
     );
   }
@@ -241,7 +209,7 @@ export default function DashboardOverview() {
               </div>
             </div>
             <p className="mt-3 text-2xl font-bold text-card-foreground">
-              <AnimatedCounter target={s.target} prefix={s.prefix} />
+              <AnimatedCounter target={s.target} />
             </p>
             <p className="mt-1 text-[11px] text-muted-foreground">{s.change}</p>
           </div>
@@ -251,39 +219,46 @@ export default function DashboardOverview() {
       <ROICalculator postsPublished={postsPublished} />
 
       {!hasData ? (
-        <EmptyOverview />
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card py-16 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/8">
+            <Rocket className="h-7 w-7 text-primary" />
+          </div>
+          <h3 className="mt-5 text-lg font-semibold text-foreground">Welcome to maroa.ai</h3>
+          <p className="mt-2 max-w-md text-sm text-muted-foreground leading-relaxed">
+            Your marketing engine is warming up. Complete your onboarding to activate everything.
+          </p>
+        </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-3">
-          {/* Chart + Quick Actions */}
+          {/* Chart */}
           <div className="lg:col-span-2 space-y-4">
             <div className="rounded-2xl border border-border bg-card p-5">
-              <h3 className="text-sm font-semibold text-card-foreground">Reach — Last 30 Days</h3>
-              <div className="mt-4">
-                <div className="flex h-48 items-end gap-1">
-                  {[...stats].reverse().map((s, i) => {
-                    const max = Math.max(...stats.map((d) => d.total_reach || 1));
-                    const height = ((s.total_reach || 0) / max) * 100;
-                    return (
-                      <div key={i} className="flex-1 rounded-t bg-primary/15 transition-all duration-200 hover:bg-primary/30" style={{ height: `${height}%` }} title={`${s.recorded_at}: ${s.total_reach}`} />
-                    );
-                  })}
+              <h3 className="text-sm font-semibold text-card-foreground mb-4">Reach — Last 30 Days</h3>
+              {chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={220}>
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} width={40} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "12px", fontSize: "12px" }}
+                      labelStyle={{ color: "hsl(var(--foreground))" }}
+                    />
+                    <Line type="monotone" dataKey="reach" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: "hsl(var(--primary))" }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
+                  No reach data yet. Check back after your first week.
                 </div>
-              </div>
-            </div>
-            <div className="rounded-2xl border border-border bg-card p-5">
-              <h3 className="text-sm font-semibold text-card-foreground">Quick Actions</h3>
-              <div className="mt-4 space-y-2">
-                <Button variant="outline" className="w-full justify-between text-sm h-10">Generate content now <ArrowRight className="h-3.5 w-3.5" /></Button>
-                <Button variant="outline" className="w-full justify-between text-sm h-10">View this week's posts <ArrowRight className="h-3.5 w-3.5" /></Button>
-                <Button variant="outline" className="w-full justify-between text-sm h-10">Check ad performance <ArrowRight className="h-3.5 w-3.5" /></Button>
-              </div>
+              )}
             </div>
           </div>
 
           {/* Live Automation Feed */}
           <div className="rounded-2xl border border-border bg-card p-5">
             <div className="flex items-center gap-2 mb-4">
-              <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
+              <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
               <h3 className="text-sm font-semibold text-card-foreground">Live Automation Feed</h3>
             </div>
             {feed.length === 0 ? (

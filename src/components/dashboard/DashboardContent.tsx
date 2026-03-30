@@ -18,8 +18,12 @@ interface ContentItem {
   instagram_caption: string | null;
   instagram_caption_2: string | null;
   facebook_post: string | null;
+  instagram_story_text: string | null;
   email_subject: string | null;
   email_body: string | null;
+  blog_title: string | null;
+  google_ad_headline: string | null;
+  google_ad_description: string | null;
   image_url: string | null;
   content_theme: string | null;
   status: string;
@@ -333,9 +337,10 @@ export default function DashboardContent() {
       )}
 
       {previewItem && (
-        <PostPreviewModal
+      <PostPreviewModal
           item={previewItem}
           businessName={businessName}
+          businessId={businessId ?? undefined}
           onClose={() => setPreviewItem(null)}
           onApproved={() => { setPreviewItem(null); fetchContent(); }}
         />
