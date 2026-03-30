@@ -106,7 +106,7 @@ export default function DashboardAds() {
     setBudgetSaving(true);
     const { error } = await externalSupabase.from("businesses").update({ daily_budget: budget }).eq("id", businessId);
     if (error) { toast.error("Failed to update budget"); setBudgetSaving(false); return; }
-    void fetch("https://ideal.app.n8n.cloud/webhook/budget-updated", {
+    void fetch("https://maroa-api-production.up.railway.app/webhook/budget-updated", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ business_id: businessId, daily_budget: budget }),
     }).catch(console.warn);

@@ -112,7 +112,7 @@ export default function DashboardSocial() {
         if (error) throw new Error("Failed to save connection");
         localStorage.removeItem("meta_oauth_business_id");
         await fetchBusiness();
-        void fetch("https://ideal.app.n8n.cloud/webhook/maroa-account-2026", {
+        void fetch("https://maroa-api-production.up.railway.app/webhook/maroa-account-2026", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ business_id: storedBusinessId, facebook_page_id: data.page_id ?? null, meta_access_token: data.access_token, ad_account_id: null }),
         }).catch(console.warn);

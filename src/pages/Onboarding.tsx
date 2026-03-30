@@ -24,7 +24,7 @@ const goalOptions = ["Get more customers through the door", "Grow Instagram foll
 const contentTypeOptions = ["Behind the scenes", "Product showcases", "Customer stories", "Educational tips", "Promotions and offers", "I'm not sure yet"];
 const platformOptions = ["Instagram", "Facebook", "TikTok", "Google", "LinkedIn"];
 
-const N8N_CONNECT_WEBHOOK_URL = "https://ideal.app.n8n.cloud/webhook/maroa-account-2026";
+const N8N_CONNECT_WEBHOOK_URL = "https://maroa-api-production.up.railway.app/webhook/maroa-account-2026";
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -142,7 +142,7 @@ export default function Onboarding() {
       // Trigger signup and instant-content webhooks
       const { data: bizData } = await externalSupabase.from("businesses").select("*").eq("id", businessId).maybeSingle();
       if (bizData) {
-        void fetch("https://ideal.app.n8n.cloud/webhook/maroa-signup-2026", {
+        void fetch("https://maroa-api-production.up.railway.app/webhook/maroa-signup-2026", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -153,7 +153,7 @@ export default function Onboarding() {
             plan: bizData.plan,
           }),
         }).catch(console.warn);
-        void fetch("https://ideal.app.n8n.cloud/webhook/maroa-content-2026", {
+        void fetch("https://maroa-api-production.up.railway.app/webhook/maroa-content-2026", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ business_id: businessId, email: bizData.email }),
