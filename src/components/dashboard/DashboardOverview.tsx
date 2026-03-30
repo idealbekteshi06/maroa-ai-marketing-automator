@@ -258,7 +258,7 @@ export default function DashboardOverview() {
           {/* Live Automation Feed */}
           <div className="rounded-2xl border border-border bg-card p-5">
             <div className="flex items-center gap-2 mb-4">
-              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+              <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
               <h3 className="text-sm font-semibold text-card-foreground">Live Automation Feed</h3>
             </div>
             {feed.length === 0 ? (
