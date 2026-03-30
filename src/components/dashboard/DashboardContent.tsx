@@ -337,9 +337,10 @@ export default function DashboardContent() {
       )}
 
       {previewItem && (
-        <PostPreviewModal
+      <PostPreviewModal
           item={previewItem}
           businessName={businessName}
+          businessId={businessId ?? undefined}
           onClose={() => setPreviewItem(null)}
           onApproved={() => { setPreviewItem(null); fetchContent(); }}
         />
