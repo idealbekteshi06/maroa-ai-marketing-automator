@@ -47,9 +47,9 @@ export default function DashboardCompetitors() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ business_id: businessId }),
       });
-      toast.success("Competitor analysis triggered! Results appear within a few minutes.");
+      toast.success("Analysis triggered!");
       setTimeout(() => fetchInsights(), 15000);
-    } catch { toast.error("Failed to trigger analysis"); }
+    } catch { toast.error("Failed"); }
     finally { setRefreshing(false); }
   };
 
@@ -58,93 +58,80 @@ export default function DashboardCompetitors() {
     setSavingComp(true);
     await externalSupabase.from("businesses").update({ competitors }).eq("id", businessId);
     setSavingComp(false);
-    toast.success("Competitors saved! Running analysis...");
+    toast.success("Saved! Running analysis...");
     handleRefresh();
   };
 
   const latest = insights[0];
   const history = insights.slice(1);
 
-  if (loading) return <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-32 rounded-2xl border border-border bg-card animate-pulse" />)}</div>;
+  if (loading) return <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-24 rounded-lg border border-border bg-card animate-pulse" />)}</div>;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm text-muted-foreground">AI-powered insights on what your competitors are doing.</p>
-          {latest && <p className="text-[10px] text-muted-foreground mt-1">Last updated: {timeAgo(latest.recorded_at)}</p>}
+          <p className="text-sm text-muted-foreground">AI-powered competitor analysis</p>
+          {latest && <p className="text-[11px] text-muted-foreground mt-0.5">Updated {timeAgo(latest.recorded_at)}</p>}
         </div>
         <Button size="sm" variant="outline" className="h-9 text-xs" onClick={handleRefresh} disabled={refreshing}>
-          {refreshing ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Analyzing...</> : <><RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Refresh Analysis</>}
+          {refreshing ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Analyzing...</> : <><RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Refresh</>}
         </Button>
       </div>
 
-      {/* Add competitors */}
       {!competitors && insights.length === 0 && (
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <h3 className="text-sm font-semibold text-card-foreground mb-2">Add Your Competitors</h3>
-          <p className="text-xs text-muted-foreground mb-3">Type competitor names separated by commas.</p>
+        <div className="rounded-lg border border-border bg-card p-5 shadow-meta">
+          <h3 className="text-sm font-semibold text-foreground mb-2">Add Your Competitors</h3>
+          <p className="text-xs text-muted-foreground mb-3">Separate names with commas.</p>
           <div className="flex gap-2">
-            <Input placeholder="e.g. Joe's Bakery, Sweet Flour, The Cake Shop" value={competitors} onChange={e => setCompetitors(e.target.value)} className="flex-1" />
+            <Input placeholder="e.g. Joe's Bakery, Sweet Flour" value={competitors} onChange={e => setCompetitors(e.target.value)} className="flex-1" />
             <Button size="sm" onClick={handleSaveCompetitors} disabled={savingComp || !competitors.trim()}>{savingComp ? "Saving..." : "Save & Analyze"}</Button>
           </div>
         </div>
       )}
 
       {insights.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card py-20 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10"><Search className="h-7 w-7 text-primary" /></div>
-          <h3 className="mt-5 text-lg font-semibold text-foreground">Add your top 3 competitors in Settings</h3>
-          <p className="mt-2 max-w-md text-sm text-muted-foreground leading-relaxed">
-            Every Friday maroa.ai searches what they posted, finds your gaps, and tells you exactly what content to create to beat them.
-          </p>
-          <Button className="mt-4" size="sm" onClick={handleRefresh} disabled={refreshing}>{refreshing ? "Analyzing..." : "Run Analysis Now"}</Button>
+        <div className="flex flex-col items-center justify-center rounded-lg border border-border bg-card py-16 text-center shadow-meta">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10"><Search className="h-6 w-6 text-primary" /></div>
+          <h3 className="mt-4 text-base font-semibold text-foreground">Add competitors in Settings</h3>
+          <p className="mt-2 max-w-md text-sm text-muted-foreground">Every Friday, AI analyzes what competitors post and tells you how to beat them.</p>
+          <Button className="mt-4" size="sm" onClick={handleRefresh} disabled={refreshing}>Run Analysis</Button>
         </div>
       ) : (
         <>
-          {/* Featured latest insight */}
           {latest && (
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <div className="grid gap-4 sm:grid-cols-2">
-                {latest.competitor_doing_well && (
-                  <div className="rounded-xl bg-muted/50 p-4">
-                    <div className="flex items-center gap-2 mb-2"><Trophy className="h-4 w-4 text-amber-500" /><p className="text-[11px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">What They're Doing Well</p></div>
-                    <p className="text-sm text-card-foreground leading-relaxed">{latest.competitor_doing_well}</p>
+            <div className="rounded-lg border border-border bg-card shadow-meta overflow-hidden">
+              <div className="grid gap-0 sm:grid-cols-2">
+                {[
+                  { icon: Trophy, color: "text-warning", label: "What They Do Well", value: latest.competitor_doing_well },
+                  { icon: Target, color: "text-primary", label: "Your Gap Opportunity", value: latest.gap_opportunity },
+                  { icon: Lightbulb, color: "text-warning", label: "Content to Steal", value: latest.content_to_steal },
+                  { icon: Compass, color: "text-primary", label: "Your Counter Move", value: latest.positioning_tip },
+                ].filter(s => s.value).map((s, i) => (
+                  <div key={i} className="p-5 border-b border-r border-border last:border-0 [&:nth-child(2)]:border-r-0 [&:nth-child(4)]:border-r-0 [&:nth-child(3)]:border-b-0 [&:nth-child(4)]:border-b-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <s.icon className={`h-4 w-4 ${s.color}`} />
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{s.label}</span>
+                    </div>
+                    <p className="text-[13px] text-foreground leading-relaxed">{s.value}</p>
                   </div>
-                )}
-                {latest.gap_opportunity && (
-                  <div className="rounded-xl bg-primary/5 p-4">
-                    <div className="flex items-center gap-2 mb-2"><Target className="h-4 w-4 text-primary" /><p className="text-[11px] font-semibold uppercase tracking-wider text-primary">Your Gap Opportunity</p></div>
-                    <p className="text-sm text-card-foreground leading-relaxed">{latest.gap_opportunity}</p>
-                  </div>
-                )}
-                {latest.content_to_steal && (
-                  <div className="rounded-xl bg-muted/50 p-4">
-                    <div className="flex items-center gap-2 mb-2"><Lightbulb className="h-4 w-4 text-amber-500" /><p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Content to Steal</p></div>
-                    <p className="text-sm text-card-foreground leading-relaxed">{latest.content_to_steal}</p>
-                  </div>
-                )}
-                {latest.positioning_tip && (
-                  <div className="rounded-xl bg-muted/50 p-4">
-                    <div className="flex items-center gap-2 mb-2"><Compass className="h-4 w-4 text-primary" /><p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Your Counter Move</p></div>
-                    <p className="text-sm text-card-foreground leading-relaxed">{latest.positioning_tip}</p>
-                  </div>
-                )}
+                ))}
               </div>
-              <p className="text-[10px] text-muted-foreground mt-4">Updated {timeAgo(latest.recorded_at)}</p>
+              <div className="px-5 py-2 border-t border-border bg-muted/30">
+                <p className="text-[11px] text-muted-foreground">Updated {timeAgo(latest.recorded_at)}</p>
+              </div>
             </div>
           )}
 
-          {/* History */}
           {history.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-card-foreground">Previous Analyses</h3>
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-foreground">Previous Analyses</h3>
               {history.map(ins => (
-                <div key={ins.id} className="rounded-2xl border border-border bg-card p-4 transition-all hover:shadow-md">
-                  <div className="flex items-center justify-between mb-2">
+                <div key={ins.id} className="rounded-lg border border-border bg-card p-4 shadow-meta hover:shadow-meta-hover transition-shadow">
+                  <div className="flex items-center justify-between mb-1">
                     <span className="text-xs text-muted-foreground">{new Date(ins.recorded_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
                   </div>
-                  <p className="text-sm text-card-foreground line-clamp-2">{ins.gap_opportunity || ins.competitor_doing_well || ins.positioning_tip || "Analysis"}</p>
+                  <p className="text-[13px] text-foreground line-clamp-2">{ins.gap_opportunity || ins.competitor_doing_well || ins.positioning_tip || "Analysis"}</p>
                 </div>
               ))}
             </div>
@@ -152,11 +139,10 @@ export default function DashboardCompetitors() {
         </>
       )}
 
-      {/* How this works */}
-      <div className="rounded-2xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-card-foreground mb-2">How This Works</h3>
+      <div className="rounded-lg border border-border bg-card p-5 shadow-meta">
+        <h3 className="text-sm font-semibold text-foreground mb-2">How This Works</h3>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          maroa.ai tracks competitor activity every Friday using search data. It finds what's working for them, identifies gaps you can exploit, and generates specific content recommendations to position you as the better choice.
+          Every Friday, AI tracks competitor activity, finds what's working, identifies gaps, and generates content recommendations to position you as the better choice.
         </p>
       </div>
     </div>
