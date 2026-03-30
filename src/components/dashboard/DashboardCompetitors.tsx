@@ -42,7 +42,7 @@ export default function DashboardCompetitors() {
     if (!businessId) return;
     setRefreshing(true);
     try {
-      await fetch("https://ideal.app.n8n.cloud/webhook/competitor-check", {
+      await fetch("https://maroa-api-production.up.railway.app/webhook/competitor-check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ business_id: businessId }),

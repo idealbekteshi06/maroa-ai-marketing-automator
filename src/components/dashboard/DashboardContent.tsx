@@ -116,7 +116,7 @@ export default function DashboardContent() {
     const { error } = await externalSupabase.from("generated_content").update({ status: "approved" }).eq("id", id);
     if (error) { toast.error("Failed to approve"); return; }
     toast.success("Content approved!");
-    void fetch("https://ideal.app.n8n.cloud/webhook/content-approved", {
+    void fetch("https://maroa-api-production.up.railway.app/webhook/content-approved", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content_id: id, business_id: businessId }),
