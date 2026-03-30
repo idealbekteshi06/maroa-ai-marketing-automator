@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, FileText, Megaphone, Share2,
   Search, Settings, Menu, X, ImageIcon, LogOut, Gift, PenSquare,
-  Sparkles, Send, Eye, Plus, Globe,
+  MessageCircle, Globe, Bell, Home, PlusCircle, MoreHorizontal,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
@@ -18,32 +18,33 @@ import PhotoLibrary from "@/components/dashboard/PhotoLibrary";
 import ReferralPage from "@/components/dashboard/ReferralPage";
 import DashboardPublish from "@/components/dashboard/DashboardPublish";
 import DashboardLandingPages from "@/components/dashboard/DashboardLandingPages";
+import DashboardInbox from "@/components/dashboard/DashboardInbox";
 import NotificationDropdown from "@/components/dashboard/NotificationDropdown";
 import AIChatAssistant from "@/components/dashboard/AIChatAssistant";
 
 const navItems = [
-  { key: "overview", label: "Overview", icon: LayoutDashboard },
+  { key: "overview", label: "Overview", icon: Home },
+  { key: "inbox", label: "Inbox", icon: MessageCircle },
   { key: "content", label: "Content", icon: FileText },
   { key: "ads", label: "Ad Campaigns", icon: Megaphone },
   { key: "social", label: "Social Accounts", icon: Share2 },
   { key: "competitors", label: "Competitor Intel", icon: Search },
   { key: "photos", label: "Photo Library", icon: ImageIcon },
-  { key: "publish", label: "Publish", icon: PenSquare },
+  { key: "publish", label: "Publish", icon: PlusCircle },
   { key: "landing", label: "Landing Pages", icon: Globe },
-  { key: "referral", label: "Refer & Earn", icon: Gift },
   { key: "settings", label: "Settings", icon: Settings },
 ];
 
 const mobileNav = [
-  { key: "overview", label: "Overview", icon: LayoutDashboard },
+  { key: "overview", label: "Home", icon: Home },
+  { key: "inbox", label: "Inbox", icon: MessageCircle },
+  { key: "publish", label: "Create", icon: PlusCircle },
   { key: "content", label: "Content", icon: FileText },
-  { key: "publish", label: "Publish", icon: PenSquare },
-  { key: "social", label: "Social", icon: Share2 },
-  { key: "settings", label: "Settings", icon: Settings },
+  { key: "settings", label: "Menu", icon: MoreHorizontal },
 ];
 
 const pageTitles: Record<string, string> = {
-  overview: "Overview", content: "Content", ads: "Ad Campaigns",
+  overview: "Overview", inbox: "Inbox", content: "Content", ads: "Ad Campaigns",
   social: "Social Accounts", competitors: "Competitor Intel",
   photos: "Photo Library", publish: "Publish", landing: "Landing Pages",
   referral: "Refer & Earn", settings: "Settings",
@@ -71,6 +72,7 @@ export default function Dashboard() {
   const renderPage = () => {
     switch (active) {
       case "overview": return <DashboardOverview />;
+      case "inbox": return <DashboardInbox />;
       case "content": return <DashboardContent />;
       case "ads": return <DashboardAds />;
       case "social": return <DashboardSocial />;
@@ -85,50 +87,67 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex min-h-screen bg-muted/30">
-      {/* Desktop sidebar */}
-      <aside className="hidden w-60 shrink-0 border-r border-sidebar-border bg-sidebar md:flex md:flex-col">
-        <div className="flex h-14 items-center px-5">
-          <Link to="/" className="text-base font-bold text-sidebar-foreground">maroa<span className="text-primary">.ai</span></Link>
+    <div className="flex min-h-screen bg-background">
+      {/* Desktop sidebar — Meta Business Suite style */}
+      <aside className="hidden w-[240px] shrink-0 border-r border-sidebar-border bg-sidebar md:flex md:flex-col">
+        <div className="flex h-14 items-center px-4 border-b border-sidebar-border">
+          <Link to="/" className="text-[15px] font-bold text-sidebar-foreground tracking-tight">
+            maroa<span className="text-primary">.ai</span>
+          </Link>
         </div>
-        <nav className="flex-1 space-y-0.5 px-3 py-3">
+        <nav className="flex-1 py-2 px-2">
           {navItems.map(item => (
-            <button key={item.key} onClick={() => setActive(item.key)}
-              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-[13px] transition-all duration-200 ${
-                active === item.key ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-              }`}>
-              <item.icon className="h-4 w-4" strokeWidth={active === item.key ? 2 : 1.5} />
+            <button
+              key={item.key}
+              onClick={() => setActive(item.key)}
+              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-colors ${
+                active === item.key
+                  ? "bg-primary/10 text-primary"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent"
+              }`}
+            >
+              <item.icon className="h-[18px] w-[18px]" strokeWidth={active === item.key ? 2 : 1.5} />
               {item.label}
             </button>
           ))}
         </nav>
-        <div className="border-t border-sidebar-border p-3 space-y-2">
-          <div className="flex items-center gap-2 px-3">
-            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-[10px] text-sidebar-foreground/50">31 workflows active</span>
+        <div className="border-t border-sidebar-border px-3 py-3 space-y-3">
+          <div className="flex items-center gap-2 px-2">
+            <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
+            <span className="text-[11px] text-muted-foreground">31 workflows active</span>
           </div>
-          <button onClick={handleSignOut} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-[13px] text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors">
+          <button
+            onClick={handleSignOut}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors"
+          >
             <LogOut className="h-4 w-4" strokeWidth={1.5} /> Sign out
           </button>
+          <div className="flex items-center gap-3 rounded-lg px-3 py-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{initials}</div>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-foreground truncate">{firstName}</p>
+              <p className="text-[10px] text-muted-foreground truncate">{user?.email}</p>
+            </div>
+          </div>
         </div>
       </aside>
 
-      {/* Mobile sidebar */}
+      {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div className="absolute inset-0 bg-foreground/20 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-          <aside className="absolute left-0 top-0 h-full w-64 border-r border-sidebar-border bg-sidebar" style={{ animation: "slide-in-right 0.2s ease-out" }}>
-            <div className="flex h-14 items-center justify-between px-5">
-              <span className="text-base font-bold text-sidebar-foreground">maroa<span className="text-primary">.ai</span></span>
+          <aside className="absolute left-0 top-0 h-full w-[280px] border-r border-sidebar-border bg-sidebar animate-fade-in">
+            <div className="flex h-14 items-center justify-between px-4 border-b border-sidebar-border">
+              <span className="text-[15px] font-bold text-sidebar-foreground">maroa<span className="text-primary">.ai</span></span>
               <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)} className="h-8 w-8"><X className="h-4 w-4" /></Button>
             </div>
-            <nav className="space-y-0.5 px-3 py-3">
+            <nav className="py-2 px-2">
               {navItems.map(item => (
                 <button key={item.key} onClick={() => { setActive(item.key); setSidebarOpen(false); }}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-[13px] transition-colors ${
-                    active === item.key ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "text-sidebar-foreground/60 hover:bg-sidebar-accent/50"
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-colors ${
+                    active === item.key ? "bg-primary/10 text-primary" : "text-sidebar-foreground hover:bg-sidebar-accent"
                   }`}>
-                  <item.icon className="h-4 w-4" />{item.label}
+                  <item.icon className="h-[18px] w-[18px]" />{item.label}
                 </button>
               ))}
             </nav>
@@ -136,30 +155,43 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Main */}
+      {/* Main content */}
       <div className="flex flex-1 flex-col min-w-0">
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/80 backdrop-blur-xl px-5">
+        {/* Top header — Meta style */}
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-card px-4 shadow-meta">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="md:hidden h-8 w-8" onClick={() => setSidebarOpen(true)}><Menu className="h-4 w-4" /></Button>
-            <h2 className="text-sm font-semibold text-foreground">
-              {active === "overview" ? `Welcome back, ${firstName} 👋` : pageTitles[active]}
+            <Button variant="ghost" size="icon" className="md:hidden h-9 w-9" onClick={() => setSidebarOpen(true)}>
+              <Menu className="h-5 w-5" />
+            </Button>
+            <h2 className="text-[15px] font-semibold text-foreground">
+              {active === "overview" ? `Welcome, ${firstName}` : pageTitles[active]}
             </h2>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             <ThemeToggle />
             <NotificationDropdown />
-            <div className="ml-1 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{initials}</div>
+            <div className="ml-1 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground cursor-pointer">
+              {initials}
+            </div>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto p-5 pb-24 md:pb-5">{renderPage()}</main>
+
+        <main className="flex-1 overflow-y-auto p-4 pb-24 md:pb-4">
+          {renderPage()}
+        </main>
       </div>
 
-      {/* Mobile bottom tab bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-border bg-background/80 backdrop-blur-xl md:hidden safe-area-inset-bottom">
+      {/* Mobile bottom tab bar — Facebook app style */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-border bg-card md:hidden safe-area-inset-bottom shadow-meta-elevated">
         {mobileNav.map(item => (
-          <button key={item.key} onClick={() => setActive(item.key)}
-            className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] transition-colors ${active === item.key ? "text-primary" : "text-muted-foreground"}`}>
-            <item.icon className="h-5 w-5" strokeWidth={active === item.key ? 2 : 1.5} />
+          <button
+            key={item.key}
+            onClick={() => setActive(item.key)}
+            className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors min-h-[48px] ${
+              active === item.key ? "text-primary" : "text-muted-foreground"
+            }`}
+          >
+            <item.icon className="h-5 w-5" strokeWidth={active === item.key ? 2.5 : 1.5} />
             {item.label}
           </button>
         ))}
