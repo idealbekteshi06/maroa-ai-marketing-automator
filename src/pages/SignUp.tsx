@@ -115,7 +115,7 @@ export default function SignUp() {
 
       // Trigger instant content generation
       if (newBiz?.id) {
-        void fetch("https://ideal.app.n8n.cloud/webhook/maroa-content-2026", {
+        void fetch("https://maroa-api-production.up.railway.app/webhook/maroa-content-2026", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ business_id: newBiz.id, email: form.email }),
