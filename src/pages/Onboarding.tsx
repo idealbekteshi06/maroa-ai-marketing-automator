@@ -213,7 +213,7 @@ export default function Onboarding() {
 
   const handleMetaOAuth = () => {
     const redirectUri = `${window.location.origin}/social-callback`;
-    const url = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${META_PERMISSIONS}&response_type=code`;
+    const url = `https://www.facebook.com/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${META_PERMISSIONS}&response_type=code&state=maroa_oauth`;
     localStorage.setItem("meta_oauth_business_id", businessId || "");
     window.location.href = url;
   };
