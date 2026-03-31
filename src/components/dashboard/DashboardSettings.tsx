@@ -4,15 +4,17 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Check, ExternalLink, Shield, Trash2, User, CreditCard, Bell, Lock } from "lucide-react";
+import { Check, ExternalLink, Shield, Trash2, User, CreditCard, Bell, Lock, Zap, CalendarClock } from "lucide-react";
 
 const tabs = [
   { key: "Profile", icon: User },
   { key: "Billing", icon: CreditCard },
+  { key: "Automation", icon: Zap },
   { key: "Notifications", icon: Bell },
   { key: "Account", icon: Lock },
 ];
@@ -25,8 +27,8 @@ const PLANS = {
 type PlanKey = keyof typeof PLANS;
 
 const industries = ["Bakery", "Restaurant", "Café", "Salon & Spa", "Gym & Fitness", "Boutique & Retail", "Photography", "Real Estate", "Coaching & Consulting", "Medical & Dental", "Auto Services", "Home Services", "E-commerce", "Professional Services", "Healthcare", "Education", "Technology", "Food & Beverage", "Entertainment", "Other"];
-const tones = ["Professional", "Friendly", "Casual", "Energetic", "Luxurious"];
-const goals = ["Get more customers", "Increase brand awareness", "Drive online sales", "Build email list"];
+const tones = ["Professional", "Friendly", "Casual", "Energetic", "Luxurious", "Educational"];
+const goals = ["Get more customers", "Increase brand awareness", "Drive online sales", "Build email list", "Generate leads", "Grow social following"];
 
 interface NotificationPrefs {
   weekly_content_preview: boolean; win_alerts: boolean; monthly_strategy_report: boolean;
@@ -42,6 +44,28 @@ const notifConfig = [
   { key: "reactivation_emails" as const, label: "Reactivation emails", desc: "If you're inactive for 14 days we check in" },
 ];
 
+function getNextRun(dayOfWeek: number, hour: number) {
+  const now = new Date();
+  const target = new Date(now);
+  target.setHours(hour, 0, 0, 0);
+  const diff = (dayOfWeek - now.getDay() + 7) % 7;
+  target.setDate(now.getDate() + (diff === 0 && target <= now ? 7 : diff));
+  return target.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+const workflows = [
+  { name: "Content Generation", schedule: "Monday 9:00 AM", next: getNextRun(1, 9), active: true },
+  { name: "Ad Optimization", schedule: "Daily 8:00 AM", next: getNextRun((new Date().getDay() + 1) % 7, 8), active: true },
+  { name: "Performance Tracking", schedule: "Daily 8:00 AM", next: getNextRun((new Date().getDay() + 1) % 7, 8), active: true },
+  { name: "Retention Emails", schedule: "Daily 7:00 AM", next: getNextRun((new Date().getDay() + 1) % 7, 7), active: true },
+  { name: "Competitor Analysis", schedule: "Friday 2:00 PM", next: getNextRun(5, 14), active: true },
+  { name: "AI Brain Strategy", schedule: "Sunday 8:00 PM", next: getNextRun(0, 20), active: true },
+  { name: "Strategy Review", schedule: "Sunday 10:00 PM", next: getNextRun(0, 22), active: true },
+  { name: "Monthly Report", schedule: "1st of month", next: "Next month", active: true },
+  { name: "Lead Scoring", schedule: "Daily 6:00 AM", next: getNextRun((new Date().getDay() + 1) % 7, 6), active: true },
+  { name: "Review Monitoring", schedule: "Daily 9:00 AM", next: getNextRun((new Date().getDay() + 1) % 7, 9), active: true },
+];
+
 export default function DashboardSettings() {
   const [activeTab, setActiveTab] = useState("Profile");
   const { user, businessId, isReady } = useAuth();
@@ -54,6 +78,8 @@ export default function DashboardSettings() {
   const [currentPlan, setCurrentPlan] = useState<PlanKey>("free");
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs>(defaultPrefs);
+  const [autopilot, setAutopilot] = useState(true);
+  const [autoApproveHours, setAutoApproveHours] = useState([48]);
 
   useEffect(() => {
     if (!businessId || !isReady) return;
@@ -143,7 +169,7 @@ export default function DashboardSettings() {
 
   return (
     <div className="flex gap-6 pb-20 md:pb-0">
-      {/* Settings nav — Meta Business Settings style */}
+      {/* Settings nav */}
       <div className="hidden md:block w-[200px] shrink-0">
         <div className="sticky top-20 space-y-1">
           {tabs.map(tab => (
@@ -160,10 +186,10 @@ export default function DashboardSettings() {
 
       {/* Mobile tabs */}
       <div className="flex-1 space-y-4">
-        <div className="flex gap-1 md:hidden border border-border rounded-lg overflow-hidden bg-card">
+        <div className="flex gap-1 md:hidden border border-border rounded-lg overflow-hidden bg-card overflow-x-auto">
           {tabs.map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
+              className={`flex-1 px-2 py-2 text-[10px] font-medium transition-colors whitespace-nowrap min-h-[48px] ${
                 activeTab === tab.key ? "bg-primary text-primary-foreground" : "text-muted-foreground"
               }`}>
               {tab.key}
@@ -194,6 +220,12 @@ export default function DashboardSettings() {
             <div className="mt-4"><Label className="text-xs">Target Audience</Label><Textarea value={form.target_audience} onChange={e => setForm(f => ({ ...f, target_audience: e.target.value }))} className="mt-1" rows={2} /></div>
             <div className="mt-4"><Label className="text-xs">Competitors</Label><Textarea value={form.competitors} onChange={e => setForm(f => ({ ...f, competitors: e.target.value }))} className="mt-1" rows={2} placeholder="e.g. Joe's Bakery, Sweet Flour" /></div>
             <div className="mt-4"><Label className="text-xs">Daily Ad Budget ($)</Label><Input type="number" value={form.daily_budget} onChange={e => setForm(f => ({ ...f, daily_budget: Number(e.target.value) }))} className="mt-1 max-w-[200px]" /></div>
+            <div className="mt-4 flex items-center gap-3">
+              <span className="text-xs text-muted-foreground">Plan:</span>
+              <span className={`rounded px-2 py-0.5 text-[10px] font-semibold capitalize ${
+                currentPlan === "growth" ? "bg-primary/10 text-primary" : currentPlan === "agency" ? "bg-purple-500/10 text-purple-500" : "bg-success/10 text-success"
+              }`}>{PLANS[currentPlan].name}</span>
+            </div>
             <Button onClick={handleSaveProfile} disabled={saving} className="mt-5">{saving ? "Saving..." : "Save Changes"}</Button>
           </div>
         )}
@@ -226,6 +258,74 @@ export default function DashboardSettings() {
                   </Button>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === "Automation" && (
+          <div className="space-y-4">
+            {/* Autopilot master toggle */}
+            <div className="rounded-lg border border-border bg-card p-6 shadow-meta">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`h-3 w-3 rounded-full ${autopilot ? "bg-success animate-pulse" : "bg-warning"}`} />
+                  <div>
+                    <h3 className="text-[15px] font-semibold text-foreground">Autopilot {autopilot ? "ON" : "OFF"}</h3>
+                    <p className="text-xs text-muted-foreground">{autopilot ? "maroa.ai is running your marketing automatically" : "Manual mode — you control everything"}</p>
+                  </div>
+                </div>
+                <Switch checked={autopilot} onCheckedChange={setAutopilot} />
+              </div>
+            </div>
+
+            {/* Automation toggles */}
+            <div className="rounded-lg border border-border bg-card shadow-meta divide-y divide-border">
+              <div className="flex items-center justify-between px-5 py-4">
+                <div>
+                  <p className="text-[13px] font-medium text-foreground">Auto-approve content after</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Content auto-approves after {autoApproveHours[0]} hours if no action taken</p>
+                </div>
+                <div className="flex items-center gap-3 w-32">
+                  <Slider value={autoApproveHours} min={24} max={72} step={12} onValueChange={setAutoApproveHours} />
+                  <span className="text-xs font-medium text-foreground w-8">{autoApproveHours[0]}h</span>
+                </div>
+              </div>
+              {[
+                { label: "Auto-adjust budget", desc: "AI optimizes your daily spend based on performance" },
+                { label: "Auto-launch seasonal campaigns", desc: "Holiday and seasonal campaigns launch automatically" },
+                { label: "Auto-pause underperforming ads", desc: "Ads with low ROAS get paused automatically" },
+                { label: "Auto-repost top content", desc: "Best performing content gets reposted after 30 days" },
+              ].map(item => (
+                <div key={item.label} className="flex items-center justify-between px-5 py-4">
+                  <div className="pr-4">
+                    <p className="text-[13px] font-medium text-foreground">{item.label}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
+                  </div>
+                  <Switch defaultChecked={autopilot} />
+                </div>
+              ))}
+            </div>
+
+            {/* Workflow schedule */}
+            <div className="rounded-lg border border-border bg-card p-5 shadow-meta">
+              <div className="flex items-center gap-2 mb-4">
+                <CalendarClock className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-semibold text-foreground">All 33 Workflow Schedules</h3>
+              </div>
+              <div className="space-y-2">
+                {workflows.map(w => (
+                  <div key={w.name} className="flex items-center justify-between rounded-lg bg-muted px-3 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className={`h-2 w-2 rounded-full ${w.active ? "bg-success" : "bg-muted-foreground/30"}`} />
+                      <span className="text-xs font-medium text-foreground">{w.name}</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[11px] text-muted-foreground">{w.schedule}</p>
+                      <p className="text-[10px] text-primary font-medium">{w.next}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}

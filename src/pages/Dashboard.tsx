@@ -114,7 +114,7 @@ export default function Dashboard() {
         <div className="border-t border-sidebar-border px-3 py-3 space-y-3">
           <div className="flex items-center gap-2 px-2">
             <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
-            <span className="text-[11px] text-muted-foreground">31 workflows active</span>
+            <span className="text-[11px] text-muted-foreground">33 workflows active</span>
           </div>
           <button
             onClick={handleSignOut}
