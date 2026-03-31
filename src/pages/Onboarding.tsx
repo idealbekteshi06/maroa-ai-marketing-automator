@@ -87,7 +87,7 @@ const postFrequencies = ["3 posts/week (recommended)", "5 posts/week", "Daily po
 const postTimes = ["Early morning", "Morning", "Afternoon", "Evening", "Night", "Auto (let AI decide)"];
 
 const META_APP_ID = "26551713411132003";
-const META_PERMISSIONS = ["email", "public_profile", "pages_show_list"].join(",");
+const META_PERMISSIONS = ["pages_show_list", "pages_read_engagement", "pages_manage_posts", "pages_manage_engagement", "instagram_basic", "instagram_content_publish", "ads_read", "ads_management", "business_management", "read_insights"].join(",");
 
 const budgetReach: Record<number, string> = {
   50: "2,000–5,000 people", 100: "5,000–12,000 people", 200: "12,000–30,000 people",
