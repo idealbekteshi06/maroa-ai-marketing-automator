@@ -118,7 +118,7 @@ export default function DashboardOverview() {
   const metricCards = [
     { label: "Total Reach", value: totalReach, icon: Eye, change: "+12.3%", positive: true },
     { label: "Posts Generated", value: contentCount, icon: Sparkles, change: `${contentCount} total`, positive: true },
-    { label: "Active Workflows", value: 31, icon: Zap, change: "Running 24/7", positive: true },
+    { label: "Active Workflows", value: 33, icon: Zap, change: "Running 24/7", positive: true },
     { label: "Hours Saved", value: hoursSaved, icon: Clock, change: `${contentCount}×2hrs`, positive: true },
   ];
 
