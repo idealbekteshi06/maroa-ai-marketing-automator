@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const META_APP_ID = "26551713411132003";
-const META_PERMISSIONS = ["email", "public_profile", "pages_show_list"].join(",");
+const META_PERMISSIONS = ["pages_show_list", "pages_read_engagement", "pages_manage_posts", "pages_manage_engagement", "instagram_basic", "instagram_content_publish", "ads_read", "ads_management", "business_management", "read_insights"].join(",");
 
 interface AccountConfig {
   name: string; color: string; dbFields: string[]; icon: React.ReactNode; type: "meta_oauth" | "manual"; comingSoon?: boolean;
@@ -62,7 +62,7 @@ export default function DashboardSocial() {
 
   const handleMetaOAuth = useCallback(() => {
     const redirectUri = `${window.location.origin}/social-callback`;
-    const url = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${META_PERMISSIONS}&response_type=code`;
+    const url = `https://www.facebook.com/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${META_PERMISSIONS}&response_type=code&state=maroa_oauth`;
     localStorage.setItem("meta_oauth_business_id", businessId || "");
     window.location.href = url;
   }, [businessId]);
