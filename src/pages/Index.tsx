@@ -38,10 +38,10 @@ const Index = () => (
     <Navbar />
     <main>
       <Hero />
-      <LiveTicker />
       <PlatformLogos />
-      <PoweredBy />
+      <LiveTicker />
       <Features />
+      <PoweredBy />
       <HowItWorks />
       <Testimonials />
       <PricingSection />

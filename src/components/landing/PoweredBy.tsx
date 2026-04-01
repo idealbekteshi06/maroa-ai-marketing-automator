@@ -29,27 +29,22 @@ export function PoweredBy() {
   const doubled = [...tools, ...tools];
 
   return (
-    <section className="border-t border-border py-10" style={{ backgroundColor: '#F7F8FA' }}>
-      <div className="container mb-6">
-        <h2 className="text-center text-lg font-semibold text-foreground">
+    <section className="border-t border-border bg-muted/30 py-8 sm:py-10">
+      <div className="container mb-5">
+        <p className="text-center text-sm font-medium text-muted-foreground uppercase tracking-wider">
           Powered by the world's best AI tools
-        </h2>
-        <p className="text-center text-sm text-muted-foreground mt-1">
-          We combine the most powerful tools available to automate your marketing
         </p>
       </div>
       <div className="relative overflow-hidden">
-        {/* Fade edges */}
-        <div className="absolute left-0 top-0 bottom-0 w-16 z-10 pointer-events-none" style={{ background: 'linear-gradient(to right, #F7F8FA, transparent)' }} />
-        <div className="absolute right-0 top-0 bottom-0 w-16 z-10 pointer-events-none" style={{ background: 'linear-gradient(to left, #F7F8FA, transparent)' }} />
-
+        <div className="absolute left-0 top-0 bottom-0 w-16 z-10 pointer-events-none bg-gradient-to-r from-muted/80 to-transparent" />
+        <div className="absolute right-0 top-0 bottom-0 w-16 z-10 pointer-events-none bg-gradient-to-l from-muted/80 to-transparent" />
         <div className="flex animate-ticker whitespace-nowrap">
           {doubled.map((t, i) => (
             <div key={i} className="flex flex-col items-center gap-1.5 mx-8 shrink-0">
-              <div className="w-9 h-9 grayscale opacity-50" style={{ color: t.color }}>
+              <div className="w-8 h-8 sm:w-9 sm:h-9 grayscale opacity-40" style={{ color: t.color }}>
                 {t.icon}
               </div>
-              <span className="text-[11px] font-medium text-muted-foreground">{t.name}</span>
+              <span className="text-[10px] font-medium text-muted-foreground">{t.name}</span>
             </div>
           ))}
         </div>
