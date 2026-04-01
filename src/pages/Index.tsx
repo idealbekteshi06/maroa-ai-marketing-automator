@@ -6,8 +6,6 @@ import { Testimonials } from "@/components/landing/Testimonials";
 import { PricingSection } from "@/components/landing/PricingSection";
 import { FAQ } from "@/components/landing/FAQ";
 import { Footer } from "@/components/landing/Footer";
-import { PlatformLogos } from "@/components/landing/PlatformLogos";
-import { PoweredBy } from "@/components/landing/PoweredBy";
 
 function LiveTicker() {
   const stats = [
@@ -38,10 +36,8 @@ const Index = () => (
     <Navbar />
     <main>
       <Hero />
-      <PlatformLogos />
       <LiveTicker />
       <Features />
-      <PoweredBy />
       <HowItWorks />
       <Testimonials />
       <PricingSection />
