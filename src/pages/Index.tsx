@@ -39,6 +39,8 @@ const Index = () => (
     <main>
       <Hero />
       <LiveTicker />
+      <PlatformLogos />
+      <PoweredBy />
       <Features />
       <HowItWorks />
       <Testimonials />
