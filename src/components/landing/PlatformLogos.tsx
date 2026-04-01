@@ -21,21 +21,21 @@ const platforms = [
 
 export function PlatformLogos() {
   return (
-    <section className="border-t border-border bg-background py-12">
+    <section className="border-t border-border bg-card py-10 sm:py-12">
       <div className="container">
-        <h2 className="text-center text-xl font-semibold text-foreground mb-8">
+        <p className="text-center text-sm font-medium text-muted-foreground mb-8 uppercase tracking-wider">
           Works with all major platforms
-        </h2>
-        <div className="flex flex-wrap justify-center gap-10 md:gap-16">
+        </p>
+        <div className="grid grid-cols-3 sm:flex sm:flex-wrap justify-center gap-8 sm:gap-12">
           {platforms.map((p) => (
             <div key={p.name} className="flex flex-col items-center gap-2 group">
               <div
-                className="w-12 h-12 grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-300"
+                className="w-10 h-10 sm:w-12 sm:h-12 grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-300"
                 style={{ color: p.color }}
               >
                 {p.icon}
               </div>
-              <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+              <span className="text-[11px] font-medium text-muted-foreground group-hover:text-foreground transition-colors">
                 {p.name}
               </span>
             </div>
