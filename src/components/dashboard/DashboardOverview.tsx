@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Eye, Sparkles, Zap, Clock, Brain, CalendarClock, CheckCircle2, Circle, TrendingUp, TrendingDown, ArrowUpRight } from "lucide-react";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
-import { queryWithRetry } from "@/lib/queryWithRetry";
+
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,

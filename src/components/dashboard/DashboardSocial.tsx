@@ -49,12 +49,8 @@ export default function DashboardSocial() {
   }, [businessId, isReady]);
 
   useEffect(() => { fetchBusiness(); }, [fetchBusiness]);
-  useEffect(() => {
-    const handle = () => { if (document.visibilityState === "visible") fetchBusiness(); };
-    document.addEventListener("visibilitychange", handle);
-    window.addEventListener("focus", handle);
-    return () => { document.removeEventListener("visibilitychange", handle); window.removeEventListener("focus", handle); };
-  }, [fetchBusiness]);
+  // Remove aggressive visibility/focus refetch — causes excessive queries
+  // Only refetch after OAuth callback
 
   const hasValue = (v: unknown) => typeof v === "string" ? v.trim() !== "" : v != null;
   const isConnected = (a: AccountConfig) => business && a.dbFields.some(f => hasValue(business[f]));
