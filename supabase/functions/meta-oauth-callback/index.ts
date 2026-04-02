@@ -29,8 +29,8 @@ serve(async (req) => {
       });
     }
 
-    // Exchange code for access token
-    const tokenUrl = `https://graph.facebook.com/v21.0/oauth/access_token?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(redirect_uri)}&client_secret=${META_APP_SECRET}&code=${encodeURIComponent(code)}`;
+    // Exchange code for short-lived access token
+    const tokenUrl = `https://graph.facebook.com/v19.0/oauth/access_token?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(redirect_uri)}&client_secret=${META_APP_SECRET}&code=${encodeURIComponent(code)}`;
     const tokenRes = await fetch(tokenUrl);
     const tokenData = await tokenRes.json();
 
@@ -45,14 +45,14 @@ serve(async (req) => {
     const shortLivedToken = tokenData.access_token;
 
     // Exchange for long-lived token
-    const longLivedUrl = `https://graph.facebook.com/v21.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${META_APP_ID}&client_secret=${META_APP_SECRET}&fb_exchange_token=${shortLivedToken}`;
+    const longLivedUrl = `https://graph.facebook.com/v19.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${META_APP_ID}&client_secret=${META_APP_SECRET}&fb_exchange_token=${shortLivedToken}`;
     const longLivedRes = await fetch(longLivedUrl);
     const longLivedData = await longLivedRes.json();
 
     const accessToken = longLivedData.access_token || shortLivedToken;
 
     // Get user's Facebook pages
-    const pagesRes = await fetch(`https://graph.facebook.com/v21.0/me/accounts?access_token=${accessToken}`);
+    const pagesRes = await fetch(`https://graph.facebook.com/v19.0/me/accounts?access_token=${accessToken}`);
     const pagesData = await pagesRes.json();
 
     let pageId = null;
@@ -60,13 +60,13 @@ serve(async (req) => {
     let instagramAccountId = null;
 
     if (pagesData.data && pagesData.data.length > 0) {
-      const page = pagesData.data[0]; // Use first page
+      const page = pagesData.data[0];
       pageId = page.id;
       pageAccessToken = page.access_token || accessToken;
 
       // Get Instagram Business Account linked to this page
       const igRes = await fetch(
-        `https://graph.facebook.com/v21.0/${pageId}?fields=instagram_business_account&access_token=${pageAccessToken}`
+        `https://graph.facebook.com/v19.0/${pageId}?fields=instagram_business_account&access_token=${pageAccessToken}`
       );
       const igData = await igRes.json();
       instagramAccountId = igData.instagram_business_account?.id || null;
