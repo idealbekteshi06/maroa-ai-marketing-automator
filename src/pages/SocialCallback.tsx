@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { toast } from "sonner";
 
 const RAILWAY_URL = "https://maroa-api-production.up.railway.app";
 const REDIRECT_URI = "https://maroa-ai-marketing-automator.lovable.app/social-callback";
@@ -10,7 +11,7 @@ const REDIRECT_URI = "https://maroa-ai-marketing-automator.lovable.app/social-ca
 export default function SocialCallback() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, businessId } = useAuth();
   const [status, setStatus] = useState<"processing" | "success" | "error">("processing");
   const [message, setMessage] = useState("Connecting your accounts...");
 
@@ -25,31 +26,36 @@ export default function SocialCallback() {
     if (error) {
       setStatus("error");
       setMessage(`Connection denied: ${searchParams.get("error_description") || error}`);
-      setTimeout(() => navigate("/dashboard"), 3000);
+      setTimeout(() => navigate("/dashboard?tab=social"), 3000);
       return;
     }
 
     if (!code) {
       setStatus("error");
       setMessage("No authorization code received.");
-      setTimeout(() => navigate("/dashboard"), 3000);
+      setTimeout(() => navigate("/dashboard?tab=social"), 3000);
       return;
     }
 
     try {
-      // Get business_id from localStorage or lookup
-      let businessId = localStorage.getItem("meta_oauth_business_id");
+      // Get business_id from auth context, localStorage, or query
+      let bizId = businessId || localStorage.getItem("meta_oauth_business_id");
 
-      if (!businessId && user) {
+      if (!bizId && user) {
         const { data: biz } = await externalSupabase
           .from("businesses")
           .select("id")
           .eq("user_id", user.id)
           .maybeSingle();
-        businessId = biz?.id || null;
+        bizId = biz?.id || null;
       }
 
-      if (!businessId) throw new Error("Business not found");
+      if (!bizId) {
+        setStatus("error");
+        setMessage("Business not found. Please try connecting again from the dashboard.");
+        setTimeout(() => navigate("/dashboard?tab=social"), 3000);
+        return;
+      }
 
       setMessage("Exchanging tokens with Facebook...");
 
@@ -58,26 +64,34 @@ export default function SocialCallback() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code,
-          business_id: businessId,
+          business_id: bizId,
           redirect_uri: REDIRECT_URI,
         }),
       });
 
-      const result = await resp.json();
+      let result: any;
+      try {
+        result = await resp.json();
+      } catch {
+        throw new Error(`Server returned status ${resp.status} with no JSON body`);
+      }
 
       if (!resp.ok || !result.success) {
-        throw new Error(result.error || "OAuth exchange failed");
+        throw new Error(result.error || result.message || `OAuth exchange failed (status ${resp.status})`);
       }
 
       localStorage.removeItem("meta_oauth_business_id");
       setStatus("success");
       setMessage(result.message || "Facebook & Instagram connected!");
-      setTimeout(() => navigate("/dashboard?connected=meta"), 2000);
+      toast.success("Facebook and Instagram connected successfully");
+      setTimeout(() => navigate("/dashboard?tab=social"), 2000);
     } catch (err: any) {
       console.error("[SocialCallback]", err);
       setStatus("error");
-      setMessage(err.message || "Something went wrong connecting your account.");
-      setTimeout(() => navigate("/dashboard"), 4000);
+      const errorMsg = err?.message || "Something went wrong connecting your account.";
+      setMessage(errorMsg);
+      toast.error(errorMsg);
+      setTimeout(() => navigate("/dashboard?tab=social"), 4000);
     }
   }
 
@@ -91,7 +105,6 @@ export default function SocialCallback() {
             <p className="text-sm text-muted-foreground">{message}</p>
           </>
         )}
-
         {status === "success" && (
           <>
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
@@ -102,7 +115,6 @@ export default function SocialCallback() {
             <p className="text-xs text-muted-foreground">Redirecting to dashboard...</p>
           </>
         )}
-
         {status === "error" && (
           <>
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-100">
