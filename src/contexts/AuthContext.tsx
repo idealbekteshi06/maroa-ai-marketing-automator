@@ -14,46 +14,11 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType>({
-  user: null,
-  session: null,
-  businessId: null,
-  onboardingComplete: null,
-  loading: true,
-  isReady: false,
-  signOut: async () => {},
-  refreshBusiness: async () => {},
+  user: null, session: null, businessId: null, onboardingComplete: null,
+  loading: true, isReady: false, signOut: async () => {}, refreshBusiness: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
-
-async function fetchBusinessWithRetry(userId: string, retries = 1, delay = 2000) {
-  const query = () =>
-    externalSupabase
-      .from("businesses")
-      .select("id, onboarding_complete")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-  let result = await query();
-  if (result.error) {
-    console.error("Failed to fetch business:", result.error.message);
-    if (retries > 0) {
-      await new Promise((r) => setTimeout(r, delay));
-      return fetchBusinessWithRetry(userId, retries - 1, delay);
-    }
-    return null;
-  }
-  // Retry once if data is null (race condition on signup)
-  if (!result.data && retries > 0) {
-    await new Promise((r) => setTimeout(r, delay));
-    result = await query();
-    if (result.error) {
-      console.error("Retry fetch business error:", result.error.message);
-      return null;
-    }
-  }
-  return result.data ?? null;
-}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -63,13 +28,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isReady, setIsReady] = useState(false);
   const mountedRef = useRef(true);
-  const initializedRef = useRef(false);
+  const fetchingRef = useRef<string | null>(null);
 
   const updateBusiness = useCallback(async (userId: string) => {
-    const biz = await fetchBusinessWithRetry(userId);
-    if (!mountedRef.current) return;
-    setBusinessId(biz?.id ?? null);
-    setOnboardingComplete(biz?.onboarding_complete ?? null);
+    // Deduplicate — skip if already fetching for same user
+    if (fetchingRef.current === userId) return;
+    fetchingRef.current = userId;
+    try {
+      const { data, error } = await externalSupabase
+        .from("businesses")
+        .select("id, onboarding_complete")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (!mountedRef.current) return;
+      if (error) { console.error("Failed to fetch business:", error.message); return; }
+      setBusinessId(data?.id ?? null);
+      setOnboardingComplete(data?.onboarding_complete ?? null);
+    } finally {
+      fetchingRef.current = null;
+    }
   }, []);
 
   const refreshBusiness = useCallback(async () => {
@@ -79,16 +56,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     mountedRef.current = true;
 
-    // 1. Set up listener FIRST (catches all subsequent events)
     const { data: { subscription } } = externalSupabase.auth.onAuthStateChange(
       (_event, nextSession) => {
         if (!mountedRef.current) return;
         setSession(nextSession);
         const nextUser = nextSession?.user ?? null;
         setUser(nextUser);
-
         if (nextUser) {
-          // Fire and forget — never await inside onAuthStateChange
           void updateBusiness(nextUser.id);
         } else {
           setBusinessId(null);
@@ -97,42 +71,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // 2. Then restore session from storage
-    if (!initializedRef.current) {
-      initializedRef.current = true;
-      externalSupabase.auth.getSession().then(async ({ data: { session: s }, error }) => {
-        if (!mountedRef.current) return;
-        if (error) {
-          console.error("Failed to restore session:", error);
-          setLoading(false);
-          setIsReady(true);
-          return;
-        }
-        setSession(s);
-        const u = s?.user ?? null;
-        setUser(u);
-        if (u) {
-          await updateBusiness(u.id);
-        }
-        if (mountedRef.current) {
-          setLoading(false);
-          setIsReady(true);
-        }
-      });
-    }
+    externalSupabase.auth.getSession().then(async ({ data: { session: s }, error }) => {
+      if (!mountedRef.current) return;
+      if (error) { setLoading(false); setIsReady(true); return; }
+      setSession(s);
+      const u = s?.user ?? null;
+      setUser(u);
+      if (u) await updateBusiness(u.id);
+      if (mountedRef.current) { setLoading(false); setIsReady(true); }
+    });
 
-    return () => {
-      mountedRef.current = false;
-      subscription.unsubscribe();
-    };
+    return () => { mountedRef.current = false; subscription.unsubscribe(); };
   }, [updateBusiness]);
 
   const signOut = useCallback(async () => {
     await externalSupabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setBusinessId(null);
-    setOnboardingComplete(null);
+    setUser(null); setSession(null); setBusinessId(null); setOnboardingComplete(null);
   }, []);
 
   return (
