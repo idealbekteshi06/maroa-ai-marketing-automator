@@ -1,72 +1,116 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { externalSupabase } from "@/integrations/supabase/external-client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Loader2, CheckCircle2, XCircle } from "lucide-react";
+
+const RAILWAY_URL = "https://maroa-api-production.up.railway.app";
+const REDIRECT_URI = "https://maroa-ai-marketing-automator.lovable.app/social-callback";
 
 export default function SocialCallback() {
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
+  const { user } = useAuth();
+  const [status, setStatus] = useState<"processing" | "success" | "error">("processing");
+  const [message, setMessage] = useState("Connecting your accounts...");
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get("code");
-    const businessId = localStorage.getItem("meta_oauth_business_id");
+    handleOAuthCallback();
+  }, []);
+
+  async function handleOAuthCallback() {
+    const code = searchParams.get("code");
+    const error = searchParams.get("error");
+
+    if (error) {
+      setStatus("error");
+      setMessage(`Connection denied: ${searchParams.get("error_description") || error}`);
+      setTimeout(() => navigate("/dashboard"), 3000);
+      return;
+    }
 
     if (!code) {
-      toast.error("No authorization code received");
-      navigate("/dashboard?tab=social", { replace: true });
+      setStatus("error");
+      setMessage("No authorization code received.");
+      setTimeout(() => navigate("/dashboard"), 3000);
       return;
     }
 
-    if (!businessId) {
-      toast.error("No business found for OAuth");
-      navigate("/dashboard?tab=social", { replace: true });
-      return;
-    }
+    try {
+      // Get business_id from localStorage or lookup
+      let businessId = localStorage.getItem("meta_oauth_business_id");
 
-    (async () => {
-      try {
-        const res = await fetch("https://maroa-api-production.up.railway.app/meta-oauth-exchange", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            code,
-            business_id: businessId,
-            redirect_uri: "https://maroa-ai-marketing-automator.lovable.app/social-callback",
-          }),
-        });
-
-        const data = await res.json();
-
-        if (!res.ok || data.error) {
-          throw new Error(data.error || "OAuth exchange failed");
-        }
-
-        localStorage.removeItem("meta_oauth_business_id");
-        setStatus("success");
-        toast.success("Facebook & Instagram connected successfully!");
-        navigate("/dashboard?tab=social", { replace: true });
-      } catch (err: any) {
-        console.error("OAuth exchange error:", err);
-        setStatus("error");
-        toast.error(err.message || "Failed to connect Facebook");
-        setTimeout(() => navigate("/dashboard?tab=social", { replace: true }), 2000);
+      if (!businessId && user) {
+        const { data: biz } = await externalSupabase
+          .from("businesses")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        businessId = biz?.id || null;
       }
-    })();
-  }, [navigate]);
+
+      if (!businessId) throw new Error("Business not found");
+
+      setMessage("Exchanging tokens with Facebook...");
+
+      const resp = await fetch(`${RAILWAY_URL}/meta-oauth-exchange`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code,
+          business_id: businessId,
+          redirect_uri: REDIRECT_URI,
+        }),
+      });
+
+      const result = await resp.json();
+
+      if (!resp.ok || !result.success) {
+        throw new Error(result.error || "OAuth exchange failed");
+      }
+
+      localStorage.removeItem("meta_oauth_business_id");
+      setStatus("success");
+      setMessage(result.message || "Facebook & Instagram connected!");
+      setTimeout(() => navigate("/dashboard?connected=meta"), 2000);
+    } catch (err: any) {
+      console.error("[SocialCallback]", err);
+      setStatus("error");
+      setMessage(err.message || "Something went wrong connecting your account.");
+      setTimeout(() => navigate("/dashboard"), 4000);
+    }
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="flex flex-col items-center gap-4">
-        {status === "loading" && (
+      <div className="flex flex-col items-center gap-4 text-center max-w-md px-4">
+        {status === "processing" && (
           <>
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Connecting your Facebook & Instagram...</p>
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <p className="text-lg font-semibold text-foreground">Connecting...</p>
+            <p className="text-sm text-muted-foreground">{message}</p>
           </>
         )}
+
+        {status === "success" && (
+          <>
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
+              <CheckCircle2 className="h-8 w-8 text-green-600" />
+            </div>
+            <p className="text-lg font-semibold text-foreground">Connected!</p>
+            <p className="text-sm text-muted-foreground">{message}</p>
+            <p className="text-xs text-muted-foreground">Redirecting to dashboard...</p>
+          </>
+        )}
+
         {status === "error" && (
           <>
-            <p className="text-sm text-destructive">Connection failed. Redirecting...</p>
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-100">
+              <XCircle className="h-8 w-8 text-red-600" />
+            </div>
+            <p className="text-lg font-semibold text-foreground">Connection Failed</p>
+            <p className="text-sm text-muted-foreground">{message}</p>
+            <p className="text-xs text-muted-foreground">Redirecting to dashboard...</p>
           </>
         )}
       </div>
