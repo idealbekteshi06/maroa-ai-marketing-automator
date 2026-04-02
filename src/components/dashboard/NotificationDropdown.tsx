@@ -37,7 +37,7 @@ export default function NotificationDropdown() {
   useEffect(() => {
     if (!isReady || !businessId) return;
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
+    const interval = setInterval(fetchNotifications, 60000); // Poll every 60s instead of 30s
     return () => clearInterval(interval);
   }, [businessId, isReady]);
 

@@ -31,7 +31,7 @@ const automations = [
   { title: "Monthly reports with real data", emoji: "📋" },
 ];
 
-export default function DashboardSocial() {
+export default function DashboardSocial({ oauthCode }: { oauthCode?: string | null }) {
   const { businessId, isReady } = useAuth();
   const [business, setBusiness] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -49,12 +49,8 @@ export default function DashboardSocial() {
   }, [businessId, isReady]);
 
   useEffect(() => { fetchBusiness(); }, [fetchBusiness]);
-  useEffect(() => {
-    const handle = () => { if (document.visibilityState === "visible") fetchBusiness(); };
-    document.addEventListener("visibilitychange", handle);
-    window.addEventListener("focus", handle);
-    return () => { document.removeEventListener("visibilitychange", handle); window.removeEventListener("focus", handle); };
-  }, [fetchBusiness]);
+  // Remove aggressive visibility/focus refetch — causes excessive queries
+  // Only refetch after OAuth callback
 
   const hasValue = (v: unknown) => typeof v === "string" ? v.trim() !== "" : v != null;
   const isConnected = (a: AccountConfig) => business && a.dbFields.some(f => hasValue(business[f]));
@@ -68,10 +64,8 @@ export default function DashboardSocial() {
   }, [businessId]);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get("code");
+    const code = oauthCode;
     if (!code) return;
-    window.history.replaceState({}, "", window.location.pathname);
     const storedBizId = localStorage.getItem("meta_oauth_business_id") || businessId;
     if (!storedBizId) { toast.error("No business found"); return; }
     setConnecting("Facebook & Instagram");
@@ -97,7 +91,7 @@ export default function DashboardSocial() {
       } catch (err: any) { toast.error(err.message); }
       finally { setConnecting(null); }
     })();
-  }, []);
+  }, [oauthCode]);
 
   const handleConnect = (a: AccountConfig) => { if (a.type === "meta_oauth") handleMetaOAuth(); else { setConnectForm({}); setConnectDialog(a); } };
 

@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Eye, Sparkles, Zap, Clock, Brain, CalendarClock, CheckCircle2, Circle, TrendingUp, TrendingDown, ArrowUpRight } from "lucide-react";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
-import { queryWithRetry } from "@/lib/queryWithRetry";
+
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
@@ -70,35 +70,35 @@ export default function DashboardOverview() {
     if (!businessId && !user?.id) { setLoading(false); return; }
     setLoading(true); setError(null);
     try {
-      let bizData: any = null; let resolvedBusinessId = businessId;
-      if (businessId) {
-        const { data } = await externalSupabase.from("businesses").select("*").eq("id", businessId).maybeSingle();
-        bizData = data;
-      } else if (user?.id) {
-        const { data } = await externalSupabase.from("businesses").select("*").eq("user_id", user.id).maybeSingle();
-        bizData = data; resolvedBusinessId = data?.id ?? null;
-      }
+      // Resolve business ID
+      let resolvedBusinessId = businessId;
+      const bizQuery = businessId
+        ? externalSupabase.from("businesses").select("*").eq("id", businessId).maybeSingle()
+        : user?.id
+          ? externalSupabase.from("businesses").select("*").eq("user_id", user.id).maybeSingle()
+          : null;
+      
+      if (!bizQuery) { setLoading(false); return; }
+      const { data: bizData } = await bizQuery;
       setBusinessData(bizData);
+      resolvedBusinessId = bizData?.id ?? resolvedBusinessId;
       if (!resolvedBusinessId) { setStats([]); setContentCount(0); setPublishedCount(0); setLoading(false); return; }
 
-      const [statsRes, contentRes, publishedRes] = await Promise.all([
-        queryWithRetry<DailyStat[]>(() =>
-          externalSupabase.from("daily_stats").select("recorded_at, total_reach").eq("business_id", resolvedBusinessId).order("recorded_at", { ascending: true }).limit(parseInt(dateRange)) as unknown as Promise<{ data: DailyStat[] | null; error: any }>
-        ),
+      // Single parallel batch — ALL queries at once
+      const [statsRes, contentRes, publishedRes, rc, ri, rr, rw] = await Promise.all([
+        externalSupabase.from("daily_stats").select("recorded_at, total_reach").eq("business_id", resolvedBusinessId).order("recorded_at", { ascending: true }).limit(parseInt(dateRange)),
         externalSupabase.from("generated_content").select("id", { count: "exact", head: true }).eq("business_id", resolvedBusinessId),
         externalSupabase.from("generated_content").select("id", { count: "exact", head: true }).eq("business_id", resolvedBusinessId).eq("status", "published"),
+        externalSupabase.from("generated_content").select("created_at, content_theme").eq("business_id", resolvedBusinessId).order("created_at", { ascending: false }).limit(5),
+        externalSupabase.from("competitor_insights").select("recorded_at, competitor_doing_well").eq("business_id", resolvedBusinessId).order("recorded_at", { ascending: false }).limit(3),
+        externalSupabase.from("retention_logs").select("email_type, subject, sent_at").eq("business_id", resolvedBusinessId).order("sent_at", { ascending: false }).limit(3),
+        externalSupabase.from("win_notifications").select("win_type, notified_at").eq("business_id", resolvedBusinessId).order("notified_at", { ascending: false }).limit(3),
       ]);
       setStats((statsRes.data as DailyStat[]) ?? []);
       setContentCount(contentRes.count ?? 0);
       setPublishedCount(publishedRes.count ?? 0);
 
       const feedItems: FeedItem[] = [];
-      const [rc, ri, rr, rw] = await Promise.all([
-        externalSupabase.from("generated_content").select("created_at, content_theme").eq("business_id", resolvedBusinessId).order("created_at", { ascending: false }).limit(5),
-        externalSupabase.from("competitor_insights").select("recorded_at, competitor_doing_well").eq("business_id", resolvedBusinessId).order("recorded_at", { ascending: false }).limit(3),
-        externalSupabase.from("retention_logs").select("email_type, subject, sent_at").eq("business_id", resolvedBusinessId).order("sent_at", { ascending: false }).limit(3),
-        externalSupabase.from("win_notifications").select("win_type, notified_at").eq("business_id", resolvedBusinessId).order("notified_at", { ascending: false }).limit(3),
-      ]);
       (rc.data ?? []).forEach((c: any) => feedItems.push({ type: "content", emoji: "📝", message: `Generated "${c.content_theme || "new"}" content`, time: c.created_at }));
       (ri.data ?? []).forEach(() => feedItems.push({ type: "competitor", emoji: "🔍", message: "Competitor analysis updated", time: (ri.data as any[])[0]?.recorded_at }));
       (rr.data ?? []).forEach((r: any) => feedItems.push({ type: "email", emoji: "📧", message: `Sent ${r.email_type || "retention"} email`, time: r.sent_at }));

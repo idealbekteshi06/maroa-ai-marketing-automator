@@ -51,8 +51,9 @@ const pageTitles: Record<string, string> = {
 };
 
 export default function Dashboard() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const tabFromUrl = searchParams.get("tab");
+  const oauthCode = searchParams.get("code");
   const [active, setActive] = useState(tabFromUrl || "overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [publishPhotoUrl, setPublishPhotoUrl] = useState<string | null>(null);
@@ -60,6 +61,13 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   useEffect(() => { if (tabFromUrl) setActive(tabFromUrl); }, [tabFromUrl]);
+
+  // Clear code from URL after reading it
+  useEffect(() => {
+    if (oauthCode) {
+      setSearchParams(prev => { prev.delete("code"); return prev; }, { replace: true });
+    }
+  }, [oauthCode, setSearchParams]);
 
   const firstName = user?.user_metadata?.first_name || user?.email?.split("@")[0] || "there";
   const initials = user?.user_metadata?.first_name
@@ -75,7 +83,7 @@ export default function Dashboard() {
       case "inbox": return <DashboardInbox />;
       case "content": return <DashboardContent />;
       case "ads": return <DashboardAds />;
-      case "social": return <DashboardSocial />;
+      case "social": return <DashboardSocial oauthCode={oauthCode} />;
       case "competitors": return <DashboardCompetitors />;
       case "photos": return <PhotoLibrary onUseInPost={handleUseInPost} />;
       case "publish": return <DashboardPublish />;
