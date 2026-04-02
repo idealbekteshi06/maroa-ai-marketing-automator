@@ -31,7 +31,7 @@ const automations = [
   { title: "Monthly reports with real data", emoji: "📋" },
 ];
 
-export default function DashboardSocial() {
+export default function DashboardSocial({ oauthCode }: { oauthCode?: string | null }) {
   const { businessId, isReady } = useAuth();
   const [business, setBusiness] = useState<any>(null);
   const [loading, setLoading] = useState(true);
