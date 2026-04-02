@@ -64,10 +64,8 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
   }, [businessId]);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get("code");
+    const code = oauthCode;
     if (!code) return;
-    window.history.replaceState({}, "", window.location.pathname);
     const storedBizId = localStorage.getItem("meta_oauth_business_id") || businessId;
     if (!storedBizId) { toast.error("No business found"); return; }
     setConnecting("Facebook & Instagram");
@@ -93,7 +91,7 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
       } catch (err: any) { toast.error(err.message); }
       finally { setConnecting(null); }
     })();
-  }, []);
+  }, [oauthCode]);
 
   const handleConnect = (a: AccountConfig) => { if (a.type === "meta_oauth") handleMetaOAuth(); else { setConnectForm({}); setConnectDialog(a); } };
 
