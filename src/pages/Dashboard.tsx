@@ -83,7 +83,7 @@ export default function Dashboard() {
       case "inbox": return <DashboardInbox />;
       case "content": return <DashboardContent />;
       case "ads": return <DashboardAds />;
-      case "social": return <DashboardSocial />;
+      case "social": return <DashboardSocial oauthCode={oauthCode} />;
       case "competitors": return <DashboardCompetitors />;
       case "photos": return <PhotoLibrary onUseInPost={handleUseInPost} />;
       case "publish": return <DashboardPublish />;
