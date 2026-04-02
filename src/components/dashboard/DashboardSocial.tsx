@@ -79,7 +79,7 @@ export default function DashboardSocial() {
       try {
         const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/meta-oauth-callback`, {
           method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-          body: JSON.stringify({ code, redirect_uri: `${window.location.origin}/social-callback` }),
+          body: JSON.stringify({ code, redirect_uri: "https://maroa-ai-marketing-automator.lovable.app/social-callback" }),
         });
         const data = await res.json();
         if (!res.ok || data.error) throw new Error(data.error || "OAuth failed");
