@@ -100,7 +100,6 @@ export default function PostPreviewModal({ item, businessName, businessId, onClo
   const isPending = item.status === "pending" || item.status === "pending_approval" || item.status === "pending approval";
 
   const contentFields = [
-    { key: "content_theme", label: "Content Theme", type: "input" },
     { key: "instagram_caption", label: "Instagram Caption", type: "textarea" },
     { key: "instagram_caption_2", label: "Instagram Caption 2", type: "textarea" },
     { key: "facebook_post", label: "Facebook Post", type: "textarea" },
@@ -251,7 +250,7 @@ export default function PostPreviewModal({ item, businessName, businessId, onClo
         <div className="mt-6 flex justify-center gap-3 border-t border-border pt-6">
           {isPending && (
             <Button onClick={handleApprove} size="lg" className="min-w-[160px]">
-              <Check className="mr-2 h-4 w-4" /> Approve Content
+              <Check className="mr-2 h-4 w-4" /> Approve & Schedule
             </Button>
           )}
           <Button variant="outline" size="lg" onClick={onClose}>Close</Button>

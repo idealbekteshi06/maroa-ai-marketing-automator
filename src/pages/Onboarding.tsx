@@ -269,6 +269,38 @@ export default function Onboarding() {
 
       const { data: biz } = await externalSupabase.from("businesses").select("*").eq("id", businessId).maybeSingle();
       if (biz) {
+        // Save to business_profiles for master prompt system
+        const profilePayload = {
+          user_id: biz.user_id || businessId,
+          business_name: form.business_name || biz.business_name,
+          business_type: form.business_type || biz.industry,
+          business_age: form.employees === "Just me" ? "new" : "established",
+          usp: form.business_description || form.differentiator || "",
+          physical_locations: form.city ? [{ city: form.city, neighborhood: form.state || form.address || "", address: form.address || "" }] : [],
+          operation_model: form.service_area === "My physical location only" ? "location_based" : form.service_area === "Nationwide" || form.service_area === "International" ? "online" : "hybrid",
+          service_area: form.target_cities ? form.target_cities.split(",").map((s: string) => s.trim()).filter(Boolean) : form.city ? [form.city] : [],
+          ad_targeting_area: form.target_cities ? form.target_cities.split(",").map((s: string) => s.trim()).filter(Boolean) : form.city ? [form.city] : [],
+          primary_language: "Albanian",
+          audience_age_min: form.age_min,
+          audience_age_max: form.age_max,
+          audience_gender: form.gender === "male" ? "male" : form.gender === "female" ? "female" : "mixed",
+          audience_description: form.dream_customer || "",
+          pain_point: form.pain_points || "",
+          products: [],
+          primary_goal: form.marketing_goal || biz.marketing_goal || "",
+          monthly_budget: form.monthly_budget[0] ? `€${form.monthly_budget[0]}` : "",
+          ads_experience: form.current_spend === "Nothing currently" ? "never" : form.current_spend ? "active" : "never",
+          tone_keywords: form.brand_tone ? [form.brand_tone] : [],
+          never_do: form.topics_to_avoid || "",
+          competitors: form.competitors.filter((c: any) => c.name).map((c: any) => ({ name: c.name, city: form.city })),
+          we_do_better: form.differentiator || "",
+        };
+
+        void fetch("https://maroa-api-production.up.railway.app/api/onboarding/save", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(profilePayload),
+        }).catch(console.warn);
+
         void fetch("https://maroa-api-production.up.railway.app/webhook/new-user-signup", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
