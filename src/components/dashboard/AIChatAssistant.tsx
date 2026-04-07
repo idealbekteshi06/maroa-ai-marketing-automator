@@ -10,8 +10,18 @@ interface Message {
   content: string;
 }
 
-export default function AIChatAssistant() {
-  const [open, setOpen] = useState(false);
+interface AIChatAssistantProps {
+  externalOpen?: boolean;
+  onExternalOpenChange?: (open: boolean) => void;
+}
+
+export default function AIChatAssistant({ externalOpen, onExternalOpenChange }: AIChatAssistantProps = {}) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = (v: boolean) => {
+    setInternalOpen(v);
+    onExternalOpenChange?.(v);
+  };
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -49,40 +59,65 @@ export default function AIChatAssistant() {
     setLoading(true);
 
     try {
-      const businessContext = business
-        ? `User's business: ${business.business_name || "Unknown"}, Industry: ${business.industry || "Unknown"}, Location: ${business.location || "Unknown"}, Target audience: ${business.target_audience || "Unknown"}, Brand tone: ${business.brand_tone || "Unknown"}, Marketing goal: ${business.marketing_goal || "Unknown"}.`
-        : "";
-
-      const systemPrompt = `You are the maroa.ai marketing assistant. You are an expert digital marketer helping small business owners. ${businessContext} Always give specific actionable advice tailored to their exact business. Be warm, confident, and direct. Never be generic. When writing captions or ad copy always match their brand tone. Keep responses concise. Use markdown formatting for clarity.`;
-
       const allMessages = [
         ...messages.map((m) => ({ role: m.role, content: m.content })),
         { role: "user" as const, content: text },
       ];
 
-      // Call the chat edge function on the external Supabase instance directly
-      const response = await fetch("https://zqhyrbttuqkvmdewiytf.supabase.co/functions/v1/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": "sb_publishable_4O2w1ObpYPQ7eOIlOhwl5A_8GxCt-gs",
-        },
-        body: JSON.stringify({ messages: allMessages, systemPrompt }),
-      });
+      let assistantContent: string | null = null;
 
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || `Chat service error (${response.status})`);
+      // Primary: call backend /webhook/ai-chat which has full business context
+      const apiBase = import.meta.env.VITE_API_BASE;
+      if (apiBase && businessId) {
+        try {
+          const backendRes = await fetch(`${apiBase}/webhook/ai-chat`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              business_id: businessId,
+              message: text,
+              conversation_history: messages.map(m => ({ role: m.role, content: m.content })),
+            }),
+          });
+          if (backendRes.ok) {
+            const backendData = await backendRes.json();
+            assistantContent = backendData?.response || backendData?.content || null;
+          }
+        } catch {
+          // Backend unavailable — fall through to Supabase edge function
+        }
       }
 
-      const data = await response.json();
+      // Fallback: call the Supabase edge function directly
+      if (!assistantContent) {
+        const businessContext = business
+          ? `User's business: ${business.business_name || "Unknown"}, Industry: ${business.industry || "Unknown"}, Location: ${business.location || "Unknown"}, Target audience: ${business.target_audience || "Unknown"}, Brand tone: ${business.brand_tone || "Unknown"}, Marketing goal: ${business.marketing_goal || "Unknown"}.`
+          : "";
 
-      const assistantContent =
-        data?.choices?.[0]?.message?.content ||
-        data?.content ||
-        (typeof data === "string" ? data : "Sorry, I couldn't process that. Please try again.");
+        const systemPrompt = `You are the maroa.ai marketing assistant. You are an expert digital marketer helping small business owners. ${businessContext} Always give specific actionable advice tailored to their exact business. Be warm, confident, and direct. Never be generic. When writing captions or ad copy always match their brand tone. Keep responses concise. Use markdown formatting for clarity.`;
 
-      setMessages((prev) => [...prev, { role: "assistant", content: assistantContent }]);
+        const response = await fetch("https://zqhyrbttuqkvmdewiytf.supabase.co/functions/v1/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": "sb_publishable_4O2w1ObpYPQ7eOIlOhwl5A_8GxCt-gs",
+          },
+          body: JSON.stringify({ messages: allMessages, systemPrompt }),
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.error || `Chat service error (${response.status})`);
+        }
+
+        const data = await response.json();
+        assistantContent =
+          data?.choices?.[0]?.message?.content ||
+          data?.content ||
+          (typeof data === "string" ? data : "Sorry, I couldn't process that. Please try again.");
+      }
+
+      setMessages((prev) => [...prev, { role: "assistant", content: assistantContent! }]);
     } catch (err: any) {
       console.error("Chat error:", err);
       const errorMsg = err?.message?.includes("429")
@@ -105,7 +140,8 @@ export default function AIChatAssistant() {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-20 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-elevated transition-transform hover:scale-105 active:scale-95 md:bottom-5"
+          className="fixed bottom-20 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full text-primary-foreground md:bottom-5 chat-btn-breathe"
+          style={{ background: "linear-gradient(135deg, #0A84FF, #BF5AF2)" }}
           aria-label="Open AI chat assistant"
         >
           <MessageCircle className="h-6 w-6" />
