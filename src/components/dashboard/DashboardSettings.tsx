@@ -174,12 +174,15 @@ export default function DashboardSettings() {
 
       {/* Mobile tabs */}
       <div className="flex-1 space-y-4">
-        <div className="flex gap-1 md:hidden overflow-x-auto pb-1">
+        <div className="grid grid-cols-2 gap-1.5 md:hidden">
           {tabs.map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-              className={`px-3 py-2 text-[11px] font-medium rounded-lg whitespace-nowrap transition-colors ${
+              className={`flex items-center gap-2 px-3 py-2.5 text-[12px] font-medium rounded-lg min-h-[44px] transition-colors ${
                 activeTab === tab.key ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-              }`}>{tab.label}</button>
+              }`}>
+              <tab.icon className="h-3.5 w-3.5 shrink-0" />
+              {tab.label}
+            </button>
           ))}
         </div>
 

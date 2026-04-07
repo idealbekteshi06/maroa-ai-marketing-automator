@@ -69,10 +69,12 @@ export default function DashboardContent() {
   const [changedIds, setChangedIds] = useState<Set<string>>(new Set());
 
   const fetchContent = async () => {
-    if (!businessId || !isReady) return;
+    if (!businessId || !isReady) { setLoading(false); return; }
     setLoading(true);
-    const { data } = await externalSupabase.from("generated_content").select("*").eq("business_id", businessId).order("created_at", { ascending: false });
-    setContent((data as ContentItem[]) ?? []);
+    try {
+      const { data } = await externalSupabase.from("generated_content").select("*").eq("business_id", businessId).order("created_at", { ascending: false });
+      setContent((data as ContentItem[]) ?? []);
+    } catch { setContent([]); }
     setLoading(false);
   };
 
