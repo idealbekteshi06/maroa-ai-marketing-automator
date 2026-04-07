@@ -112,8 +112,8 @@ export default function PostPreviewModal({ item, businessName, businessId, onClo
   ];
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-foreground/50 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="relative w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-2xl bg-background border border-border p-6" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-foreground/50 backdrop-blur-sm sm:p-4" onClick={onClose}>
+      <div className="relative w-full sm:max-w-5xl h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto sm:rounded-2xl bg-background border-t sm:border border-border p-4 sm:p-6" onClick={(e) => e.stopPropagation()}>
         <button onClick={onClose} className="absolute top-4 right-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-muted hover:bg-muted/80 transition-colors">
           <X className="h-4 w-4" />
         </button>

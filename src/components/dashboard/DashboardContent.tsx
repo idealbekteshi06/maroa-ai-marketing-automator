@@ -272,15 +272,15 @@ export default function DashboardContent() {
                   <p className="text-[11px] text-muted-foreground mt-1.5">{timeAgo(c.created_at)}</p>
                 </div>
 
-                {/* Hover action row */}
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-card via-card to-transparent pt-8 pb-3 px-3 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                  <div className="flex gap-1.5">
+                {/* Hover action row — desktop only, hidden on mobile to avoid blocking card tap */}
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-card via-card to-transparent pt-8 pb-3 px-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none hidden sm:block">
+                  <div className="flex gap-1.5 pointer-events-auto">
                     {isPending && (
-                      <Button size="sm" className="h-7 text-[10px] flex-1" title="Content will publish at your optimal time" onClick={() => handleApprove(c.id)}>
+                      <Button size="sm" className="h-7 text-[10px] flex-1" title="Content will publish at your optimal time" onClick={(e) => { e.stopPropagation(); handleApprove(c.id); }}>
                         <Check className="mr-1 h-3 w-3" /> Approve
                       </Button>
                     )}
-                    <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => setPreviewItem(c)}>
+                    <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={(e) => { e.stopPropagation(); setPreviewItem(c); }}>
                       <Eye className="mr-1 h-3 w-3" /> Preview
                     </Button>
                   </div>
