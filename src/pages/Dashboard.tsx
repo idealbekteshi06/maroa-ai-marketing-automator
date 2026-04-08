@@ -9,7 +9,10 @@ import {
 import {
   LayoutDashboard, FileText, Megaphone, Share2, Target,
   Search, Settings, Menu, X, LogOut, Globe, Star, Mail,
-  Users, Home, MoreHorizontal,
+  Users, Home, MoreHorizontal, Gift, Magnet, Rocket,
+  Lightbulb, Brain, Code, FileSearch, DollarSign,
+  MessageSquare, Briefcase, BarChart3, Wrench, MousePointer,
+  UserPlus, TrendingUp, CreditCard, Bot,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import NotificationCenter from "@/components/NotificationCenter";
@@ -53,6 +56,25 @@ const DashboardCRM = lazy(() => import("@/components/dashboard/DashboardCRM"));
 const DashboardSEO = lazy(() => import("@/components/dashboard/DashboardSEO"));
 const DashboardReviews = lazy(() => import("@/components/dashboard/DashboardReviews"));
 const DashboardEmail = lazy(() => import("@/components/dashboard/DashboardEmail"));
+const DashboardReferral2 = lazy(() => import("@/components/dashboard/DashboardReferral2"));
+const DashboardLeadMagnets = lazy(() => import("@/components/dashboard/DashboardLeadMagnets"));
+const DashboardLaunch = lazy(() => import("@/components/dashboard/DashboardLaunch"));
+const DashboardResearch = lazy(() => import("@/components/dashboard/DashboardResearch"));
+const DashboardIdeas = lazy(() => import("@/components/dashboard/DashboardIdeas"));
+const DashboardAISEO = lazy(() => import("@/components/dashboard/DashboardAISEO"));
+const DashboardSchema = lazy(() => import("@/components/dashboard/DashboardSchema"));
+const DashboardSEOPages = lazy(() => import("@/components/dashboard/DashboardSEOPages"));
+const DashboardPricing = lazy(() => import("@/components/dashboard/DashboardPricing"));
+const DashboardCommunity = lazy(() => import("@/components/dashboard/DashboardCommunity"));
+const DashboardSales = lazy(() => import("@/components/dashboard/DashboardSales"));
+const DashboardRevOps = lazy(() => import("@/components/dashboard/DashboardRevOps"));
+const DashboardABTests = lazy(() => import("@/components/dashboard/DashboardABTests"));
+const DashboardFreeTools = lazy(() => import("@/components/dashboard/DashboardFreeTools"));
+const DashboardPopupCRO = lazy(() => import("@/components/dashboard/DashboardPopupCRO"));
+const DashboardOnboardingCRO = lazy(() => import("@/components/dashboard/DashboardOnboardingCRO"));
+const DashboardUpgradeCRO = lazy(() => import("@/components/dashboard/DashboardUpgradeCRO"));
+const DashboardSignupCRO = lazy(() => import("@/components/dashboard/DashboardSignupCRO"));
+const DashboardOrchestrator = lazy(() => import("@/components/dashboard/DashboardOrchestrator"));
 
 /* ── Navigation (grouped) ── */
 const navGroups = [
@@ -68,6 +90,10 @@ const navGroups = [
       { key: "campaigns", label: "AI Campaigns", icon: Megaphone },
       { key: "content", label: "Content", icon: FileText },
       { key: "email", label: "Email", icon: Mail },
+      { key: "referral", label: "Referral Program", icon: Gift },
+      { key: "lead-magnets", label: "Lead Magnets", icon: Magnet },
+      { key: "launch", label: "Launch Campaign", icon: Rocket },
+      { key: "ideas", label: "Marketing Ideas", icon: Lightbulb },
     ],
   },
   {
@@ -75,6 +101,10 @@ const navGroups = [
     items: [
       { key: "competitors", label: "Competitors", icon: Target },
       { key: "seo", label: "SEO", icon: Search },
+      { key: "ai-seo", label: "AI SEO", icon: Brain },
+      { key: "research", label: "Customer Research", icon: FileSearch },
+      { key: "schema", label: "Schema Markup", icon: Code },
+      { key: "seo-pages", label: "SEO Pages", icon: Globe },
     ],
   },
   {
@@ -82,6 +112,27 @@ const navGroups = [
     items: [
       { key: "crm", label: "CRM & Leads", icon: Users },
       { key: "reviews", label: "Reviews", icon: Star },
+    ],
+  },
+  {
+    label: "OPTIMIZE",
+    items: [
+      { key: "pricing", label: "Pricing Strategy", icon: DollarSign },
+      { key: "ab-tests", label: "A/B Tests", icon: BarChart3 },
+      { key: "free-tools", label: "Free Tools", icon: Wrench },
+      { key: "popup-cro", label: "Popups", icon: MousePointer },
+    ],
+  },
+  {
+    label: "AUTOMATION",
+    items: [
+      { key: "community", label: "Community", icon: MessageSquare },
+      { key: "sales", label: "Sales Assets", icon: Briefcase },
+      { key: "revops", label: "RevOps", icon: TrendingUp },
+      { key: "onboarding-cro", label: "Onboarding CRO", icon: UserPlus },
+      { key: "upgrade-cro", label: "Upgrade CRO", icon: CreditCard },
+      { key: "signup-cro", label: "Signup CRO", icon: UserPlus },
+      { key: "orchestrator", label: "AI Orchestrator", icon: Bot },
     ],
   },
   {
@@ -114,6 +165,25 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   crm: { title: "CRM & Leads", subtitle: "Lead pipeline and scoring" },
   reviews: { title: "Reviews", subtitle: "Reputation management" },
   settings: { title: "Settings", subtitle: "Configure your AI engine" },
+  referral: { title: "Referral Program", subtitle: "Earn rewards by referring businesses" },
+  "lead-magnets": { title: "Lead Magnets", subtitle: "AI-generated guides and checklists" },
+  launch: { title: "Launch Campaign", subtitle: "Plan and execute product launches" },
+  research: { title: "Customer Research", subtitle: "AI-powered market insights" },
+  ideas: { title: "Marketing Ideas", subtitle: "AI-generated campaign ideas" },
+  "ai-seo": { title: "AI SEO", subtitle: "Content optimization for search" },
+  schema: { title: "Schema Markup", subtitle: "Structured data for better rankings" },
+  "seo-pages": { title: "SEO Pages", subtitle: "AI-generated landing pages" },
+  pricing: { title: "Pricing Strategy", subtitle: "Optimize your pricing" },
+  community: { title: "Community", subtitle: "Generate engagement content" },
+  sales: { title: "Sales Assets", subtitle: "Pitches and objection handlers" },
+  revops: { title: "RevOps", subtitle: "Revenue operations and lead scoring" },
+  "ab-tests": { title: "A/B Tests", subtitle: "Test and optimize everything" },
+  "free-tools": { title: "Free Tools", subtitle: "Lead generation tools" },
+  "popup-cro": { title: "Popups", subtitle: "High-converting popup copy" },
+  "onboarding-cro": { title: "Onboarding CRO", subtitle: "Optimize customer onboarding" },
+  "upgrade-cro": { title: "Upgrade CRO", subtitle: "Increase upgrade conversions" },
+  "signup-cro": { title: "Signup CRO", subtitle: "Optimize your signup flow" },
+  orchestrator: { title: "AI Orchestrator", subtitle: "View and control AI automation" },
 };
 
 /* FIX 1: Name capitalization */
@@ -180,6 +250,25 @@ export default function Dashboard() {
         case "reviews": return <DashboardReviews />;
         case "email": return <DashboardEmail />;
         case "settings": return <DashboardSettings />;
+        case "referral": return <DashboardReferral2 />;
+        case "lead-magnets": return <DashboardLeadMagnets />;
+        case "launch": return <DashboardLaunch />;
+        case "research": return <DashboardResearch />;
+        case "ideas": return <DashboardIdeas />;
+        case "ai-seo": return <DashboardAISEO />;
+        case "schema": return <DashboardSchema />;
+        case "seo-pages": return <DashboardSEOPages />;
+        case "pricing": return <DashboardPricing />;
+        case "community": return <DashboardCommunity />;
+        case "sales": return <DashboardSales />;
+        case "revops": return <DashboardRevOps />;
+        case "ab-tests": return <DashboardABTests />;
+        case "free-tools": return <DashboardFreeTools />;
+        case "popup-cro": return <DashboardPopupCRO />;
+        case "onboarding-cro": return <DashboardOnboardingCRO />;
+        case "upgrade-cro": return <DashboardUpgradeCRO />;
+        case "signup-cro": return <DashboardSignupCRO />;
+        case "orchestrator": return <DashboardOrchestrator />;
         default: return <DashboardOverview />;
       }
     })();
