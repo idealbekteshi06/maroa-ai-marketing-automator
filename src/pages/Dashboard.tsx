@@ -61,6 +61,9 @@ const DashboardLeadMagnets = lazy(() => import("@/components/dashboard/Dashboard
 const DashboardLaunch = lazy(() => import("@/components/dashboard/DashboardLaunch"));
 const DashboardResearch = lazy(() => import("@/components/dashboard/DashboardResearch"));
 const DashboardIdeas = lazy(() => import("@/components/dashboard/DashboardIdeas"));
+const DashboardAIBrain = lazy(() => import("@/components/dashboard/DashboardAIBrain"));
+const DashboardHealth = lazy(() => import("@/components/dashboard/DashboardHealth"));
+const DashboardCampaign = lazy(() => import("@/components/dashboard/DashboardCampaign"));
 const DashboardAISEO = lazy(() => import("@/components/dashboard/DashboardAISEO"));
 const DashboardSchema = lazy(() => import("@/components/dashboard/DashboardSchema"));
 const DashboardSEOPages = lazy(() => import("@/components/dashboard/DashboardSEOPages"));
@@ -126,6 +129,8 @@ const navGroups = [
   {
     label: "AUTOMATION",
     items: [
+      { key: "ai-brain", label: "AI Brain", icon: Brain },
+      { key: "campaign", label: "Instant Campaign", icon: Rocket },
       { key: "community", label: "Community", icon: MessageSquare },
       { key: "sales", label: "Sales Assets", icon: Briefcase },
       { key: "revops", label: "RevOps", icon: TrendingUp },
@@ -138,6 +143,7 @@ const navGroups = [
   {
     label: "ACCOUNT",
     items: [
+      { key: "health", label: "Health Score", icon: BarChart3 },
       { key: "settings", label: "Settings", icon: Settings },
     ],
   },
@@ -147,9 +153,9 @@ const allNavItems = navGroups.flatMap(g => g.items);
 
 const mobileNav = [
   { key: "overview", label: "Home", icon: Home },
-  { key: "social", label: "Social", icon: Share2 },
   { key: "content", label: "Content", icon: FileText },
-  { key: "crm", label: "Leads", icon: Users },
+  { key: "ideas", label: "Ideas", icon: Lightbulb },
+  { key: "ai-brain", label: "AI Brain", icon: Brain },
   { key: "settings", label: "Settings", icon: Settings },
 ];
 
@@ -184,6 +190,9 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   "upgrade-cro": { title: "Upgrade CRO", subtitle: "Increase upgrade conversions" },
   "signup-cro": { title: "Signup CRO", subtitle: "Optimize your signup flow" },
   orchestrator: { title: "AI Orchestrator", subtitle: "View and control AI automation" },
+  "ai-brain": { title: "AI Brain", subtitle: "Your autonomous marketing manager" },
+  health: { title: "Health Score", subtitle: "Your marketing health assessment" },
+  campaign: { title: "Instant Campaign", subtitle: "One-click multi-channel campaigns" },
 };
 
 /* FIX 1: Name capitalization */
@@ -269,6 +278,9 @@ export default function Dashboard() {
         case "upgrade-cro": return <DashboardUpgradeCRO />;
         case "signup-cro": return <DashboardSignupCRO />;
         case "orchestrator": return <DashboardOrchestrator />;
+        case "ai-brain": return <DashboardAIBrain />;
+        case "health": return <DashboardHealth />;
+        case "campaign": return <DashboardCampaign />;
         default: return <DashboardOverview />;
       }
     })();
