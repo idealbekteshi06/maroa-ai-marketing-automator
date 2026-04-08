@@ -1,65 +1,71 @@
 import { Button } from "@/components/ui/button";
-import { Check, X } from "lucide-react";
+import { Check, X, Shield } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useState } from "react";
 
-const plans = [
+type Currency = "EUR" | "USD" | "GBP" | "AED";
+
+const currencySymbols: Record<Currency, string> = {
+  EUR: "\u20ac",
+  USD: "$",
+  GBP: "\u00a3",
+  AED: "AED ",
+};
+
+const planData = [
   {
-    key: "free",
-    name: "Free",
-    price: "$0",
-    period: "forever",
-    desc: "Try it out with one business.",
+    key: "starter",
+    name: "Starter",
+    prices: { EUR: 19, USD: 21, GBP: 17, AED: 77 },
+    desc: "Perfect for getting started.",
     features: [
-      { text: "1 business", included: true },
-      { text: "5 posts per month", included: true },
-      { text: "Basic dashboard", included: true },
+      { text: "1 social account", included: true },
+      { text: "30 AI posts/month", included: true },
+      { text: "Basic calendar", included: true },
       { text: "Email support", included: true },
       { text: "Ad management", included: false },
       { text: "Competitor tracking", included: false },
     ],
-    cta: "Get started",
+    cta: "Start free trial",
     popular: false,
-    priceId: null,
+    priceId: null as string | null,
   },
   {
     key: "growth",
     name: "Growth",
-    price: "$49",
-    period: "/mo",
+    prices: { EUR: 49, USD: 54, GBP: 43, AED: 198 },
     desc: "Everything you need to grow.",
     features: [
-      { text: "Unlimited content", included: true },
-      { text: "All platforms", included: true },
-      { text: "Ad management", included: true },
-      { text: "Daily optimization", included: true },
-      { text: "Weekly strategy", included: true },
+      { text: "5 social accounts", included: true },
+      { text: "Unlimited AI content", included: true },
+      { text: "Paid ads management", included: true },
       { text: "Competitor tracking", included: true },
+      { text: "Email + WhatsApp campaigns", included: true },
+      { text: "Priority support", included: true },
     ],
     cta: "Start free trial",
     popular: true,
-    priceId: "price_1TEzSrRdWtvqvMKio7e5VO2Y",
+    priceId: "price_1TEzSrRdWtvqvMKio7e5VO2Y" as string | null,
   },
   {
     key: "agency",
     name: "Agency",
-    price: "$99",
-    period: "/mo",
+    prices: { EUR: 99, USD: 109, GBP: 87, AED: 400 },
     desc: "For agencies managing multiple brands.",
     features: [
-      { text: "Unlimited businesses", included: true },
-      { text: "White label", included: true },
-      { text: "Client reports", included: true },
-      { text: "Everything in Growth", included: true },
-      { text: "Priority support", included: true },
+      { text: "Unlimited accounts", included: true },
+      { text: "White-label option", included: true },
+      { text: "API access", included: true },
+      { text: "Dedicated manager", included: true },
       { text: "Custom integrations", included: true },
+      { text: "Everything in Growth", included: true },
     ],
     cta: "Start free trial",
     popular: false,
-    priceId: "price_1TEzTeRdWtvqvMKiWI61UYLk",
+    priceId: "price_1TEzTeRdWtvqvMKiWI61UYLk" as string | null,
   },
 ];
 
@@ -77,8 +83,20 @@ export function PricingSection() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [loading, setLoading] = useState<string | null>(null);
+  const [currency, setCurrency] = useState<Currency>("EUR");
+  const [isAnnual, setIsAnnual] = useState(false);
 
-  const handleCheckout = async (plan: typeof plans[number]) => {
+  const currencies: Currency[] = ["EUR", "USD", "GBP", "AED"];
+
+  const getDisplayPrice = (plan: typeof planData[number]) => {
+    const monthly = plan.prices[currency];
+    const amount = isAnnual ? monthly * 10 : monthly;
+    const symbol = currencySymbols[currency];
+    // For AED the symbol already has a space, for others no space needed
+    return `${symbol}${amount}`;
+  };
+
+  const handleCheckout = async (plan: typeof planData[number]) => {
     if (!plan.priceId) { navigate("/signup"); return; }
     if (!user) { navigate("/signup"); return; }
 
@@ -114,8 +132,47 @@ export function PricingSection() {
           </h2>
           <p className="mt-3 sm:mt-4 text-base sm:text-lg text-muted-foreground">No surprises. Cancel anytime.</p>
         </div>
+
+        {/* Currency selector */}
+        <div className="mx-auto mt-8 flex items-center justify-center gap-2 px-4">
+          {currencies.map((c) => (
+            <button
+              key={c}
+              onClick={() => setCurrency(c)}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
+                currency === c
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+
+        {/* Annual / Monthly toggle */}
+        <div className="mx-auto mt-5 flex items-center justify-center gap-3 px-4">
+          <span className={`text-sm ${!isAnnual ? "font-semibold text-foreground" : "text-muted-foreground"}`}>Monthly</span>
+          <button
+            onClick={() => setIsAnnual(!isAnnual)}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+              isAnnual ? "bg-primary" : "bg-muted-foreground/30"
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                isAnnual ? "translate-x-5" : "translate-x-0"
+              }`}
+            />
+          </button>
+          <span className={`text-sm ${isAnnual ? "font-semibold text-foreground" : "text-muted-foreground"}`}>Annual</span>
+          {isAnnual && (
+            <span className="rounded-full bg-success/15 px-2.5 py-0.5 text-xs font-semibold text-success">Save 20%</span>
+          )}
+        </div>
+
         <div className="mx-auto mt-12 sm:mt-16 grid max-w-4xl gap-5 sm:gap-6 px-2 sm:px-0 md:grid-cols-3">
-          {plans.map((plan) => (
+          {planData.map((plan) => (
             <div
               key={plan.name}
               className={`relative flex flex-col rounded-2xl border-2 p-6 sm:p-8 transition-all duration-300 hover:-translate-y-0.5 ${
@@ -131,8 +188,8 @@ export function PricingSection() {
               )}
               <h3 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">{plan.name}</h3>
               <div className="mt-3 sm:mt-4 flex items-baseline gap-1">
-                <span className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground">{plan.price}</span>
-                <span className="text-sm text-muted-foreground">{plan.period}</span>
+                <span className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground">{getDisplayPrice(plan)}</span>
+                <span className="text-sm text-muted-foreground">{isAnnual ? "/yr" : "/mo"}</span>
               </div>
               <p className="mt-2 sm:mt-3 text-sm text-muted-foreground">{plan.desc}</p>
               <ul className="mt-6 sm:mt-8 flex-1 space-y-3">
@@ -158,6 +215,20 @@ export function PricingSection() {
               </Button>
             </div>
           ))}
+        </div>
+
+        {/* Trust bar */}
+        <p className="mx-auto mt-8 text-center text-sm text-muted-foreground">
+          🔒 SSL Secured · Cancel anytime · No hidden fees · 14-day free trial
+        </p>
+
+        {/* Money-back guarantee */}
+        <div className="mx-auto mt-10 max-w-md rounded-2xl border border-border bg-card p-6 sm:p-8 text-center shadow-sm">
+          <Shield className="mx-auto h-10 w-10 text-primary" />
+          <h4 className="mt-4 text-lg font-bold text-foreground">14-Day Money-Back Guarantee</h4>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Try maroa.ai risk-free. If you are not satisfied within the first 14 days, we will refund your payment in full — no questions asked.
+          </p>
         </div>
 
         {/* Comparison table */}

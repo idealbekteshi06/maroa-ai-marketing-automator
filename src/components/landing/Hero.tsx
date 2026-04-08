@@ -65,24 +65,35 @@ export function Hero() {
           </span>
         </div>
         <h1 className="mx-auto mt-6 sm:mt-8 max-w-3xl text-4xl sm:text-5xl md:text-7xl font-bold leading-[1.08] tracking-tight text-foreground text-balance opacity-0 animate-fade-in" style={{ animationDelay: "0.05s" }}>
-          Your marketing
+          Your Business. Marketed Automatically.
           <br />
-          on autopilot.
+          In Any Language.
         </h1>
-        <p className="mx-auto mt-5 sm:mt-6 max-w-lg text-base sm:text-lg leading-relaxed text-muted-foreground px-4 sm:px-0 opacity-0 animate-fade-in" style={{ animationDelay: "0.15s" }}>
-          maroa.ai uses AI to write your content, run your ads,
-          and post everything automatically.
+        <p className="mx-auto mt-5 sm:mt-6 max-w-2xl text-base sm:text-lg leading-relaxed text-muted-foreground px-4 sm:px-0 opacity-0 animate-fade-in" style={{ animationDelay: "0.15s" }}>
+          maroa.ai is the AI marketing platform that works while you sleep — writing content, running ads, tracking competitors, and growing your business in 22 countries and 17 languages.
         </p>
         <div className="mt-8 sm:mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row px-4 sm:px-0 opacity-0 animate-fade-in" style={{ animationDelay: "0.25s" }}>
           <Link to="/signup" className="w-full sm:w-auto">
-            <Button variant="hero" size="xl" className="w-full sm:w-auto">Start free trial</Button>
+            <Button variant="hero" size="xl" className="w-full sm:w-auto">Start Free Trial</Button>
           </Link>
-          <a href="#how-it-works" className="w-full sm:w-auto">
-            <Button variant="hero-outline" size="xl" className="w-full sm:w-auto">See how it works</Button>
+          <a href="#features" className="w-full sm:w-auto">
+            <Button variant="hero-outline" size="xl" className="w-full sm:w-auto">See It In Action</Button>
           </a>
         </div>
         <p className="mt-4 text-xs text-muted-foreground opacity-0 animate-fade-in" style={{ animationDelay: "0.3s" }}>
-          No credit card required · Plans from $49/mo
+          No credit card required · Setup in 5 minutes · Cancel anytime
+        </p>
+
+        {/* Flag row */}
+        <div className="mt-6 flex items-center justify-center gap-3 text-2xl opacity-0 animate-fade-in" style={{ animationDelay: "0.35s" }}>
+          {["🇺🇸", "🇬🇧", "🇦🇪", "🇩🇪", "🇫🇷", "🇹🇷", "🇧🇷", "🇮🇳"].map((flag, i) => (
+            <span key={i} className="animate-bounce" style={{ animationDelay: `${i * 0.15}s`, animationDuration: "2s" }}>{flag}</span>
+          ))}
+        </div>
+
+        {/* Social proof */}
+        <p className="mt-5 text-sm font-medium text-muted-foreground opacity-0 animate-fade-in" style={{ animationDelay: "0.4s" }}>
+          Trusted by 1,000+ businesses in 22 countries
         </p>
       </div>
 

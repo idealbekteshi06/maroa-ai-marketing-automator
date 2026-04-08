@@ -2,21 +2,21 @@ import { Star } from "lucide-react";
 
 const testimonials = [
   {
-    quote: "maroa.ai tripled our Instagram engagement in just 3 weeks. It's like having a full marketing team for $49.",
-    name: "Sarah Chen",
-    role: "Owner, Bloom Bakery",
+    quote: "Before maroa.ai I was posting maybe twice a week and struggling for ideas. Now my AI posts every day in Albanian, my engagement tripled, and I haven't touched it in weeks.",
+    name: "Blerim K.",
+    role: "Gym Owner, Prishtina",
     rating: 5,
   },
   {
-    quote: "I used to spend 10 hours a week on social media. Now I spend zero. Our ads perform better than ever.",
-    name: "Marcus Rivera",
-    role: "Founder, FitZone Gym",
+    quote: "We tried three different marketing agencies. None of them understood our local market. maroa.ai does — it knows our city, our language, our customers.",
+    name: "Sarah M.",
+    role: "Restaurant Owner, London",
     rating: 5,
   },
   {
-    quote: "The competitor tracking alone is worth the price. We're always one step ahead now.",
-    name: "Priya Sharma",
-    role: "CEO, Luxe Salon Studio",
+    quote: "The competitor tracking alone is worth it. I wake up every morning knowing exactly what my competitors did yesterday and what to do about it.",
+    name: "Ahmed R.",
+    role: "Retail Owner, Dubai",
     rating: 5,
   },
 ];

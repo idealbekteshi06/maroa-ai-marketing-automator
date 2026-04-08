@@ -1,17 +1,15 @@
 import {
-  Sparkles, Send, Target, ImagePlus,
-  Users, Brain, Search, BarChart3,
+  Sparkles, Target, Search,
+  Calendar, Globe, Zap,
 } from "lucide-react";
 
 const features = [
-  { icon: Sparkles, title: "AI Content Generation", desc: "Captions, blogs, and ad copy that sound like you wrote them. Trained on your brand voice.", detail: "Our AI analyzes your industry, competitors, and audience preferences to craft content that converts." },
-  { icon: Send, title: "Auto-Posting", desc: "Publish across every platform without lifting a finger. Scheduled at optimal times.", detail: "Posts go live at the exact times your audience is most active, based on engagement data analysis." },
-  { icon: Target, title: "Meta Ads Management", desc: "Launch and optimize ad campaigns with AI precision. Automated budget allocation.", detail: "Daily A/B testing, audience refinement, and budget reallocation maximize your return on ad spend." },
-  { icon: ImagePlus, title: "AI Image Generation", desc: "On-brand visuals for posts and ads, generated in seconds. No designer needed.", detail: "Upload your brand photos and our AI creates stunning visuals that match your aesthetic perfectly." },
-  { icon: Users, title: "Audience Targeting", desc: "Reach your ideal customers with data-driven precision. Lookalike audiences built automatically.", detail: "We analyze your best customers and find more people just like them across all platforms." },
-  { icon: Brain, title: "Self-Improving Strategy", desc: "Gets smarter every week from your real performance data. Adapts to what works.", detail: "Weekly strategy updates based on what's performing. Your marketing engine improves on autopilot." },
-  { icon: Search, title: "Competitor Tracking", desc: "See what competitors do and stay one step ahead. Real-time market intelligence.", detail: "Every Friday, receive a detailed report on competitor activities and actionable opportunities." },
-  { icon: BarChart3, title: "Weekly Reports", desc: "Clear, actionable insights on reach, engagement, and ROI. Delivered every Monday.", detail: "No more guessing. Know exactly what's working and what to do next with data-driven reports." },
+  { icon: Sparkles, title: "AI Content Creation", desc: "Writes social posts, ads, and emails in your language every day.", detail: "Our AI generates authentic content in 17 languages, tailored to your brand voice and local market." },
+  { icon: Target, title: "Smart Ad Campaigns", desc: "Creates and optimizes Meta and Google ads automatically.", detail: "Daily A/B testing, audience refinement, and budget reallocation maximize your return on ad spend." },
+  { icon: Search, title: "Competitor Tracking", desc: "Monitors what competitors are doing and counters it.", detail: "Every morning, receive a detailed report on competitor activities and actionable opportunities." },
+  { icon: Calendar, title: "Content Calendar", desc: "Plans 30 days of content automatically every month.", detail: "A full month of posts, stories, and ads planned and scheduled without you lifting a finger." },
+  { icon: Globe, title: "22 Countries", desc: "Works for any business, any language, any market.", detail: "From Kosovo to Dubai, London to New York — our AI understands your local market and audience." },
+  { icon: Zap, title: "Fully Automated", desc: "Runs at 6am every day without you doing anything.", detail: "Wake up to fresh content, updated campaigns, and competitor insights — all done while you slept." },
 ];
 
 export function Features() {

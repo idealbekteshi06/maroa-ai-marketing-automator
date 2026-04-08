@@ -2,14 +2,14 @@ import { useState } from "react";
 import { Plus, Minus } from "lucide-react";
 
 const faqs = [
-  { q: "What is maroa.ai?", a: "maroa.ai is an AI-powered marketing platform that automates content creation, social media posting, and ad management for small businesses. It replaces the need for a marketing agency at a fraction of the cost." },
-  { q: "How long does setup take?", a: "Setup takes under 5 minutes. Answer a few questions about your business, connect your social accounts, and our AI starts working immediately. Your first batch of content is ready within 24 hours." },
-  { q: "Do I need marketing experience?", a: "Not at all. maroa.ai is designed for business owners with zero marketing experience. Our AI handles strategy, content creation, posting schedules, and ad optimization automatically." },
-  { q: "What platforms does it post to?", a: "Currently we support Facebook, Instagram, Google Ads, and TikTok. We're adding LinkedIn and Twitter soon. All posts are scheduled at optimal times for your specific audience." },
-  { q: "How does the AI learn my business?", a: "During onboarding, you tell us about your industry, target audience, brand tone, and goals. Our AI uses this to craft content that sounds authentically like your brand and improves each week based on performance data." },
-  { q: "Can I edit content before it posts?", a: "Absolutely. Every piece of content goes to your approval queue first. You can approve, edit, or reject with one tap. Nothing gets published without your explicit approval." },
-  { q: "What happens to my existing ads?", a: "Your existing ads continue running. When you connect your ad account, our AI monitors performance and gradually introduces optimized campaigns alongside your current ones. We never delete or modify existing campaigns without your permission." },
-  { q: "How do I cancel?", a: "No contracts, no commitments. Cancel anytime with one click from your Settings page. Your content and data are always yours to keep." },
+  { q: "Does maroa.ai work for my country?", a: "Yes! We support businesses in 22 countries including Kosovo, Albania, USA, UK, UAE, Germany, France, Turkey, and more. Our AI generates content in 17 languages." },
+  { q: "What languages does it support?", a: "17 languages including Albanian, English, Arabic, German, French, Turkish, Italian, Spanish, Portuguese, Hindi, and more." },
+  { q: "Do I need marketing experience?", a: "Not at all. maroa.ai handles everything — from content creation to ad optimization. You just approve what you want to publish." },
+  { q: "How long does setup take?", a: "About 5 minutes. Answer a few questions about your business, connect your social accounts, and your AI starts working immediately." },
+  { q: "Can I cancel anytime?", a: "Yes, absolutely. No contracts, no questions asked. Cancel anytime from your settings." },
+  { q: "Will the content sound like my business?", a: "Yes. Our AI learns your brand voice, tone, and language. It uses your real business information to create authentic content." },
+  { q: "Does it work with Meta and Google ads?", a: "Yes. We connect directly to Meta Business Suite and Google Ads to create, optimize, and manage your campaigns automatically." },
+  { q: "What if the AI makes a mistake?", a: "You control everything. All content goes through an approval queue before publishing. Nothing goes live without your OK." },
 ];
 
 export function FAQ() {
