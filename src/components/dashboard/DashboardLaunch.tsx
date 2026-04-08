@@ -35,7 +35,7 @@ export default function DashboardLaunch() {
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    if (!businessId || !isReady) return;
+    if (!businessId || !isReady) { setLoading(false); return; }
     const load = async () => {
       setLoading(true);
       try {

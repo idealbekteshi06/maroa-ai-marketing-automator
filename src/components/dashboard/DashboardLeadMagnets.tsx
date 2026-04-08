@@ -29,7 +29,7 @@ export default function DashboardLeadMagnets() {
   const [selectedType, setSelectedType] = useState("checklist");
 
   useEffect(() => {
-    if (!businessId || !isReady) return;
+    if (!businessId || !isReady) { setLoading(false); return; }
     const load = async () => {
       setLoading(true);
       try {

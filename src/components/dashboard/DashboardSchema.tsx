@@ -28,7 +28,7 @@ export default function DashboardSchema() {
   const [selectedType, setSelectedType] = useState("LocalBusiness");
 
   useEffect(() => {
-    if (!businessId || !isReady) return;
+    if (!businessId || !isReady) { setLoading(false); return; }
     const load = async () => {
       setLoading(true);
       try {

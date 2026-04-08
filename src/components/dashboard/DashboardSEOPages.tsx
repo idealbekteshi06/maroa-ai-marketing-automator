@@ -23,7 +23,7 @@ export default function DashboardSEOPages() {
   const [keyword, setKeyword] = useState("");
 
   useEffect(() => {
-    if (!businessId || !isReady) return;
+    if (!businessId || !isReady) { setLoading(false); return; }
     const load = async () => {
       setLoading(true);
       try {

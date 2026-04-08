@@ -18,7 +18,7 @@ export default function DashboardABTests() {
   const [selectedType, setSelectedType] = useState<string>("headline");
 
   useEffect(() => {
-    if (!businessId || !isReady) return;
+    if (!businessId || !isReady) { setLoading(false); return; }
     const load = async () => {
       setLoading(true);
       try {

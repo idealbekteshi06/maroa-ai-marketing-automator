@@ -19,7 +19,7 @@ export default function DashboardReferral2() {
   const [setting, setSetting] = useState(false);
 
   useEffect(() => {
-    if (!businessId || !isReady) return;
+    if (!businessId || !isReady) { setLoading(false); return; }
     const load = async () => {
       setLoading(true);
       try {
@@ -93,17 +93,17 @@ export default function DashboardReferral2() {
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-3">
         <div className="rounded-lg border border-border bg-card p-3 text-center">
           <Users className="mx-auto h-4 w-4 text-muted-foreground mb-1" />
-          <p className="text-xl font-bold text-foreground">{status.stats.sent}</p>
+          <p className="text-xl font-bold text-foreground">{status?.stats?.sent ?? 0}</p>
           <p className="text-[10px] text-muted-foreground mt-0.5">Referrals Sent</p>
         </div>
         <div className="rounded-lg border border-success/20 bg-success/5 p-3 text-center">
           <Users className="mx-auto h-4 w-4 text-success mb-1" />
-          <p className="text-xl font-bold text-success">{status.stats.converted}</p>
+          <p className="text-xl font-bold text-success">{status?.stats?.converted ?? 0}</p>
           <p className="text-[10px] text-muted-foreground mt-0.5">Converted</p>
         </div>
         <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-center">
           <DollarSign className="mx-auto h-4 w-4 text-primary mb-1" />
-          <p className="text-xl font-bold text-primary">${status.stats.earned}</p>
+          <p className="text-xl font-bold text-primary">${status?.stats?.earned ?? 0}</p>
           <p className="text-[10px] text-muted-foreground mt-0.5">Earned</p>
         </div>
       </div>
@@ -111,11 +111,11 @@ export default function DashboardReferral2() {
       <div className="rounded-lg border border-border bg-card p-5">
         <p className="text-xs text-muted-foreground mb-2">Your referral link</p>
         <div className="flex items-center gap-2">
-          <code className="flex-1 rounded bg-muted px-3 py-2 text-xs text-foreground truncate">{status.referral_link}</code>
-          <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => handleCopy(status.referral_link)}>
+          <code className="flex-1 rounded bg-muted px-3 py-2 text-xs text-foreground truncate">{status?.referral_link ?? ""}</code>
+          <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => handleCopy(status?.referral_link ?? "")}>
             <Copy className="mr-1 h-3 w-3" /> Copy
           </Button>
-          <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => { navigator.share?.({ url: status.referral_link }).catch(() => handleCopy(status.referral_link)); }}>
+          <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => { const link = status?.referral_link ?? ""; navigator.share?.({ url: link }).catch(() => handleCopy(link)); }}>
             <Share2 className="mr-1 h-3 w-3" /> Share
           </Button>
         </div>

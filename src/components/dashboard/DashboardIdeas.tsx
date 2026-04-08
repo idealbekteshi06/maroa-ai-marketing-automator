@@ -22,7 +22,7 @@ export default function DashboardIdeas() {
   const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
-    if (!businessId || !isReady) return;
+    if (!businessId || !isReady) { setLoading(false); return; }
     const load = async () => {
       setLoading(true);
       try {
