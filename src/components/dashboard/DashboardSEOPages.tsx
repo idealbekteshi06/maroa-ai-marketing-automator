@@ -28,7 +28,10 @@ export default function DashboardSEOPages() {
       setLoading(true);
       try {
         const res = await fetch(`${API_BASE}/api/seo-pages/${businessId}`);
-        if (res.ok) setPages(await res.json());
+        if (res.ok) {
+          const data = await res.json();
+          setPages(Array.isArray(data) ? data : data?.items || data?.data || []);
+        }
       } catch { /* empty */ }
       setLoading(false);
     };

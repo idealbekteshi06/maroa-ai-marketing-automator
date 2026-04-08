@@ -34,7 +34,10 @@ export default function DashboardLeadMagnets() {
       setLoading(true);
       try {
         const res = await fetch(`${API_BASE}/api/lead-magnets/${businessId}`);
-        if (res.ok) setMagnets(await res.json());
+        if (res.ok) {
+          const data = await res.json();
+          setMagnets(Array.isArray(data) ? data : data?.items || data?.data || []);
+        }
       } catch { /* empty */ }
       setLoading(false);
     };

@@ -37,7 +37,8 @@ export default function DashboardResearch() {
         body: JSON.stringify({ business_id: businessId, topic: t.trim() }),
       });
       if (!res.ok) throw new Error();
-      setResults(await res.json());
+      const data = await res.json();
+      setResults({ insights: data.insights || [], quotes: data.quotes || [], trends: data.trends || [] });
       toast.success("Research complete!");
     } catch {
       toast.error("Failed to analyze topic");

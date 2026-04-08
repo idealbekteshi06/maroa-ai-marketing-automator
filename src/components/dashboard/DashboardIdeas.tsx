@@ -27,7 +27,10 @@ export default function DashboardIdeas() {
       setLoading(true);
       try {
         const res = await fetch(`${API_BASE}/api/ideas/${businessId}`);
-        if (res.ok) setIdeas(await res.json());
+        if (res.ok) {
+          const data = await res.json();
+          setIdeas(Array.isArray(data) ? data : data?.items || data?.data || []);
+        }
       } catch { /* empty */ }
       setLoading(false);
     };

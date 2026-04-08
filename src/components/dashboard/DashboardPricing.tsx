@@ -39,7 +39,10 @@ export default function DashboardPricing() {
       setLoading(true);
       try {
         const res = await fetch(`${API_BASE}/api/pricing/${businessId}`);
-        if (res.ok) setAnalysis(await res.json());
+        if (res.ok) {
+          const data = await res.json();
+          setAnalysis({ ...data, recommendations: data.recommendations || [], competitor_prices: data.competitor_prices || [] });
+        }
       } catch { /* empty */ }
       setLoading(false);
     };
@@ -56,7 +59,8 @@ export default function DashboardPricing() {
         body: JSON.stringify({ business_id: businessId }),
       });
       if (!res.ok) throw new Error();
-      setAnalysis(await res.json());
+      const data = await res.json();
+      setAnalysis({ ...data, recommendations: data.recommendations || [], competitor_prices: data.competitor_prices || [] });
       toast.success("Pricing analysis complete!");
     } catch {
       toast.error("Failed to analyze pricing");
@@ -103,7 +107,7 @@ export default function DashboardPricing() {
 
       <div className="grid gap-3 grid-cols-2">
         <div className="rounded-lg border border-border bg-card p-3 text-center">
-          <p className="text-xl font-bold text-foreground">{analysis.recommendations.length}</p>
+          <p className="text-xl font-bold text-foreground">{(analysis.recommendations || []).length}</p>
           <p className="text-[10px] text-muted-foreground mt-0.5">Recommendations</p>
         </div>
         <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-center">
@@ -118,11 +122,11 @@ export default function DashboardPricing() {
         </div>
       )}
 
-      {analysis.recommendations.length > 0 && (
+      {(analysis.recommendations || []).length > 0 && (
         <div className="rounded-lg border border-border bg-card p-5">
           <h4 className="text-xs font-semibold text-foreground mb-3">Price Recommendations</h4>
           <div className="space-y-3">
-            {analysis.recommendations.map((r, i) => (
+            {(analysis.recommendations || []).map((r, i) => (
               <div key={i} className="flex items-center justify-between rounded bg-muted px-3 py-2.5">
                 <div>
                   <p className="text-xs font-medium text-foreground">{r.product}</p>
@@ -142,11 +146,11 @@ export default function DashboardPricing() {
         </div>
       )}
 
-      {analysis.competitor_prices.length > 0 && (
+      {(analysis.competitor_prices || []).length > 0 && (
         <div className="rounded-lg border border-border bg-card p-5">
           <h4 className="text-xs font-semibold text-foreground mb-3">Competitor Prices</h4>
           <div className="space-y-2">
-            {analysis.competitor_prices.map((c, i) => (
+            {(analysis.competitor_prices || []).map((c, i) => (
               <div key={i} className="flex items-center justify-between rounded bg-muted px-3 py-2">
                 <span className="text-xs font-medium text-foreground">{c.competitor}</span>
                 <div className="flex items-center gap-2">

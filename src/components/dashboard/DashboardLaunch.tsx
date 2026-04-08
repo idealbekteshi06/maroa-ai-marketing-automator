@@ -40,7 +40,10 @@ export default function DashboardLaunch() {
       setLoading(true);
       try {
         const res = await fetch(`${API_BASE}/api/launch/${businessId}`);
-        if (res.ok) setCampaigns(await res.json());
+        if (res.ok) {
+          const data = await res.json();
+          setCampaigns(Array.isArray(data) ? data : data?.items || data?.data || []);
+        }
       } catch { /* empty */ }
       setLoading(false);
     };

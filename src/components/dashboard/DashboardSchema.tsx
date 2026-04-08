@@ -33,7 +33,10 @@ export default function DashboardSchema() {
       setLoading(true);
       try {
         const res = await fetch(`${API_BASE}/api/schema/${businessId}`);
-        if (res.ok) setSchemas(await res.json());
+        if (res.ok) {
+          const data = await res.json();
+          setSchemas(Array.isArray(data) ? data : data?.items || data?.data || []);
+        }
       } catch { /* empty */ }
       setLoading(false);
     };

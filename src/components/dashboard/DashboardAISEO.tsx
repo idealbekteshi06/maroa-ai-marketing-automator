@@ -47,7 +47,8 @@ export default function DashboardAISEO() {
         body: JSON.stringify({ business_id: businessId, url: url.trim() }),
       });
       if (!res.ok) throw new Error();
-      setResult(await res.json());
+      const data = await res.json();
+      setResult({ ...data, suggestions: data.suggestions || [], keywords: data.keywords || [] });
       toast.success("Optimization analysis complete!");
     } catch {
       toast.error("Failed to optimize content");
@@ -119,11 +120,11 @@ export default function DashboardAISEO() {
             <p className="text-[10px] text-muted-foreground mt-0.5">SEO Score</p>
           </div>
 
-          {result.suggestions.length > 0 && (
+          {(result.suggestions || []).length > 0 && (
             <div className="rounded-lg border border-border bg-card p-5">
               <h4 className="text-xs font-semibold text-foreground mb-3">Optimization Suggestions</h4>
               <div className="space-y-3">
-                {result.suggestions.map((s, i) => (
+                {(result.suggestions || []).map((s, i) => (
                   <div key={i} className="flex items-start gap-3">
                     {s.priority === "high" ? <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" /> : <CheckCircle2 className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />}
                     <div>
@@ -136,11 +137,11 @@ export default function DashboardAISEO() {
             </div>
           )}
 
-          {result.keywords.length > 0 && (
+          {(result.keywords || []).length > 0 && (
             <div className="rounded-lg border border-border bg-card p-5">
               <h4 className="text-xs font-semibold text-foreground mb-3">Keyword Analysis</h4>
               <div className="space-y-2">
-                {result.keywords.map((k, i) => (
+                {(result.keywords || []).map((k, i) => (
                   <div key={i} className="flex items-center justify-between rounded bg-muted px-3 py-2">
                     <span className="inline-flex items-center gap-1.5 text-xs font-medium text-foreground">
                       <Tag className="h-3 w-3 text-primary" /> {k.keyword}
