@@ -66,7 +66,7 @@ export default function DashboardOrchestrator() {
   };
 
   const totalActions = logs.length;
-  const successCount = logs.filter(l => l.status === "success").length;
+  const successCount = (logs || []).filter(l => l.status === "success").length;
   const successRate = totalActions > 0 ? Math.round((successCount / totalActions) * 100) : 0;
   const lastRun = logs.length > 0 ? logs[0].timestamp : null;
 
@@ -128,7 +128,7 @@ export default function DashboardOrchestrator() {
         </div>
       ) : (
         <div className="space-y-2">
-          {logs.map(entry => {
+          {(logs || []).map(entry => {
             const ActionIcon = actionIcons[entry.action_type] || Bot;
             const sConfig = statusConfig[entry.status] || statusConfig.running;
             const StatusIcon = sConfig.icon;

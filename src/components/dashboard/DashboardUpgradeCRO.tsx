@@ -66,7 +66,7 @@ export default function DashboardUpgradeCRO() {
         </div>
       ) : (
         <div className="space-y-3">
-          {prompts.map(prompt => {
+          {(prompts || []).map(prompt => {
             const Icon = scenarioIcon[prompt.scenario] || ArrowUpCircle;
             return (
               <div key={prompt.id} className="rounded-lg border border-border bg-card p-5">

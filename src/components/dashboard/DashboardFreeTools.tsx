@@ -93,7 +93,7 @@ export default function DashboardFreeTools() {
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
-          {tools.map(tool => {
+          {(tools || []).map(tool => {
             const Icon = categoryIcon[tool.category] || Wrench;
             return (
               <div key={tool.id} className="rounded-lg border border-border bg-card p-5">

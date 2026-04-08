@@ -94,8 +94,8 @@ export default function DashboardSEOPages() {
     );
   }
 
-  const draftCount = pages.filter(p => p.status === "draft").length;
-  const publishedCount = pages.filter(p => p.status === "published").length;
+  const draftCount = (pages || []).filter(p => p.status === "draft").length;
+  const publishedCount = (pages || []).filter(p => p.status === "published").length;
 
   return (
     <div className="space-y-4">
@@ -129,7 +129,7 @@ export default function DashboardSEOPages() {
       </div>
 
       <div className="space-y-3">
-        {pages.map(p => (
+        {(pages || []).map(p => (
           <div key={p.id} className="rounded-lg border border-border bg-card p-5 flex items-center justify-between gap-4">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-1">

@@ -80,7 +80,7 @@ export default function DashboardABTests() {
         </div>
       ) : (
         <div className="space-y-3">
-          {tests.map(test => (
+          {(tests || []).map(test => (
             <div key={test.id} className="rounded-lg border border-border bg-card p-5">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">

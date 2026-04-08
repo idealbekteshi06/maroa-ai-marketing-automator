@@ -103,7 +103,7 @@ export default function DashboardSales() {
         </div>
       ) : (
         <div className="space-y-3">
-          {tab === "pitches" ? pitches.map(p => (
+          {tab === "pitches" ? (pitches || []).map(p => (
             <div key={p.id} className="rounded-lg border border-border bg-card p-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
@@ -115,7 +115,7 @@ export default function DashboardSales() {
                 </Button>
               </div>
             </div>
-          )) : objections.map(o => (
+          )) : (objections || []).map(o => (
             <div key={o.id} className="rounded-lg border border-border bg-card p-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">

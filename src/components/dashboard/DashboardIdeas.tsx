@@ -99,7 +99,7 @@ export default function DashboardIdeas() {
     );
   }
 
-  const activeIdeas = ideas.filter(i => i.status !== "archived");
+  const activeIdeas = (ideas || []).filter(i => i.status !== "archived");
 
   return (
     <div className="space-y-4">
@@ -119,7 +119,7 @@ export default function DashboardIdeas() {
       )}
 
       <div className="space-y-3">
-        {activeIdeas.map(idea => (
+        {(activeIdeas || []).map(idea => (
           <div key={idea.id} className={`rounded-lg border bg-card p-5 ${idea.status === "saved" ? "border-primary/20" : "border-border"}`}>
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">

@@ -115,7 +115,7 @@ export default function DashboardResearch() {
             <Lightbulb className="h-4 w-4 text-primary" />
             <h4 className="text-xs font-semibold text-foreground">Key Insights</h4>
           </div>
-          {results.insights.map((insight, i) => (
+          {(results?.insights || []).map((insight, i) => (
             <p key={i} className="text-xs text-foreground leading-relaxed mb-2">{insight}</p>
           ))}
         </div>
@@ -127,7 +127,7 @@ export default function DashboardResearch() {
             <Quote className="h-4 w-4 text-primary" />
             <h4 className="text-xs font-semibold text-foreground">Notable Quotes</h4>
           </div>
-          {results.quotes.map((q, i) => (
+          {(results?.quotes || []).map((q, i) => (
             <blockquote key={i} className="border-l-2 border-primary/30 pl-3 text-xs text-muted-foreground italic mb-2">{q}</blockquote>
           ))}
         </div>
@@ -139,7 +139,7 @@ export default function DashboardResearch() {
             <TrendingUp className="h-4 w-4 text-primary" />
             <h4 className="text-xs font-semibold text-foreground">Trends</h4>
           </div>
-          {results.trends.map((t, i) => (
+          {(results?.trends || []).map((t, i) => (
             <p key={i} className="text-xs text-foreground leading-relaxed mb-2">{t}</p>
           ))}
         </div>

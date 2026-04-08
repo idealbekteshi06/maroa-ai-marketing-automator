@@ -121,7 +121,7 @@ export default function DashboardLeadMagnets() {
       </div>
 
       <div className="space-y-3">
-        {magnets.map(m => (
+        {(magnets || []).map(m => (
           <div key={m.id} className="rounded-lg border border-border bg-card p-5 flex items-center justify-between gap-4">
             <div className="min-w-0">
               <span className="inline-flex items-center gap-1 rounded bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground mb-1">

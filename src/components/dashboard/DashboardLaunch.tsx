@@ -121,7 +121,7 @@ export default function DashboardLaunch() {
       </div>
 
       <div className="space-y-3">
-        {campaigns.map(c => {
+        {(campaigns || []).map(c => {
           const completed = c.tasks?.filter(t => t.completed).length ?? 0;
           const total = c.tasks?.length ?? 0;
           const days = daysUntil(c.launch_date);

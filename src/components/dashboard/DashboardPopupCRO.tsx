@@ -68,7 +68,7 @@ export default function DashboardPopupCRO() {
         </div>
       ) : (
         <div className="space-y-3">
-          {popups.map(popup => (
+          {(popups || []).map(popup => (
             <div key={popup.id} className="rounded-lg border border-border bg-card p-5">
               <div className="flex items-start justify-between gap-4 mb-3">
                 <span className="inline-flex items-center rounded bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">{popup.popup_type}</span>

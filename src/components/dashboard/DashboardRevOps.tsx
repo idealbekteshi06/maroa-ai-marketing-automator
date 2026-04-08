@@ -58,9 +58,9 @@ export default function DashboardRevOps() {
     return "bg-muted text-muted-foreground";
   };
 
-  const totalPipeline = leads.reduce((s, l) => s + (l.revenue_forecast || 0), 0);
-  const avgScore = leads.length > 0 ? Math.round(leads.reduce((s, l) => s + l.score, 0) / leads.length) : 0;
-  const avgDeal = leads.length > 0 ? Math.round(totalPipeline / leads.length) : 0;
+  const totalPipeline = (leads || []).reduce((s, l) => s + (l.revenue_forecast || 0), 0);
+  const avgScore = (leads || []).length > 0 ? Math.round((leads || []).reduce((s, l) => s + l.score, 0) / (leads || []).length) : 0;
+  const avgDeal = (leads || []).length > 0 ? Math.round(totalPipeline / (leads || []).length) : 0;
 
   if (loading) {
     return (
@@ -82,7 +82,7 @@ export default function DashboardRevOps() {
         </Button>
       </div>
 
-      {leads.length > 0 && (
+      {(leads || []).length > 0 && (
         <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
           <div className="rounded-lg border border-border bg-card p-3 text-center">
             <DollarSign className="mx-auto h-4 w-4 text-muted-foreground mb-1" />
@@ -107,7 +107,7 @@ export default function DashboardRevOps() {
         </div>
       )}
 
-      {leads.length === 0 ? (
+      {(leads || []).length === 0 ? (
         <div className="rounded-lg border border-border bg-card p-12 text-center">
           <TrendingUp className="mx-auto h-10 w-10 text-muted-foreground/30" />
           <h3 className="mt-4 text-sm font-semibold text-foreground">Set up revenue operations</h3>
@@ -126,7 +126,7 @@ export default function DashboardRevOps() {
               </tr>
             </thead>
             <tbody>
-              {leads.map(l => (
+              {(leads || []).map(l => (
                 <tr key={l.id} className="border-b border-border last:border-0">
                   <td className="px-4 py-2.5 text-foreground font-medium">{l.name}</td>
                   <td className="px-4 py-2.5 text-muted-foreground">{l.email}</td>

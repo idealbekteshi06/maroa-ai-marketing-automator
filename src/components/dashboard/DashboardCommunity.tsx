@@ -113,7 +113,7 @@ export default function DashboardCommunity() {
       )}
 
       <div className="space-y-3">
-        {posts.map(p => (
+        {(posts || []).map(p => (
           <div key={p.id} className="rounded-lg border border-border bg-card p-5">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
