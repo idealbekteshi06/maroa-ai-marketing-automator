@@ -114,7 +114,7 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
 
   /* ---- Fetch business ---- */
   const fetchBusiness = useCallback(async () => {
-    if (!businessId || !isReady) return;
+    if (!businessId || !isReady) { setLoading(false); return; }
     setLoading(true);
     const { data } = await externalSupabase
       .from("businesses")

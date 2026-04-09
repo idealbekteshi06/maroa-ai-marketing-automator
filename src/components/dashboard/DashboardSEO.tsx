@@ -61,7 +61,7 @@ export default function DashboardSEO() {
 
   // Initial load from Supabase
   useEffect(() => {
-    if (!businessId || !isReady) return;
+    if (!businessId || !isReady) { setLoading(false); return; }
     const load = async () => {
       setLoading(true);
       const recs = await fetchFromSupabase();

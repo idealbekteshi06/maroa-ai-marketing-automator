@@ -58,7 +58,7 @@ export default function DashboardEmail() {
   };
 
   useEffect(() => {
-    if (!businessId || !isReady) return;
+    if (!businessId || !isReady) { setLoading(false); return; }
     (async () => { setLoading(true); await fetchData(); setLoading(false); })();
   }, [businessId, isReady]);
 

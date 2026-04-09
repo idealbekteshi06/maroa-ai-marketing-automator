@@ -39,7 +39,7 @@ export default function DashboardCompetitors() {
   const pollRef = useRef<ReturnType<typeof setInterval>>();
 
   const fetchInsights = useCallback(async () => {
-    if (!businessId || !isReady) return;
+    if (!businessId || !isReady) { setLoading(false); return; }
     setLoading(true);
     const [insRes, bizRes] = await Promise.all([
       externalSupabase.from("competitor_insights").select("*").eq("business_id", businessId).order("recorded_at", { ascending: false }).limit(10),

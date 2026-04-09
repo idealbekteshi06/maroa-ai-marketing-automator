@@ -88,7 +88,7 @@ export default function DashboardCRM() {
   };
 
   useEffect(() => {
-    if (!businessId || !isReady) return;
+    if (!businessId || !isReady) { setLoading(false); return; }
     const load = async () => {
       setLoading(true);
       await Promise.all([fetchContacts(), fetchPipeline()]);
@@ -99,7 +99,7 @@ export default function DashboardCRM() {
 
   // Live lead score updates via Supabase real-time
   useEffect(() => {
-    if (!businessId || !isReady) return;
+    if (!businessId || !isReady) { setLoading(false); return; }
     const channel = externalSupabase
       .channel(`lead-scores-${businessId}`)
       .on("postgres_changes", {

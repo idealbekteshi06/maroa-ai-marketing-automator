@@ -34,7 +34,7 @@ export default function DashboardPricing() {
   const [analyzing, setAnalyzing] = useState(false);
 
   useEffect(() => {
-    if (!businessId || !isReady) return;
+    if (!businessId || !isReady) { setLoading(false); return; }
     const load = async () => {
       setLoading(true);
       try {

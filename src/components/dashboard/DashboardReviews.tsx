@@ -68,7 +68,7 @@ export default function DashboardReviews() {
   const [requestSending, setRequestSending] = useState(false);
 
   const fetchReviews = async () => {
-    if (!businessId || !isReady) return;
+    if (!businessId || !isReady) { setLoading(false); return; }
     try {
       const { data, error } = await externalSupabase
         .from("reviews")
@@ -83,7 +83,7 @@ export default function DashboardReviews() {
   };
 
   useEffect(() => {
-    if (!businessId || !isReady) return;
+    if (!businessId || !isReady) { setLoading(false); return; }
     const load = async () => {
       setLoading(true);
       await fetchReviews();

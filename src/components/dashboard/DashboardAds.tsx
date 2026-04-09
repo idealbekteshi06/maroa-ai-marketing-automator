@@ -45,7 +45,7 @@ export default function DashboardAds() {
   const [budgetValue, setBudgetValue] = useState([300]);
 
   useEffect(() => {
-    if (!businessId || !isReady) return;
+    if (!businessId || !isReady) { setLoading(false); return; }
     (async () => {
       setLoading(true);
       const { data: camps } = await externalSupabase.from("ad_campaigns").select("*").eq("business_id", businessId).order("last_optimized_at", { ascending: false });
