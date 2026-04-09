@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { FileText, Search as SearchIcon, Calendar, LayoutGrid, ChevronLeft, ChevronRight, Loader2, Sparkles, Eye, Check, Instagram, Facebook } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import PostPreviewModal from "@/components/dashboard/PostPreviewModal";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 interface ContentItem {
   id: string; instagram_caption: string | null; instagram_caption_2: string | null;
@@ -95,11 +96,11 @@ export default function DashboardContent() {
           setContent(prev => prev.map(c => c.id === updated.id ? { ...c, status: updated.status } : c));
           setChangedIds(prev => new Set(prev).add(updated.id));
           setTimeout(() => setChangedIds(prev => { const n = new Set(prev); n.delete(updated.id); return n; }), 2000);
-          if (payload.old?.status !== "published" && updated.status === "published") toast.success("🚀 Published!");
+          if (payload.old?.status !== "published" && updated.status === "published") toast.success(SUCCESS_MESSAGES.GENERATED);
         }
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "generated_content", filter: `business_id=eq.${businessId}` }, (payload: any) => {
-        if (payload.new) { setContent(prev => [payload.new as ContentItem, ...prev]); toast.success("✍️ New content generated!"); }
+        if (payload.new) { setContent(prev => [payload.new as ContentItem, ...prev]); toast.success(SUCCESS_MESSAGES.GENERATED); }
       })
       .subscribe();
     return () => { externalSupabase.removeChannel(channel); };
@@ -117,16 +118,16 @@ export default function DashboardContent() {
       const msgs = ["Crafting captions...", "Generating image...", "Optimizing for platforms...", "Almost done..."];
       for (const msg of msgs) { await new Promise(r => setTimeout(r, 5000)); setGenMessage(msg); }
       await new Promise(r => setTimeout(r, 5000));
-      toast.success("✓ Post created! It should appear below.");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
       await fetchContent();
-    } catch { toast.error("Failed — try again"); }
+    } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
     finally { setGenerating(false); setGenMessage(""); }
   };
 
   const handleApprove = async (id: string) => {
     const { error } = await externalSupabase.from("generated_content").update({ status: "approved" }).eq("id", id);
-    if (error) { toast.error("Failed to approve"); return; }
-    toast.success("✓ Approved & scheduled for optimal publish time");
+    if (error) { toast.error(ERROR_MESSAGES.GENERATION_FAILED); return; }
+    toast.success(SUCCESS_MESSAGES.GENERATED);
     void fetch("https://maroa-api-production.up.railway.app/webhook/content-approved", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content_id: id, business_id: businessId }),

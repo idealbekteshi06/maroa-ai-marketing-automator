@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Wrench, Loader2, Calculator, HelpCircle, CheckSquare, Sparkles } from "lucide-react";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 interface FreeTool {
   id: string;
@@ -60,8 +61,8 @@ export default function DashboardFreeTools() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
       setTools(data.tools ?? []);
-      toast.success("Tool suggestions generated");
-    } catch { toast.error("Failed to generate suggestions"); }
+      toast.success(SUCCESS_MESSAGES.GENERATED);
+    } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
     finally { setSuggesting(false); }
   };
 

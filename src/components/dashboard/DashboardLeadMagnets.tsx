@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { FileText, Loader2, Download, CheckSquare, BookOpen, LayoutTemplate, HelpCircle } from "lucide-react";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 const API_BASE = "https://maroa-api-production.up.railway.app";
 
@@ -56,9 +57,9 @@ export default function DashboardLeadMagnets() {
       if (!res.ok) throw new Error();
       const data = await res.json();
       setMagnets(prev => [data, ...prev]);
-      toast.success("Lead magnet generated!");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch {
-      toast.error("Failed to generate lead magnet");
+      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     } finally {
       setGenerating(false);
     }

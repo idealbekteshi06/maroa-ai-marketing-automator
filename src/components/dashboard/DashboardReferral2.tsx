@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Gift, Loader2, Copy, Share2, Users, DollarSign } from "lucide-react";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 const API_BASE = "https://maroa-api-production.up.railway.app";
 
@@ -49,9 +50,9 @@ export default function DashboardReferral2() {
       if (!res.ok) throw new Error();
       const data = await res.json();
       setStatus(data);
-      toast.success("Referral program created!");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch {
-      toast.error("Failed to set up referral program");
+      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     } finally {
       setSetting(false);
     }
@@ -59,7 +60,7 @@ export default function DashboardReferral2() {
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard");
+    toast.success(SUCCESS_MESSAGES.COPIED);
   };
 
   if (loading) {

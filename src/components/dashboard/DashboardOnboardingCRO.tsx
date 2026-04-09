@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { UserCheck, Loader2, ArrowRight, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 interface OnboardingStep {
   step_number: number;
@@ -40,8 +41,8 @@ export default function DashboardOnboardingCRO() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
       setResult(data);
-      toast.success("Onboarding flow optimized");
-    } catch { toast.error("Failed to optimize onboarding"); }
+      toast.success(SUCCESS_MESSAGES.GENERATED);
+    } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
     finally { setGenerating(false); }
   };
 

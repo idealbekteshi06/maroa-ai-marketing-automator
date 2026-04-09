@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mail, Send, MousePointerClick, Loader2, Plus, Users, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 interface EmailSequence {
   id: string; name: string; trigger?: string; status: string;
@@ -54,7 +55,7 @@ export default function DashboardEmail() {
     try {
       const { data } = await externalSupabase.from("email_sequences").select("*").eq("business_id", businessId).order("created_at", { ascending: false });
       setSequences((data ?? []) as EmailSequence[]);
-    } catch { toast.error("Failed to load sequences"); }
+    } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
   };
 
   useEffect(() => {
@@ -71,11 +72,11 @@ export default function DashboardEmail() {
         delay_hours: formSteps[0]?.delay_days * 24 || 24,
         emails: formSteps.map(s => ({ subject_prompt: s.subject_prompt, body_prompt: s.body_prompt, delay_hours: s.delay_days * 24 })),
       });
-      toast.success("✓ Sequence created!");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
       setCreateOpen(false);
       setFormName(""); setFormTrigger("signup"); setFormSteps([{ subject_prompt: "", body_prompt: "", delay_days: 1 }]);
       await fetchData();
-    } catch { toast.error("Failed to create — try again"); }
+    } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
     finally { setCreating(false); }
   };
 

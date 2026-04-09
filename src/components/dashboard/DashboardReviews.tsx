@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Star, MessageCircle, Loader2, Bot, Send, CheckCircle2 } from "lucide-react";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 interface Review {
   id: string;
@@ -78,7 +79,7 @@ export default function DashboardReviews() {
       if (error) throw error;
       setReviews((data as Review[]) ?? []);
     } catch {
-      toast.error("Failed to load reviews");
+      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     }
   };
 
@@ -97,10 +98,10 @@ export default function DashboardReviews() {
     setGeneratingId(reviewId);
     try {
       await api.reviewResponseGenerate({ business_id: businessId, review_id: reviewId });
-      toast.success("AI response generated");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
       await fetchReviews();
     } catch {
-      toast.error("Failed to generate response");
+      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     } finally {
       setGeneratingId(null);
     }
@@ -112,10 +113,10 @@ export default function DashboardReviews() {
     setPublishingId(reviewId);
     try {
       await api.reviewResponsePublish({ business_id: businessId, review_id: reviewId, response_text: draftText });
-      toast.success("Response published");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
       await fetchReviews();
     } catch {
-      toast.error("Failed to publish response");
+      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     } finally {
       setPublishingId(null);
     }
@@ -126,11 +127,11 @@ export default function DashboardReviews() {
     setRequestSending(true);
     try {
       await api.reviewRequestSend({ business_id: businessId, contact_email: contactEmail, contact_name: contactName });
-      toast.success("Review request sent");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
       setRequestOpen(false);
       setContactEmail(""); setContactName("");
     } catch {
-      toast.error("Failed to send review request");
+      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     } finally {
       setRequestSending(false);
     }

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { toast } from "sonner";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 const industries = ["Bakery", "Restaurant", "Café", "Salon & Spa", "Gym & Fitness", "Boutique & Retail", "Photography", "Real Estate", "Coaching & Consulting", "Medical & Dental", "Auto Services", "Home Services", "Other"];
 
@@ -118,7 +119,7 @@ export default function SignUp() {
         }).catch(() => {});
       }
 
-      toast.success("Account created! Let's set up your marketing.");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
       navigate("/onboarding");
     } catch (error) {
       toast.error(toAuthErrorMessage(error));

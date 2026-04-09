@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Bot, Loader2, Play, CheckCircle2, XCircle, Clock, Mail, Search, Share2, Megaphone, BarChart3 } from "lucide-react";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 interface LogEntry {
   id: string;
@@ -60,8 +61,8 @@ export default function DashboardOrchestrator() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
       setLogs(data.logs ?? []);
-      toast.success("AI cycle completed");
-    } catch { toast.error("Failed to run AI cycle"); }
+      toast.success(SUCCESS_MESSAGES.GENERATED);
+    } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
     finally { setRunning(false); }
   };
 

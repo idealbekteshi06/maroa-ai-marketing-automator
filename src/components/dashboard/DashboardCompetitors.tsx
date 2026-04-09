@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Target, Loader2, Trophy, Lightbulb, Compass, ChevronDown, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 interface Insight {
   id: string; competitor_doing_well: string | null; gap_opportunity: string | null;
@@ -87,7 +88,7 @@ export default function DashboardCompetitors() {
         if ((data?.length ?? 0) > startCount) {
           clearInterval(pollRef.current);
           clearInterval(msgTimer);
-          toast.success("✓ Analysis complete!");
+          toast.success(SUCCESS_MESSAGES.GENERATED);
           setAnalyzing(false);
           fetchInsights();
           return;
@@ -101,7 +102,7 @@ export default function DashboardCompetitors() {
       }, 5000);
     } catch {
       clearInterval(msgTimer);
-      toast.error("Analysis failed — try again");
+      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
       setAnalyzing(false);
     }
   };

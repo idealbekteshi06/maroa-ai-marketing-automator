@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Search, Loader2, TrendingUp, Quote, Lightbulb } from "lucide-react";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 const API_BASE = "https://maroa-api-production.up.railway.app";
 
@@ -39,9 +40,9 @@ export default function DashboardResearch() {
       if (!res.ok) throw new Error();
       const data = await res.json();
       setResults({ insights: data.insights || [], quotes: data.quotes || [], trends: data.trends || [] });
-      toast.success("Research complete!");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch {
-      toast.error("Failed to analyze topic");
+      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     } finally {
       setLoading(false);
     }

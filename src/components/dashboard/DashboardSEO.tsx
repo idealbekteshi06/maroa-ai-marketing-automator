@@ -5,6 +5,7 @@ import * as api from "@/lib/api";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Search, Loader2, CheckCircle2, Clock, Copy, Tag, Globe, FileText, Code } from "lucide-react";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 interface Recommendation {
   id: string;
@@ -85,7 +86,7 @@ export default function DashboardSEO() {
     try {
       await api.seoAudit({ business_id: businessId });
     } catch {
-      toast.error("Failed to start SEO audit");
+      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
       setAuditing(false);
       return;
     }
@@ -125,11 +126,11 @@ export default function DashboardSEO() {
     setApplyingId(id);
     try {
       await api.seoRecommendationApply({ business_id: businessId, recommendation_id: id });
-      toast.success("Recommendation applied");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
       // Optimistic update
       setRecommendations(prev => prev.map(r => r.id === id ? { ...r, status: "applied", applied_at: new Date().toISOString() } : r));
     } catch {
-      toast.error("Failed to apply recommendation");
+      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     } finally {
       setApplyingId(null);
     }
@@ -137,7 +138,7 @@ export default function DashboardSEO() {
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard");
+    toast.success(SUCCESS_MESSAGES.COPIED);
   };
 
   const lastAuditDate = recommendations.length > 0 ? recommendations[0].created_at : null;

@@ -4,6 +4,7 @@ import { Upload, X, ImageIcon, Loader2, Send } from "lucide-react";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 const photoTypes = ["Product", "Team", "Interior", "Exterior", "Behind the scenes", "Lifestyle"];
 
@@ -83,9 +84,9 @@ export default function PhotoLibrary({ onUseInPost }: PhotoLibraryProps) {
       }
     } catch { /* ignore storage delete errors */ }
     const { error } = await externalSupabase.from("business_photos").delete().eq("id", photo.id);
-    if (error) { toast.error("Failed to delete"); return; }
+    if (error) { toast.error(ERROR_MESSAGES.GENERATION_FAILED); return; }
     setPhotos(prev => prev.filter(p => p.id !== photo.id));
-    toast.success("Photo deleted");
+    toast.success(SUCCESS_MESSAGES.GENERATED);
   };
 
   if (loading && photos.length === 0) return <SkeletonGrid />;

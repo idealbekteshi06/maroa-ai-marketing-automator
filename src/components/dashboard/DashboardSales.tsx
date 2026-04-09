@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DollarSign, Loader2, Copy, ShieldQuestion } from "lucide-react";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 interface Pitch { id: string; product: string; pitch: string; created_at: string }
 interface Objection { id: string; objection: string; response: string; created_at: string }
@@ -31,8 +32,8 @@ export default function DashboardSales() {
       if (!res.ok) throw new Error(data.error || "Failed");
       setPitches(prev => [data, ...prev]);
       setProduct("");
-      toast.success("Sales pitch generated");
-    } catch { toast.error("Failed to generate pitch"); }
+      toast.success(SUCCESS_MESSAGES.GENERATED);
+    } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
     finally { setGenerating(false); }
   };
 
@@ -48,14 +49,14 @@ export default function DashboardSales() {
       if (!res.ok) throw new Error(data.error || "Failed");
       setObjections(prev => [data, ...prev]);
       setObjectionText("");
-      toast.success("Objection handler generated");
-    } catch { toast.error("Failed to generate response"); }
+      toast.success(SUCCESS_MESSAGES.GENERATED);
+    } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
     finally { setGenerating(false); }
   };
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard");
+    toast.success(SUCCESS_MESSAGES.COPIED);
   };
 
   if (loading) {

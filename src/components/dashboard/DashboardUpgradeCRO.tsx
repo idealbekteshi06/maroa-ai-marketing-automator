@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ArrowUpCircle, Loader2, Copy, Clock, Zap, Lock } from "lucide-react";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 interface UpgradePrompt {
   id: string;
@@ -38,14 +39,14 @@ export default function DashboardUpgradeCRO() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
       setPrompts(data.prompts ?? []);
-      toast.success("Upgrade prompts generated");
-    } catch { toast.error("Failed to generate prompts"); }
+      toast.success(SUCCESS_MESSAGES.GENERATED);
+    } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
     finally { setGenerating(false); }
   };
 
   const handleCopy = (prompt: UpgradePrompt) => {
     navigator.clipboard.writeText(`${prompt.headline}\n\n${prompt.body}\n\nCTA: ${prompt.cta}\nTrigger: ${prompt.trigger}`);
-    toast.success("Copied to clipboard");
+    toast.success(SUCCESS_MESSAGES.COPIED);
   };
 
   return (

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { toast } from "sonner";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 interface ContentItem {
   id: string;
@@ -61,8 +62,8 @@ export default function PostPreviewModal({ item, businessName, businessId, onClo
       .from("generated_content")
       .update({ status: "approved" })
       .eq("id", item.id);
-    if (error) { toast.error("Failed to approve"); return; }
-    toast.success("Content approved!");
+    if (error) { toast.error(ERROR_MESSAGES.GENERATION_FAILED); return; }
+    toast.success(SUCCESS_MESSAGES.GENERATED);
     void fetch("https://maroa-api-production.up.railway.app/webhook/content-approved", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -89,8 +90,8 @@ export default function PostPreviewModal({ item, businessName, businessId, onClo
       })
       .eq("id", item.id);
     setSaving(false);
-    if (error) { toast.error("Failed to save changes"); return; }
-    toast.success("Content updated!");
+    if (error) { toast.error(ERROR_MESSAGES.GENERATION_FAILED); return; }
+    toast.success(SUCCESS_MESSAGES.GENERATED);
     setEditing(false);
     onApproved();
   };

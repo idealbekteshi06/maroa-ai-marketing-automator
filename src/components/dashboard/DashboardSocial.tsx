@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import ContentCalendar from "@/components/ContentCalendar";
 import { timeAgo } from "@/lib/format";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 const META_APP_ID = "26551713411132003";
 const META_PERMISSIONS =
@@ -174,7 +175,7 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
     if (!code) return;
     const storedBizId = localStorage.getItem("meta_oauth_business_id") || businessId;
     if (!storedBizId) {
-      toast.error("No business found");
+      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
       return;
     }
     setConnecting("Facebook & Instagram");
@@ -214,7 +215,7 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
             meta_access_token: data.access_token,
           }),
         }).catch(console.warn);
-        toast.success("Connected!");
+        toast.success(SUCCESS_MESSAGES.GENERATED);
       } catch (err: any) {
         toast.error(err.message);
       } finally {
@@ -286,7 +287,7 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
         body: JSON.stringify({ business_id: businessId, email: user?.email }),
       });
       if (!res.ok) throw new Error("Failed to generate post");
-      toast.success("\u2713 Post created! Check Content tab");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
       await fetchRecentPosts();
     } catch (err: any) {
       toast.error(err.message || "Failed to generate post");

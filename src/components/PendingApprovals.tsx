@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import * as api from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 interface PendingContent {
   id: string;
@@ -60,9 +61,9 @@ export default function PendingApprovals({ onNavigate }: PendingApprovalsProps) 
     try {
       await api.approveContentPiece({ content_id: contentId, business_id: businessId });
       setItems(prev => prev.filter(i => i.id !== contentId));
-      toast.success("Approved! Will publish at optimal time");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch {
-      toast.error("Failed to approve — please try again");
+      toast.error(ERROR_MESSAGES.SAVE_FAILED);
     }
     setApprovingId(null);
   };

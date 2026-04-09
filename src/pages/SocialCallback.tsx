@@ -4,6 +4,7 @@ import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 const RAILWAY_URL = "https://maroa-api-production.up.railway.app";
 const REDIRECT_URI = "https://maroa-ai-marketing-automator.lovable.app/social-callback";
@@ -83,7 +84,7 @@ export default function SocialCallback() {
       localStorage.removeItem("meta_oauth_business_id");
       setStatus("success");
       setMessage(result.message || "Facebook & Instagram connected!");
-      toast.success("Facebook and Instagram connected successfully");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
       setTimeout(() => navigate("/dashboard?tab=social"), 2000);
     } catch (err: any) {
       setStatus("error");

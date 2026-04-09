@@ -65,7 +65,7 @@ export default function ReferralPage() {
   const copyLink = async () => {
     await navigator.clipboard.writeText(referralLink);
     setCopied(true);
-    toast.success("Copied to clipboard!");
+    toast.success(SUCCESS_MESSAGES.COPIED);
     setTimeout(() => setCopied(false), 2000);
   };
 

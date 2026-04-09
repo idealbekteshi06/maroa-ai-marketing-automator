@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { UserPlus, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 interface StepAnalysis {
   step: string;
@@ -39,8 +40,8 @@ export default function DashboardSignupCRO() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
       setAnalysis(data);
-      toast.success("Signup flow analyzed");
-    } catch { toast.error("Failed to analyze signup flow"); }
+      toast.success(SUCCESS_MESSAGES.GENERATED);
+    } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
     finally { setAnalyzing(false); }
   };
 

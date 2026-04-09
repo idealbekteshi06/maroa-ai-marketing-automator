@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Rocket, Loader2, CheckCircle2, Circle, Calendar, Zap, Mail, Megaphone } from "lucide-react";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 const API_BASE = "https://maroa-api-production.up.railway.app";
 
@@ -62,9 +63,9 @@ export default function DashboardLaunch() {
       if (!res.ok) throw new Error();
       const data = await res.json();
       setCampaigns(prev => [data, ...prev]);
-      toast.success("Launch campaign created!");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch {
-      toast.error("Failed to create campaign");
+      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     } finally {
       setCreating(false);
     }

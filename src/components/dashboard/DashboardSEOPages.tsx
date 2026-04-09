@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { FileText, Loader2, ExternalLink, CheckCircle2, Clock, Globe } from "lucide-react";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 const API_BASE = "https://maroa-api-production.up.railway.app";
 
@@ -51,9 +52,9 @@ export default function DashboardSEOPages() {
       const data = await res.json();
       setPages(prev => [data, ...prev]);
       setKeyword("");
-      toast.success("SEO page generated!");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch {
-      toast.error("Failed to generate page");
+      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     } finally {
       setGenerating(false);
     }

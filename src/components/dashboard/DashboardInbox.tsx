@@ -5,6 +5,7 @@ import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Search, Send, Smile, Sparkles, MessageCircle, Facebook, Instagram, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 interface InboxMessage {
   id: string;
@@ -130,8 +131,8 @@ export default function DashboardInbox() {
         }
       });
       if (reply) setReplyText(reply);
-      else toast.error("Couldn't generate a reply");
-    } catch { toast.error("AI reply failed"); }
+      else toast.error(ERROR_MESSAGES.GENERATION_FAILED);
+    } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
     finally { setAiLoading(false); }
   };
 

@@ -18,6 +18,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 interface Platform {
   key: string;
@@ -159,16 +160,16 @@ export default function DashboardPublish() {
     try {
       const fileName = `${businessId}/${Date.now()}_${file.name}`;
       const { error } = await externalSupabase.storage.from("business-photos").upload(fileName, file);
-      if (error) { toast.error("Upload failed: " + error.message); setUploading(false); return; }
+      if (error) { toast.error(ERROR_MESSAGES.SAVE_FAILED); setUploading(false); return; }
       const { data: urlData } = externalSupabase.storage.from("business-photos").getPublicUrl(fileName);
       setImageUrl(urlData.publicUrl);
-      toast.success("Image uploaded!");
-    } catch { toast.error("Upload failed"); }
+      toast.success(SUCCESS_MESSAGES.GENERATED);
+    } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
     finally { setUploading(false); if (fileInputRef.current) fileInputRef.current.value = ""; }
   };
 
   const handleAiAssist = async () => {
-    if (!postText.trim()) { toast.error("Write something first"); return; }
+    if (!postText.trim()) { toast.error(ERROR_MESSAGES.GENERATION_FAILED); return; }
     setAiLoading(true);
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -190,16 +191,16 @@ export default function DashboardPublish() {
       }
       const data = await response.json();
       const improved = data?.choices?.[0]?.message?.content;
-      if (improved) { setPostText(improved); toast.success("Post improved by AI!"); }
-      else toast.error("AI returned empty response");
+      if (improved) { setPostText(improved); toast.success(SUCCESS_MESSAGES.GENERATED); }
+      else toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     } catch (err: any) {
       toast.error(err?.message?.includes("429") ? "Too many requests — wait a moment" : err?.message || "AI assist failed");
     } finally { setAiLoading(false); }
   };
 
   const handleSaveDraft = async () => {
-    if (!businessId || !postText.trim()) { toast.error("Write something first"); return; }
-    if (!draftsSupported) { toast.error("Drafts feature is being set up"); return; }
+    if (!businessId || !postText.trim()) { toast.error(ERROR_MESSAGES.GENERATION_FAILED); return; }
+    if (!draftsSupported) { toast.error(ERROR_MESSAGES.GENERATION_FAILED); return; }
     const { error } = await externalSupabase.from("post_drafts").insert({
       business_id: businessId,
       post_text: postText,
@@ -210,14 +211,14 @@ export default function DashboardPublish() {
     });
     if (error) {
       if (error.code === "42P01" || error.message?.includes("does not exist")) {
-        toast.error("Drafts table needs to be created first");
+        toast.error(ERROR_MESSAGES.GENERATION_FAILED);
         setDraftsSupported(false);
       } else {
-        toast.error("Failed to save draft");
+        toast.error(ERROR_MESSAGES.GENERATION_FAILED);
       }
       return;
     }
-    toast.success("Draft saved!");
+    toast.success(SUCCESS_MESSAGES.GENERATED);
     fetchDrafts();
   };
 
@@ -226,25 +227,25 @@ export default function DashboardPublish() {
     setImageUrl(draft.image_url || "");
     setSelectedPlatforms(draft.platforms_selected || []);
     setActiveTab("compose");
-    toast.success("Draft loaded");
+    toast.success(SUCCESS_MESSAGES.GENERATED);
   };
 
   const deleteDraft = async (id: string) => {
     await externalSupabase.from("post_drafts").delete().eq("id", id);
     fetchDrafts();
-    toast.success("Draft deleted");
+    toast.success(SUCCESS_MESSAGES.GENERATED);
   };
 
   const importContent = (row: ContentRow) => {
     setPostText(row.instagram_caption || row.facebook_post || "");
     setImageUrl(row.image_url || "");
     setImportOpen(false);
-    toast.success("Content imported into composer!");
+    toast.success(SUCCESS_MESSAGES.GENERATED);
   };
 
   const handlePublish = async () => {
-    if (!postText.trim()) { toast.error("Write something first"); return; }
-    if (selectedPlatforms.length === 0) { toast.error("Select at least one platform"); return; }
+    if (!postText.trim()) { toast.error(ERROR_MESSAGES.GENERATION_FAILED); return; }
+    if (selectedPlatforms.length === 0) { toast.error(ERROR_MESSAGES.GENERATION_FAILED); return; }
     setPublishing(true);
     setPublishResults({});
     const results: Record<string, "success" | "error"> = {};
@@ -587,7 +588,7 @@ export default function DashboardPublish() {
             {photos.length === 0 ? (
               <p className="col-span-3 text-sm text-muted-foreground py-8 text-center">No photos in library. Upload some in the Photo Library page first.</p>
             ) : photos.map(p => (
-              <button key={p.id} onClick={() => { setImageUrl(p.photo_url); setPhotoPickerOpen(false); toast.success("Photo selected"); }} className="aspect-square rounded-xl border border-border overflow-hidden hover:ring-2 hover:ring-primary transition-all">
+              <button key={p.id} onClick={() => { setImageUrl(p.photo_url); setPhotoPickerOpen(false); toast.success(SUCCESS_MESSAGES.GENERATED); }} className="aspect-square rounded-xl border border-border overflow-hidden hover:ring-2 hover:ring-primary transition-all">
                 <img src={p.photo_url} alt={p.description || "Photo"} className="h-full w-full object-cover" />
               </button>
             ))}

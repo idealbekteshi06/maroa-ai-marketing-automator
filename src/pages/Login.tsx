@@ -7,6 +7,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -95,7 +96,7 @@ export default function Login() {
 
       if (bizError) throw bizError;
 
-      toast.success("Welcome back!");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
 
       if (biz?.onboarding_complete === false) {
         navigate("/onboarding", { replace: true });
@@ -135,7 +136,7 @@ export default function Login() {
         redirectTo: `${window.location.origin}/reset-password`,
       });
       if (error) throw error;
-      toast.success("Password reset link sent! Check your email.");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
       setForgotOpen(false);
     } catch (err: any) {
       toast.error(err.message || "Failed to send reset email.");

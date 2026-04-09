@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { FlaskConical, Loader2, Trophy, Plus } from "lucide-react";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 interface Variant { name: string; impressions: number; clicks: number; conversions: number; confidence: number }
 interface ABTest { id: string; test_type: string; status: string; variants: Variant[]; winner: string | null; created_at: string }
@@ -42,8 +43,8 @@ export default function DashboardABTests() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
       setTests(prev => [data, ...prev]);
-      toast.success("A/B test created");
-    } catch { toast.error("Failed to create test"); }
+      toast.success(SUCCESS_MESSAGES.GENERATED);
+    } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
     finally { setCreating(false); }
   };
 

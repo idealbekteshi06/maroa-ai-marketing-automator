@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Users, Loader2, Copy, MessageSquare, HelpCircle, Hash, Gamepad2 } from "lucide-react";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 const API_BASE = "https://maroa-api-production.up.railway.app";
 
@@ -42,7 +43,7 @@ export default function DashboardCommunity() {
       setPosts(prev => [...newPosts, ...prev]);
       toast.success(`${newPosts.length} post${newPosts.length !== 1 ? "s" : ""} generated!`);
     } catch {
-      toast.error("Failed to generate posts");
+      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     } finally {
       setGenerating(false);
     }
@@ -50,7 +51,7 @@ export default function DashboardCommunity() {
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard");
+    toast.success(SUCCESS_MESSAGES.COPIED);
   };
 
   const platformLabel = (val: string) => platforms.find(p => p.value === val)?.label ?? val;

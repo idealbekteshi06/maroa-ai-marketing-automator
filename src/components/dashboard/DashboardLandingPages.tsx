@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { FileText, Eye, Copy, Loader2, Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 interface LandingPage {
   id: string; headline: string | null; subheadline: string | null; cta_text: string | null;
@@ -45,9 +46,9 @@ export default function DashboardLandingPages() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ business_id: businessId, email: user?.email }),
       });
-      toast.success("Landing page generation triggered!");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
       setTimeout(() => fetchPages(), 15000);
-    } catch { toast.error("Failed to generate"); }
+    } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
     finally { setGenerating(false); }
   };
 
@@ -55,7 +56,7 @@ export default function DashboardLandingPages() {
     const benefits = page.benefits ? page.benefits.split(",").map(b => `<li>${b.trim()}</li>`).join("") : "";
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${page.headline || ""}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui,sans-serif;color:#1c1c1c}.hero{padding:80px 20px;text-align:center;max-width:600px;margin:0 auto}h1{font-size:2.5rem;font-weight:800;line-height:1.2;margin-bottom:16px}p{font-size:1.1rem;color:#666;margin-bottom:32px}ul{list-style:none;text-align:left;margin-bottom:32px}li{padding:8px 0;border-bottom:1px solid #eee}li:before{content:"✓ ";color:#0066cc}.cta{display:inline-block;padding:16px 32px;background:#0066cc;color:white;border-radius:8px;text-decoration:none;font-weight:600;font-size:1.1rem}</style></head><body><div class="hero"><h1>${page.headline || ""}</h1><p>${page.subheadline || ""}</p>${benefits ? `<ul>${benefits}</ul>` : ""}<a href="#" class="cta">${page.cta_text || "Get Started"}</a></div></body></html>`;
     navigator.clipboard.writeText(html);
-    toast.success("HTML copied to clipboard!");
+    toast.success(SUCCESS_MESSAGES.COPIED);
   };
 
   if (loading) return <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-24 rounded-2xl border border-border bg-card animate-pulse" />)}</div>;

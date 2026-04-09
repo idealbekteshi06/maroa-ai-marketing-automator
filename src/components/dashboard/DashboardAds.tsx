@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
 } from "@/components/ui/table";
@@ -76,12 +77,12 @@ export default function DashboardAds() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ business_id: businessId, email: biz?.email || user?.email, business_name: biz?.business_name, daily_budget: budgetValue[0] / 30, target_audience: biz?.target_audience, industry: biz?.industry, location: biz?.location }),
       });
-      toast.success("✓ Campaign created! It will appear below shortly.");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
       setTimeout(async () => {
         const { data } = await externalSupabase.from("ad_campaigns").select("*").eq("business_id", businessId).order("last_optimized_at", { ascending: false });
         setCampaigns((data ?? []) as Campaign[]);
       }, 15000);
-    } catch { toast.error("Failed to create campaign — try again"); }
+    } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
     finally { setCreating(false); setCreateOpen(false); }
   };
 

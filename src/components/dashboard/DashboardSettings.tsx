@@ -9,6 +9,7 @@ import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Check, ExternalLink, User, CreditCard, Bell, Zap, Palette, Link2, CalendarClock, Loader2, Trash2, Shield } from "lucide-react";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 /* ── Tabs ── */
 const tabs = [
@@ -107,7 +108,7 @@ export default function DashboardSettings() {
     saveTimerRef.current = setTimeout(async () => {
       if (!businessId) return;
       const { error } = await externalSupabase.from("businesses").update(newForm).eq("id", businessId);
-      if (error) { setSaveStatus("error"); toast.error("Failed to save"); }
+      if (error) { setSaveStatus("error"); toast.error(ERROR_MESSAGES.SAVE_FAILED); }
       else { setSaveStatus("saved"); setTimeout(() => setSaveStatus("idle"), 3000); }
     }, 2000);
   }, [businessId]);
@@ -139,7 +140,7 @@ export default function DashboardSettings() {
     setNotifPrefs(newPrefs);
     if (businessId) {
       const { error } = await externalSupabase.from("businesses").update({ notification_preferences: newPrefs }).eq("id", businessId);
-      if (error) { toast.error("Failed to save"); setNotifPrefs(notifPrefs); }
+      if (error) { toast.error(ERROR_MESSAGES.SAVE_FAILED); setNotifPrefs(notifPrefs); }
     }
   };
 
@@ -149,8 +150,8 @@ export default function DashboardSettings() {
     toast("🧠 Training brand voice...");
     try {
       await fetch("https://maroa-api-production.up.railway.app/webhook/brand-memory-train", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: businessId }) });
-      toast.success("✓ Brand voice updated!");
-    } catch { toast.error("Training failed — try again"); }
+      toast.success(SUCCESS_MESSAGES.GENERATED);
+    } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
     setBrandTraining(false);
   };
 
@@ -317,7 +318,7 @@ export default function DashboardSettings() {
                     setAutopilot(next);
                     if (businessId) {
                       const { error } = await externalSupabase.from("businesses").update({ autopilot_enabled: next }).eq("id", businessId);
-                      if (error) { toast.error("Failed to save"); setAutopilot(!next); }
+                      if (error) { toast.error(ERROR_MESSAGES.SAVE_FAILED); setAutopilot(!next); }
                       else toast.success(next ? "✓ Autopilot enabled" : "Autopilot paused");
                     }
                   }}
@@ -398,7 +399,7 @@ export default function DashboardSettings() {
               <Button variant="outline" size="sm" onClick={async () => {
                 if (!user?.email) return;
                 const { error } = await externalSupabase.auth.resetPasswordForEmail(user.email, { redirectTo: `${window.location.origin}/reset-password` });
-                if (error) toast.error(error.message); else toast.success("Reset link sent to " + user.email);
+                if (error) toast.error(ERROR_MESSAGES.SAVE_FAILED); else toast.success(SUCCESS_MESSAGES.SAVED);
               }}>Send Reset Link</Button>
             </div>
             <div className="rounded-xl border border-destructive/30 bg-card p-5">

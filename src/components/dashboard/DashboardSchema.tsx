@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Code, Loader2, Copy, Building2, ShoppingBag, HelpCircle, FileText } from "lucide-react";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 const API_BASE = "https://maroa-api-production.up.railway.app";
 
@@ -55,9 +56,9 @@ export default function DashboardSchema() {
       if (!res.ok) throw new Error();
       const data = await res.json();
       setSchemas(prev => [data, ...prev]);
-      toast.success("Schema markup generated!");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch {
-      toast.error("Failed to generate schema");
+      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     } finally {
       setGenerating(false);
     }
@@ -65,7 +66,7 @@ export default function DashboardSchema() {
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard");
+    toast.success(SUCCESS_MESSAGES.COPIED);
   };
 
   if (loading) {

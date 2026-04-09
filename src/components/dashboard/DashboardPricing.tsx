@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DollarSign, Loader2, TrendingUp, TrendingDown, BarChart3, ArrowUpRight } from "lucide-react";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 const API_BASE = "https://maroa-api-production.up.railway.app";
 
@@ -61,9 +62,9 @@ export default function DashboardPricing() {
       if (!res.ok) throw new Error();
       const data = await res.json();
       setAnalysis({ ...data, recommendations: data.recommendations || [], competitor_prices: data.competitor_prices || [] });
-      toast.success("Pricing analysis complete!");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch {
-      toast.error("Failed to analyze pricing");
+      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     } finally {
       setAnalyzing(false);
     }

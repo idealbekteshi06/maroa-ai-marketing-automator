@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { toast } from "sonner";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -18,20 +19,20 @@ export default function ResetPassword() {
     if (hash.includes("type=recovery")) {
       setValid(true);
     } else {
-      toast.error("Invalid or expired reset link.");
+      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
       navigate("/login");
     }
   }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password !== confirm) { toast.error("Passwords don't match."); return; }
-    if (password.length < 6) { toast.error("Password must be at least 6 characters."); return; }
+    if (password !== confirm) { toast.error(ERROR_MESSAGES.GENERATION_FAILED); return; }
+    if (password.length < 6) { toast.error(ERROR_MESSAGES.GENERATION_FAILED); return; }
     setLoading(true);
     try {
       const { error } = await externalSupabase.auth.updateUser({ password });
       if (error) throw error;
-      toast.success("Password updated! You can now sign in.");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
       navigate("/login");
     } catch (err: any) {
       toast.error(err.message || "Failed to update password.");

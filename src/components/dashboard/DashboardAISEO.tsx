@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Search, Loader2, CheckCircle2, AlertTriangle, Tag, Globe } from "lucide-react";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 const API_BASE = "https://maroa-api-production.up.railway.app";
 
@@ -49,9 +50,9 @@ export default function DashboardAISEO() {
       if (!res.ok) throw new Error();
       const data = await res.json();
       setResult({ ...data, suggestions: data.suggestions || [], keywords: data.keywords || [] });
-      toast.success("Optimization analysis complete!");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch {
-      toast.error("Failed to optimize content");
+      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     } finally {
       setLoading(false);
     }

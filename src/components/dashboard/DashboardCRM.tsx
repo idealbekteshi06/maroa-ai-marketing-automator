@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 import {
   Users, Search as SearchIcon, Loader2, Plus, MessageSquare, Bot,
 } from "lucide-react";
@@ -73,7 +74,7 @@ export default function DashboardCRM() {
       const res = await api.getContacts({ business_id: businessId });
       setContacts(((res as any)?.contacts ?? (res as any)?.data ?? (Array.isArray(res) ? res : [])) as Contact[]);
     } catch {
-      toast.error("Failed to load contacts");
+      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     }
   };
 
@@ -83,7 +84,7 @@ export default function DashboardCRM() {
       const res = await api.getPipeline({ business_id: businessId });
       setPipeline(((res as any)?.deals ?? (res as any)?.data ?? (Array.isArray(res) ? res : [])) as Deal[]);
     } catch {
-      toast.error("Failed to load pipeline");
+      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     }
   };
 
@@ -148,12 +149,12 @@ export default function DashboardCRM() {
     setAddSaving(true);
     try {
       await api.contactCreate({ business_id: businessId, name: addName, email: addEmail, phone: addPhone });
-      toast.success("Contact added");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
       setAddOpen(false);
       setAddName(""); setAddEmail(""); setAddPhone("");
       await fetchContacts();
     } catch {
-      toast.error("Failed to add contact");
+      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     } finally {
       setAddSaving(false);
     }
@@ -164,11 +165,11 @@ export default function DashboardCRM() {
     setLogSaving(true);
     try {
       await api.contactActivityLog({ business_id: businessId, contact_id: logContactId, activity_type: "note", note: logNote });
-      toast.success("Activity logged");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
       setLogOpen(false);
       setLogNote(""); setLogContactId("");
     } catch {
-      toast.error("Failed to log activity");
+      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     } finally {
       setLogSaving(false);
     }
