@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Loader2, Brain, Zap, Trophy, Globe, Activity } from "lucide-react";
+import { apiGet, apiPost, createAbortController } from "@/lib/apiClient";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 interface LogEntry {
   id?: string;
@@ -13,8 +15,6 @@ interface LogEntry {
   timestamp?: string;
   created_at?: string;
 }
-
-const API_BASE = "https://maroa-api-production.up.railway.app";
 
 const typeColors: Record<string, { bg: string; text: string; icon: string }> = {
   content: { bg: "bg-primary/10", text: "text-primary", icon: "📝" },
@@ -58,13 +58,12 @@ export default function DashboardAIBrain() {
   const [totalSignals, setTotalSignals] = useState(0);
   const [contentWins, setContentWins] = useState(0);
 
-  useEffect(() => {
+  const fetchLogs = useCallback(async (signal?: AbortSignal): Promise<void> => {
     if (!businessId || !isReady) { setLoading(false); return; }
-    const fetchLogs = async () => {
+    try {
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/api/orchestrator/log/${businessId}`);
-        const data = await res.json();
+        const data = await apiGet<Record<string, unknown> | LogEntry[]>(`/api/orchestrator/log/${businessId}`, signal);
         const parsed: LogEntry[] = Array.isArray(data) ? data : data?.logs || [];
         setLogs(parsed.slice(0, 10));
         setTotalSignals(parsed.length);
@@ -76,36 +75,42 @@ export default function DashboardAIBrain() {
         setLogs(demo as any);
         setTotalSignals(DEMO_INTELLIGENCE.signals);
         setContentWins(DEMO_INTELLIGENCE.content_wins);
-      } finally {
-        setLoading(false);
       }
-    };
-    fetchLogs();
+    } finally {
+      setLoading(false);
+    }
   }, [businessId, isReady]);
 
-  const handleRunAI = async () => {
+  useEffect(() => {
+    const controller = createAbortController();
+    void fetchLogs(controller.signal);
+    return () => controller.abort();
+  }, [fetchLogs]);
+
+  const handleRunAI = useCallback(async (): Promise<void> => {
     if (!businessId) return;
     setRunning(true);
     setRunMessage("Analyzing intelligence...");
     try {
       const msgs = ["Analyzing intelligence...", "Scanning competitors...", "Creating content...", "Optimizing campaigns..."];
       let i = 0;
-      const interval = setInterval(() => {
+      const interval: ReturnType<typeof setInterval> = setInterval(() => {
         i++;
         if (i < msgs.length) setRunMessage(msgs[i]);
       }, 3000);
 
-      await fetch(`${API_BASE}/api/orchestrator/run/${businessId}`, { method: "POST" });
+      await apiPost(`/api/orchestrator/run/${businessId}`, {});
 
       clearInterval(interval);
-      toast.success("AI Brain cycle complete — check your dashboard for updates");
+      toast.success(SUCCESS_MESSAGES.GENERATED);
+      void fetchLogs();
     } catch {
-      toast.error("Failed to run AI — please try again");
+      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     } finally {
       setRunning(false);
       setRunMessage("");
     }
-  };
+  }, [businessId, fetchLogs]);
 
   const getLogType = (log: LogEntry) => {
     const t = (log.type || log.action || "default").toLowerCase();

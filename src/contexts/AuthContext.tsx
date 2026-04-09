@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq("user_id", userId)
         .maybeSingle();
       if (!mountedRef.current) return;
-      if (error) { console.error("Failed to fetch business:", error.message); return; }
+      if (error) { return; }
       setBusinessId(data?.id ?? null);
       setOnboardingComplete(data?.onboarding_complete ?? null);
     } finally {

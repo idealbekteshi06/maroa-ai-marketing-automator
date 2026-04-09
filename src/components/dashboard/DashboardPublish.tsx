@@ -115,7 +115,6 @@ export default function DashboardPublish() {
           setDraftsSupported(false);
           return;
         }
-        console.error("Drafts fetch error:", error);
         return;
       }
       setDrafts((data as Draft[]) ?? []);
@@ -194,7 +193,6 @@ export default function DashboardPublish() {
       if (improved) { setPostText(improved); toast.success("Post improved by AI!"); }
       else toast.error("AI returned empty response");
     } catch (err: any) {
-      console.error("AI assist error:", err);
       toast.error(err?.message?.includes("429") ? "Too many requests — wait a moment" : err?.message || "AI assist failed");
     } finally { setAiLoading(false); }
   };
@@ -268,7 +266,6 @@ export default function DashboardPublish() {
           results[pKey] = "success";
         }
       } catch (err: any) {
-        console.error(`Publish to ${pKey} failed:`, err);
         results[pKey] = "error";
         toast.error(`${platforms.find(p => p.key === pKey)?.name}: ${err.message || "Failed"}`);
       }

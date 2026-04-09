@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -15,8 +15,8 @@ interface CampaignResult {
   ads?: { headline: string; description: string; cta: string; platform: string }[];
   summary?: string;
 }
-
-const API_BASE = "https://maroa-api-production.up.railway.app";
+import { apiPost } from "@/lib/apiClient";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 const durationOptions = [
   { value: 7, label: "7 Days", desc: "Quick sprint" },
@@ -59,9 +59,9 @@ export default function DashboardCampaign() {
     setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const handleGenerate = async () => {
+  const handleGenerate = useCallback(async (): Promise<void> => {
     if (!businessId || !goal.trim()) {
-      toast.error("Please describe your campaign goal");
+      toast.error(ERROR_MESSAGES.PROFILE_INCOMPLETE);
       return;
     }
 
@@ -79,32 +79,23 @@ export default function DashboardCampaign() {
         "Finalizing your campaign...",
       ];
       let i = 0;
-      const interval = setInterval(() => {
+      const interval: ReturnType<typeof setInterval> = setInterval(() => {
         i++;
         if (i < msgs.length) setGenMessage(msgs[i]);
       }, 4000);
 
-      const res = await fetch(`${API_BASE}/api/campaigns/instant`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: businessId, goal: goal.trim(), duration }),
-      });
-
+      const data = await apiPost<CampaignResult>("/api/campaigns/instant", { userId: businessId, goal: goal.trim(), duration });
       clearInterval(interval);
-
-      if (!res.ok) throw new Error("Campaign generation failed");
-
-      const data = await res.json();
       setResult(data);
       setExpandedSections({ schedule: true, emails: true, ads: true });
-      toast.success("Campaign generated successfully!");
+      toast.success(SUCCESS_MESSAGES.CAMPAIGN_LAUNCHED);
     } catch {
-      toast.error("Failed to generate campaign — please try again");
+      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     } finally {
       setGenerating(false);
       setGenMessage("");
     }
-  };
+  }, [businessId, duration, goal]);
 
   const schedule = result?.schedule || result?.day_by_day || [];
   const emails = result?.emails || result?.email_sequence || [];

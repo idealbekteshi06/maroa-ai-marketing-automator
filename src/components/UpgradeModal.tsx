@@ -41,9 +41,7 @@ export default function UpgradeModal({ open, onClose, featureName, description, 
     try {
       const result: any = await api.createCheckout({ business_id: businessId, plan });
       if (result?.url) window.location.href = result.url;
-    } catch (err) {
-      console.error("Checkout error:", err);
-    }
+    } catch {}
   };
 
   if (!open) return null;

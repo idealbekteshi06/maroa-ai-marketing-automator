@@ -86,7 +86,6 @@ export default function SocialCallback() {
       toast.success("Facebook and Instagram connected successfully");
       setTimeout(() => navigate("/dashboard?tab=social"), 2000);
     } catch (err: any) {
-      console.error("[SocialCallback]", err);
       setStatus("error");
       const errorMsg = err?.message || "Something went wrong connecting your account.";
       setMessage(errorMsg);

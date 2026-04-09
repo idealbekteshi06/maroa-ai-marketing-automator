@@ -30,7 +30,7 @@ export default function NotificationDropdown() {
       .eq("business_id", businessId)
       .order("notified_at", { ascending: false })
       .limit(20);
-    if (error) { console.warn("Notifications fetch error:", error.message); return; }
+    if (error) { return; }
     setNotifications((data as Notification[]) ?? []);
   };
 

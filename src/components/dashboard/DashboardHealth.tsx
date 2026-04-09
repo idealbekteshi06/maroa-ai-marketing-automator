@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Loader2, Heart, RefreshCw } from "lucide-react";
+import { apiGet, createAbortController } from "@/lib/apiClient";
+import { ERROR_MESSAGES } from "@/lib/errorMessages";
 
 interface CategoryScore {
   label: string;
@@ -10,8 +12,6 @@ interface CategoryScore {
   max: number;
   tips: string[];
 }
-
-const API_BASE = "https://maroa-api-production.up.railway.app";
 
 function getScoreColor(score: number): string {
   if (score <= 40) return "#EF4444";
@@ -73,22 +73,20 @@ export default function DashboardHealth() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchHealth = async () => {
+  const fetchHealth = useCallback(async (signal?: AbortSignal): Promise<void> => {
     if (!businessId || !isReady) { setLoading(false); return; }
     try {
-      const res = await fetch(`${API_BASE}/api/health/${businessId}`);
-      if (!res.ok) throw new Error("API error");
-      const data = await res.json();
+      const data = await apiGet<Record<string, unknown>>(`/api/health/${businessId}`, signal);
 
       const totalScore = data.score ?? data.total_score ?? 0;
       setScore(totalScore);
 
       if (data.categories && Array.isArray(data.categories)) {
-        setCategories(data.categories.map((c: any, i: number) => ({
-          label: c.label || c.name || defaultCategories[i]?.label || `Category ${i + 1}`,
-          score: c.score ?? 0,
-          max: c.max ?? 20,
-          tips: c.tips || c.recommendations || defaultCategories[i]?.tips || [],
+        setCategories(data.categories.map((c: Record<string, unknown>, i: number) => ({
+          label: (c.label as string) || (c.name as string) || defaultCategories[i]?.label || `Category ${i + 1}`,
+          score: (c.score as number) ?? 0,
+          max: (c.max as number) ?? 20,
+          tips: (c.tips as string[]) || (c.recommendations as string[]) || defaultCategories[i]?.tips || [],
         })));
       } else {
         // Calculate score from available data
@@ -108,16 +106,18 @@ export default function DashboardHealth() {
         setScore(DEMO_HEALTH.score);
         setCategories(DEMO_HEALTH.categories.map(c => ({ label: c.name, score: c.score, max: c.max, tips: [c.tip] })));
       } catch {
-        setScore(categories.reduce((sum, c) => sum + c.score, 0));
+        setScore(defaultCategories.reduce((sum, c) => sum + c.score, 0));
       }
     } finally {
       setLoading(false);
     }
-  };
+  }, [businessId, isReady]);
 
   useEffect(() => {
-    fetchHealth();
-  }, [businessId, isReady]);
+    const controller = createAbortController();
+    void fetchHealth(controller.signal);
+    return () => controller.abort();
+  }, [fetchHealth]);
 
   const handleRefresh = async () => {
     setRefreshing(true);

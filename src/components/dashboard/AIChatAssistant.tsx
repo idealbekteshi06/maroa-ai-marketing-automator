@@ -119,7 +119,6 @@ export default function AIChatAssistant({ externalOpen, onExternalOpenChange }: 
 
       setMessages((prev) => [...prev, { role: "assistant", content: assistantContent! }]);
     } catch (err: any) {
-      console.error("Chat error:", err);
       const errorMsg = err?.message?.includes("429")
         ? "I'm getting too many requests right now. Please wait a moment and try again."
         : err?.message?.includes("402")

@@ -52,9 +52,7 @@ export default function ReferralPage() {
             });
           }
         }
-      } catch (err) {
-        console.warn("Referral data fetch failed (non-critical):", err);
-      }
+      } catch {}
       setLoading(false);
     };
     fetchReferralData();

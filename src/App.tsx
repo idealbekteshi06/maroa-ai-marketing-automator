@@ -18,6 +18,7 @@ const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
+const Refund = lazy(() => import("./pages/Refund"));
 const DeleteData = lazy(() => import("./pages/DeleteData"));
 const SocialCallback = lazy(() => import("./pages/SocialCallback"));
 const Compare = lazy(() => import("./pages/Compare"));
@@ -49,6 +50,7 @@ const App = () => (
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
+              <Route path="/refund" element={<Refund />} />
               <Route path="/delete-data" element={<DeleteData />} />
               <Route path="/social-callback" element={<SocialCallback />} />
               <Route path="/compare" element={<Compare />} />

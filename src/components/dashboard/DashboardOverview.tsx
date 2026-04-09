@@ -10,6 +10,9 @@ import PendingApprovals from "@/components/PendingApprovals";
 import Sparkline from "@/components/Sparkline";
 import AIBrainStatus from "@/components/AIBrainStatus";
 import ProfileScore from "@/components/dashboard/ProfileScore";
+import { apiPost } from "@/lib/apiClient";
+import { ERROR_MESSAGES } from "@/lib/errorMessages";
+import type { BusinessProfile } from "@/types";
 
 interface DailyStat { recorded_at: string; total_reach: number; }
 interface FeedItem { type: string; message: string; time: string; emoji: string; }
@@ -20,11 +23,12 @@ function capitalizeName(name: string): string {
   return name.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
 }
 
-function getFirstName(user: any, businessData: any): string {
+type AuthUser = { email?: string; id?: string; user_metadata?: Record<string, unknown> };
+function getFirstName(user: AuthUser | null, businessData: BusinessProfile | null): string {
   const raw =
-    user?.user_metadata?.first_name ||
-    user?.user_metadata?.full_name?.split(" ")[0] ||
-    user?.user_metadata?.name?.split(" ")[0] ||
+    (user?.user_metadata?.first_name as string | undefined) ||
+    (user?.user_metadata?.full_name as string | undefined)?.split(" ")[0] ||
+    (user?.user_metadata?.name as string | undefined)?.split(" ")[0] ||
     businessData?.first_name ||
     businessData?.business_name?.split(" ")[0] ||
     user?.email?.split("@")[0] ||
@@ -116,8 +120,6 @@ function formatActivityText(raw: string): string {
   return raw.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()).slice(0, 50);
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE as string;
-
 /* ── FIX 8: Clearer task names ── */
 const scheduledTasks = [
   { icon: "🎨", name: "Generate new posts", time: formatTimeUntil(getNextRunDate(2, 7)) },
@@ -141,7 +143,7 @@ const quickActions = [
 export default function DashboardOverview() {
   const { businessId, user, isReady } = useAuth();
   const [stats, setStats] = useState<DailyStat[]>([]);
-  const [businessData, setBusinessData] = useState<any>(null);
+  const [businessData, setBusinessData] = useState<BusinessProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [publishedCount, setPublishedCount] = useState(0);
   const [leadCount, setLeadCount] = useState(0);
@@ -242,21 +244,17 @@ export default function DashboardOverview() {
   const setupPct = Math.round((setupDone / setupSteps.length) * 100);
   const setupComplete = localStorage.getItem("maroa-setup-complete") === "true";
 
-  const handleQuickAction = async (action: typeof quickActions[0]) => {
-    if (!businessId || !API_BASE) return;
+  const handleQuickAction = async (action: typeof quickActions[0]): Promise<void> => {
+    if (!businessId) return;
     setActionLoading(action.name);
     try {
       toast(`🤖 AI is working on "${action.name}"...`);
-      await fetch(`${API_BASE}${action.endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business_id: businessId, email: user?.email }),
-      });
+      await apiPost(action.endpoint, { business_id: businessId, email: user?.email });
       setActionSuccess(action.name);
       toast.success(action.successMsg);
       setTimeout(() => setActionSuccess(null), 3000);
     } catch {
-      toast.error("Failed — check your internet and try again");
+      toast.error(ERROR_MESSAGES.CONNECTION_ERROR);
     } finally { setActionLoading(null); }
   };
 

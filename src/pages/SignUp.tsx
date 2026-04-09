@@ -66,7 +66,6 @@ export default function SignUp() {
       const userId = authData?.user?.id;
       if (authError && !userId) throw authError;
       if (!userId) throw new Error("Signup failed — no user returned.");
-      if (authError) console.warn("Auth warning (user created, continuing):", authError.message);
 
       const businessData = {
         user_id: userId,
@@ -91,10 +90,7 @@ export default function SignUp() {
         "Creating your account timed out."
       );
 
-      if (bizError) {
-        console.error("Businesses insert error:", bizError);
-        throw new Error(`Businesses insert failed: ${bizError.message}`);
-      }
+      if (bizError) throw new Error(`Businesses insert failed: ${bizError.message}`);
 
       // Fetch the new business_id for webhooks
       const { data: newBiz } = await externalSupabase
@@ -111,7 +107,7 @@ export default function SignUp() {
           last_name: form.lastName, business_name: form.businessName,
           industry: form.industry, location: form.location, plan: "free",
         }),
-      }).catch((err) => console.warn("Signup webhook failed:", err));
+      }).catch(() => {});
 
       // Trigger instant content generation
       if (newBiz?.id) {
@@ -119,7 +115,7 @@ export default function SignUp() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ business_id: newBiz.id, email: form.email }),
-        }).catch((err) => console.warn("Instant content webhook failed:", err));
+        }).catch(() => {});
       }
 
       toast.success("Account created! Let's set up your marketing.");

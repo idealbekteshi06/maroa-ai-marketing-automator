@@ -30,7 +30,7 @@ function fire(path: string, body: Record<string, unknown>): void {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-  }).catch((err) => console.warn(`[api] ${path} failed:`, err));
+  }).catch(() => {});
 }
 
 // ─── Auth / Signup ───────────────────────────────────────────

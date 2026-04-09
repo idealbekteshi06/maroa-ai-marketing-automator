@@ -43,9 +43,9 @@ export default function PhotoLibrary({ onUseInPost }: PhotoLibraryProps) {
     try {
       const { data, error } = await externalSupabase
         .from("business_photos").select("*").eq("business_id", businessId).order("uploaded_at", { ascending: false });
-      if (error) { console.error("Failed to fetch photos:", error); return; }
+      if (error) { return; }
       setPhotos((data as Photo[]) ?? []);
-    } catch (err) { console.error("Photo fetch error:", err); }
+    } catch {}
     finally { setLoading(false); }
   }, [businessId, isReady]);
 

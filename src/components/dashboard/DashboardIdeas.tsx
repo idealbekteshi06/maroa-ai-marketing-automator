@@ -1,23 +1,14 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Lightbulb, Loader2, Sparkles, ChevronDown, ArrowRight, Check } from "lucide-react";
 import { DEMO_IDEAS } from "@/lib/demoData";
+import { apiGet, apiPost, createAbortController } from "@/lib/apiClient";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
+import type { MarketingIdea } from "@/types";
 
-const API_BASE = "https://maroa-api-production.up.railway.app";
-
-interface Idea {
-  id: string;
-  idea: string;
-  category: string;
-  priority: string;
-  estimated_impact: string;
-  how_to_execute: string;
-  budget_required: string;
-  time_to_results: string;
-  status: string;
-}
+interface IdeasResponse { ideas?: MarketingIdea[]; items?: MarketingIdea[]; data?: MarketingIdea[]; }
 
 const priorityColors: Record<string, string> = {
   high: "bg-destructive/10 text-destructive",
@@ -34,7 +25,7 @@ const columns = [
 
 export default function DashboardIdeas() {
   const { businessId, isReady } = useAuth();
-  const [ideas, setIdeas] = useState<Idea[]>([]);
+  const [ideas, setIdeas] = useState<MarketingIdea[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -42,44 +33,45 @@ export default function DashboardIdeas() {
 
   useEffect(() => {
     if (!businessId || !isReady) { setLoading(false); return; }
-    (async () => {
+    const controller = createAbortController();
+    const fetchIdeas = async (): Promise<void> => {
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/api/ideas/${businessId}`);
-        if (res.ok) {
-          const data = await res.json();
-          const items = Array.isArray(data) ? data : data?.items || data?.data || [];
-          if (items.length > 0) { setIdeas(items); setIsDemo(false); }
-          else { setIdeas(DEMO_IDEAS as any); setIsDemo(true); }
-        } else { setIdeas(DEMO_IDEAS as any); setIsDemo(true); }
-      } catch { setIdeas(DEMO_IDEAS as any); setIsDemo(true); }
-      setLoading(false);
-    })();
+        const data = await apiGet<IdeasResponse | MarketingIdea[]>(`/api/ideas/${businessId}`, controller.signal);
+        const items = Array.isArray(data) ? data : data?.items || data?.ideas || data?.data || [];
+        if (items.length > 0) { setIdeas(items); setIsDemo(false); }
+        else { setIdeas(DEMO_IDEAS as MarketingIdea[]); setIsDemo(true); }
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
+        setIdeas(DEMO_IDEAS as MarketingIdea[]);
+        setIsDemo(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+    void fetchIdeas();
+    return () => controller.abort();
   }, [businessId, isReady]);
 
-  const handleGenerate = async () => {
-    if (!businessId) { toast.error("Complete your profile first"); return; }
+  const handleGenerate = useCallback(async (): Promise<void> => {
+    if (!businessId) { toast.error(ERROR_MESSAGES.NO_BUSINESS_ID); return; }
     setGenerating(true);
     try {
-      const res = await fetch(`${API_BASE}/api/ideas/generate`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: businessId }),
-      });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
+      const data = await apiPost<IdeasResponse | MarketingIdea[]>("/api/ideas/generate", { userId: businessId });
       const newIdeas = Array.isArray(data) ? data : data?.ideas || data?.items || [];
       if (newIdeas.length > 0) { setIdeas(newIdeas); setIsDemo(false); }
-      toast.success("✓ New ideas generated!");
-    } catch { toast.error("Failed to generate — try again"); }
+      toast.success(SUCCESS_MESSAGES.GENERATED);
+    } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
     finally { setGenerating(false); }
-  };
+  }, [businessId]);
 
-  const moveIdea = (id: string, newStatus: string) => {
+  const moveIdea = (id: string, newStatus: "new" | "in_progress" | "completed"): void => {
     setIdeas(prev => (prev || []).map(i => i.id === id ? { ...i, status: newStatus } : i));
     if (!isDemo && businessId) {
-      fetch(`${API_BASE}/api/ideas/${id}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+      fetch(`https://maroa-api-production.up.railway.app/api/ideas/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus })
       }).catch(() => {});
     }
   };
