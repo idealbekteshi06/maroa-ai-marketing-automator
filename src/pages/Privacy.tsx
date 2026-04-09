@@ -13,7 +13,7 @@ export default function Privacy() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl px-6 py-12">
+      <main className="mx-auto max-w-3xl px-6 py-16">
         <h1 className="text-3xl font-bold text-foreground">Privacy Policy</h1>
         <p className="mt-2 text-sm text-muted-foreground">Last updated: March 26, 2026</p>
 
@@ -102,7 +102,7 @@ export default function Privacy() {
               <li><strong>Objection:</strong> Object to processing of your data for certain purposes.</li>
               <li><strong>Withdraw Consent:</strong> Withdraw consent where processing is based on consent.</li>
             </ul>
-            <p className="mt-2">To exercise these rights, contact us at <a href="mailto:hello@maroa.ai" className="text-primary hover:underline">hello@maroa.ai</a>.</p>
+            <p className="mt-2">To exercise these rights, contact us at <a href="mailto:support@maroa.ai" className="text-primary hover:underline">support@maroa.ai</a>.</p>
           </section>
 
           <section>
@@ -137,7 +137,7 @@ export default function Privacy() {
             <h2 className="text-lg font-semibold text-foreground">12. Contact Us</h2>
             <p className="mt-2">
               If you have questions about this Privacy Policy, please contact us at:<br />
-              <a href="mailto:hello@maroa.ai" className="text-primary hover:underline">hello@maroa.ai</a>
+              <a href="mailto:support@maroa.ai" className="text-primary hover:underline">support@maroa.ai</a>
             </p>
           </section>
         </div>

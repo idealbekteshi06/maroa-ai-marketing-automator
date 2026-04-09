@@ -13,7 +13,7 @@ export default function Terms() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl px-6 py-12">
+      <main className="mx-auto max-w-3xl px-6 py-16">
         <h1 className="text-3xl font-bold text-foreground">Terms of Service</h1>
         <p className="mt-2 text-sm text-muted-foreground">Last updated: March 26, 2026</p>
 
@@ -49,7 +49,7 @@ export default function Terms() {
               <li>The Service offers free and paid subscription plans. Features and limits vary by plan.</li>
               <li>Paid subscriptions are billed monthly or annually in advance through our payment processor (Stripe).</li>
               <li>Prices are subject to change with 30 days' prior notice.</li>
-              <li>Refunds are handled on a case-by-case basis. Contact us at <a href="mailto:hello@maroa.ai" className="text-primary hover:underline">hello@maroa.ai</a> for refund requests.</li>
+              <li>Refunds are handled on a case-by-case basis. Contact us at <a href="mailto:support@maroa.ai" className="text-primary hover:underline">support@maroa.ai</a> for refund requests.</li>
               <li>Ad budgets set within the platform are charged separately through the respective advertising platforms (e.g., Meta, Google).</li>
             </ul>
           </section>
@@ -135,7 +135,7 @@ export default function Terms() {
             <h2 className="text-lg font-semibold text-foreground">14. Contact Us</h2>
             <p className="mt-2">
               For questions about these Terms, contact us at:<br />
-              <a href="mailto:hello@maroa.ai" className="text-primary hover:underline">hello@maroa.ai</a>
+              <a href="mailto:support@maroa.ai" className="text-primary hover:underline">support@maroa.ai</a>
             </p>
           </section>
         </div>

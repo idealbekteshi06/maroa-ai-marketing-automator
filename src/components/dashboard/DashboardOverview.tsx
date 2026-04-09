@@ -16,6 +16,15 @@ import type { BusinessProfile } from "@/types";
 
 interface DailyStat { recorded_at: string; total_reach: number; }
 interface FeedItem { type: string; message: string; time: string; emoji: string; }
+interface SnapshotItem { total_reach?: number | null; }
+interface GeneratedContentRow { created_at: string; platform?: string | null; }
+interface CompetitorInsightRow { recorded_at: string; }
+interface RetentionLogRow { sent_at: string; email_type?: string | null; }
+interface WinNotificationRow { notified_at: string; message?: string | null; win_type?: string | null; }
+interface AIDecision { title: string; value: unknown; }
+interface RealtimePayload {
+  new?: { platform?: string | null; first_name?: string | null };
+}
 
 /* ── FIX 1: Name capitalization ── */
 function capitalizeName(name: string): string {
@@ -189,13 +198,13 @@ export default function DashboardOverview() {
       setLeadCount(leadsRes.count ?? 0);
       setTodayActions(todayRes.count ?? 0);
       setPendingApprovalCount(pendingRes.count ?? 0);
-      setSnapshotSpark({ reach: (snapRes.data || []).map((s: any) => s.total_reach || 0) });
+      setSnapshotSpark({ reach: ((snapRes.data || []) as SnapshotItem[]).map((s) => s.total_reach || 0) });
 
       const feedItems: FeedItem[] = [];
-      (rc.data ?? []).forEach((c: any) => feedItems.push({ type: "content", emoji: "✍️", message: `${c.platform || "Post"} generated`, time: c.created_at }));
-      (ri.data ?? []).forEach((r: any) => feedItems.push({ type: "competitor", emoji: "🎯", message: "Competitor analysis completed", time: r.recorded_at }));
-      (rr.data ?? []).forEach((r: any) => feedItems.push({ type: "email", emoji: "📧", message: `${r.email_type || "Email"} sent`, time: r.sent_at }));
-      (rw.data ?? []).forEach((w: any) => feedItems.push({ type: "win", emoji: "🏆", message: w.message?.slice(0, 50) || w.win_type || "Milestone!", time: w.notified_at }));
+      ((rc.data ?? []) as GeneratedContentRow[]).forEach((c) => feedItems.push({ type: "content", emoji: "✍️", message: `${c.platform || "Post"} generated`, time: c.created_at }));
+      ((ri.data ?? []) as CompetitorInsightRow[]).forEach((r) => feedItems.push({ type: "competitor", emoji: "🎯", message: "Competitor analysis completed", time: r.recorded_at }));
+      ((rr.data ?? []) as RetentionLogRow[]).forEach((r) => feedItems.push({ type: "email", emoji: "📧", message: `${r.email_type || "Email"} sent`, time: r.sent_at }));
+      ((rw.data ?? []) as WinNotificationRow[]).forEach((w) => feedItems.push({ type: "win", emoji: "🏆", message: w.message?.slice(0, 50) || w.win_type || "Milestone!", time: w.notified_at }));
       feedItems.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
       setFeed(feedItems.slice(0, 10));
     } catch { setError("Something went wrong — we're looking into it"); }
@@ -209,9 +218,9 @@ export default function DashboardOverview() {
     if (!businessId || !isReady) return;
     const channel = externalSupabase.channel(`live-activity-${businessId}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "generated_content", filter: `business_id=eq.${businessId}` },
-        (p: any) => setFeed(prev => [{ type: "content", emoji: "✍️", message: `${p.new?.platform || "Post"} generated`, time: new Date().toISOString() }, ...prev].slice(0, 20)))
+        (p: RealtimePayload) => setFeed(prev => [{ type: "content", emoji: "✍️", message: `${p.new?.platform || "Post"} generated`, time: new Date().toISOString() }, ...prev].slice(0, 20)))
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "contacts", filter: `business_id=eq.${businessId}` },
-        (p: any) => { setFeed(prev => [{ type: "lead", emoji: "👤", message: `New lead: ${capitalizeName(p.new?.first_name || "Unknown")}`, time: new Date().toISOString() }, ...prev].slice(0, 20)); setLeadCount(c => c + 1); })
+        (p: RealtimePayload) => { setFeed(prev => [{ type: "lead", emoji: "👤", message: `New lead: ${capitalizeName(p.new?.first_name || "Unknown")}`, time: new Date().toISOString() }, ...prev].slice(0, 20)); setLeadCount(c => c + 1); })
       .subscribe();
     return () => { externalSupabase.removeChannel(channel); };
   }, [businessId, isReady]);
@@ -220,12 +229,18 @@ export default function DashboardOverview() {
   const reachSpark = snapshotSpark.reach.length >= 2 ? snapshotSpark.reach : stats.slice(-7).map(s => s.total_reach || 0);
 
   // AI Brain decisions
-  let aiDecisions: any[] = [];
+  let aiDecisions: AIDecision[] = [];
   if (businessData?.ai_brain_decisions) {
     try {
       const raw = typeof businessData.ai_brain_decisions === "string" ? JSON.parse(businessData.ai_brain_decisions) : businessData.ai_brain_decisions;
-      if (Array.isArray(raw)) aiDecisions = raw;
-      else if (typeof raw === "object") aiDecisions = Object.entries(raw).map(([k, v]) => ({ title: k, value: v }));
+      if (Array.isArray(raw)) {
+        aiDecisions = raw.map((entry, idx) => ({
+          title: `Decision ${idx + 1}`,
+          value: entry,
+        }));
+      } else if (typeof raw === "object" && raw !== null) {
+        aiDecisions = Object.entries(raw).map(([k, v]) => ({ title: k, value: v }));
+      }
     } catch {}
   }
 

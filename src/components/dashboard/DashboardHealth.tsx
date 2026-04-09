@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Loader2, Heart, RefreshCw } from "lucide-react";
 import { apiGet, createAbortController } from "@/lib/apiClient";
-import { ERROR_MESSAGES } from "@/lib/errorMessages";
+import { SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 interface CategoryScore {
   label: string;
@@ -123,7 +123,7 @@ export default function DashboardHealth() {
     setRefreshing(true);
     await fetchHealth();
     setRefreshing(false);
-    toast.success("Health score refreshed");
+    toast.success(SUCCESS_MESSAGES.GENERATED);
   };
 
   const scoreColor = getScoreColor(score);

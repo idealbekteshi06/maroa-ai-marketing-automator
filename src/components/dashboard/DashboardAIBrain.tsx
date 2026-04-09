@@ -15,6 +15,10 @@ interface LogEntry {
   timestamp?: string;
   created_at?: string;
 }
+interface DemoIntelligence {
+  signals: number;
+  content_wins: number;
+}
 
 const typeColors: Record<string, { bg: string; text: string; icon: string }> = {
   content: { bg: "bg-primary/10", text: "text-primary", icon: "📝" },
@@ -70,9 +74,12 @@ export default function DashboardAIBrain() {
         setContentWins(parsed.filter((l) => l.type === "content" || l.action === "content_published").length);
       } catch {
         // Fallback to demo data
-        const { DEMO_ORCHESTRATION_LOGS, DEMO_INTELLIGENCE } = await import("@/lib/demoData");
+        const { DEMO_ORCHESTRATION_LOGS, DEMO_INTELLIGENCE } = await import("@/lib/demoData") as {
+          DEMO_ORCHESTRATION_LOGS: Array<{ task: string; reason: string; success: boolean; created_at: string }>;
+          DEMO_INTELLIGENCE: DemoIntelligence;
+        };
         const demo = DEMO_ORCHESTRATION_LOGS.map((l, i) => ({ id: `demo-${i}`, type: l.task, action: l.task, description: l.reason, status: l.success ? "success" : "failed", timestamp: l.created_at, created_at: l.created_at }));
-        setLogs(demo as any);
+        setLogs(demo);
         setTotalSignals(DEMO_INTELLIGENCE.signals);
         setContentWins(DEMO_INTELLIGENCE.content_wins);
       }
