@@ -103,14 +103,14 @@ const STATUS_CONFIG: Record<string, { label: string; classes: string }> = {
 
 export default function DashboardSocial({ oauthCode }: { oauthCode?: string | null }) {
   const { businessId, user, isReady } = useAuth();
-  const [business, setBusiness] = useState<any>(null);
+  const [business, setBusiness] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState<string | null>(null);
   const [connectDialog, setConnectDialog] = useState<AccountConfig | null>(null);
   const [connectForm, setConnectForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
-  const [recentPosts, setRecentPosts] = useState<any[]>([]);
+  const [recentPosts, setRecentPosts] = useState<Array<Record<string, unknown>>>([]);
   const [generating, setGenerating] = useState(false);
 
   /* ---- Fetch business ---- */
@@ -197,7 +197,7 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
         );
         const data = await res.json();
         if (!res.ok || data.error) throw new Error(data.error || "OAuth failed");
-        const updateData: Record<string, any> = {
+        const updateData: Record<string, unknown> = {
           meta_access_token: data.access_token,
           social_accounts_connected: true,
         };
@@ -214,15 +214,17 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
             facebook_page_id: data.page_id ?? null,
             meta_access_token: data.access_token,
           }),
-        }).catch(console.warn);
+        }).catch(() => {
+          toast.error(ERROR_MESSAGES.LOAD_FAILED);
+        });
         toast.success(SUCCESS_MESSAGES.GENERATED);
-      } catch (err: any) {
-        toast.error(err.message);
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : ERROR_MESSAGES.GENERATION_FAILED);
       } finally {
         setConnecting(null);
       }
     })();
-  }, [oauthCode]);
+  }, [businessId, fetchBusiness, oauthCode]);
 
   /* ---- Connect handler ---- */
   const handleConnect = (a: AccountConfig) => {
@@ -240,7 +242,7 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
   const handleDisconnect = async (a: AccountConfig) => {
     if (!businessId) return;
     setDisconnecting(a.name);
-    const update: Record<string, any> = {};
+    const update: Record<string, unknown> = {};
     if (a.name === "Facebook") {
       update.meta_access_token = null;
       update.facebook_page_id = null;
@@ -256,7 +258,7 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
     }
     await externalSupabase.from("businesses").update(update).eq("id", businessId);
     setDisconnecting(null);
-    toast.success(`${a.name} disconnected`);
+    toast.success(SUCCESS_MESSAGES.SAVED);
     await fetchBusiness();
   };
 
@@ -264,14 +266,14 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
   const handleSaveConnection = async () => {
     if (!businessId || !connectDialog) return;
     setSaving(true);
-    const update: Record<string, any> = { social_accounts_connected: true };
+    const update: Record<string, unknown> = { social_accounts_connected: true };
     if (connectDialog.name === "Google Ads")
       update.ad_account_id = connectForm.account_id?.trim() || "";
     else if (connectDialog.name === "TikTok")
       update.tiktok_handle = connectForm.handle?.trim() || "";
     await externalSupabase.from("businesses").update(update).eq("id", businessId);
     setSaving(false);
-    toast.success(`${connectDialog.name} connected!`);
+    toast.success(SUCCESS_MESSAGES.SAVED);
     setConnectDialog(null);
     await fetchBusiness();
   };
@@ -289,8 +291,8 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
       if (!res.ok) throw new Error("Failed to generate post");
       toast.success(SUCCESS_MESSAGES.GENERATED);
       await fetchRecentPosts();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to generate post");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : ERROR_MESSAGES.GENERATION_FAILED);
     } finally {
       setGenerating(false);
     }

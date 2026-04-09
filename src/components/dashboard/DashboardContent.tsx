@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { externalSupabase } from "@/integrations/supabase/external-client";
@@ -69,7 +69,7 @@ export default function DashboardContent() {
   const [genMessage, setGenMessage] = useState("");
   const [changedIds, setChangedIds] = useState<Set<string>>(new Set());
 
-  const fetchContent = async () => {
+  const fetchContent = useCallback(async () => {
     if (!businessId || !isReady) { setLoading(false); return; }
     setLoading(true);
     try {
@@ -77,7 +77,7 @@ export default function DashboardContent() {
       setContent((data as ContentItem[]) ?? []);
     } catch { setContent([]); }
     setLoading(false);
-  };
+  }, [businessId, isReady]);
 
   useEffect(() => {
     fetchContent();
@@ -85,12 +85,12 @@ export default function DashboardContent() {
       externalSupabase.from("businesses").select("business_name").eq("id", businessId).maybeSingle()
         .then(({ data }) => setBusinessName(data?.business_name || ""));
     }
-  }, [businessId, isReady]);
+  }, [businessId, fetchContent, isReady]);
 
   useEffect(() => {
     if (!businessId || !isReady) return;
     const channel = externalSupabase.channel(`content-status-${businessId}`)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "generated_content", filter: `business_id=eq.${businessId}` }, (payload: any) => {
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "generated_content", filter: `business_id=eq.${businessId}` }, (payload: { new?: Record<string, unknown>; old?: Record<string, unknown> }) => {
         const updated = payload.new;
         if (updated?.id) {
           setContent(prev => prev.map(c => c.id === updated.id ? { ...c, status: updated.status } : c));
@@ -99,7 +99,7 @@ export default function DashboardContent() {
           if (payload.old?.status !== "published" && updated.status === "published") toast.success(SUCCESS_MESSAGES.GENERATED);
         }
       })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "generated_content", filter: `business_id=eq.${businessId}` }, (payload: any) => {
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "generated_content", filter: `business_id=eq.${businessId}` }, (payload: { new?: Record<string, unknown>; old?: Record<string, unknown> }) => {
         if (payload.new) { setContent(prev => [payload.new as ContentItem, ...prev]); toast.success(SUCCESS_MESSAGES.GENERATED); }
       })
       .subscribe();

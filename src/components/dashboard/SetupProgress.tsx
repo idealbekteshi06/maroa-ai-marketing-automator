@@ -1,7 +1,7 @@
 import { CheckCircle2, Circle, User, Share2, CreditCard, FileText, Flag } from "lucide-react";
 
 interface SetupProgressProps {
-  business: any;
+  business: Record<string, unknown>;
   photoCount: number;
   contentCount: number;
   approvedCount: number;

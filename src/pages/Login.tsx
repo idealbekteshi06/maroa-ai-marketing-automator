@@ -138,7 +138,7 @@ export default function Login() {
       if (error) throw error;
       toast.success(SUCCESS_MESSAGES.GENERATED);
       setForgotOpen(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error(err.message || "Failed to send reset email.");
     } finally {
       setResetLoading(false);

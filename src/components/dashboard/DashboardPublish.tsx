@@ -61,7 +61,7 @@ interface Photo {
   description: string | null;
 }
 
-function isPlatformConnected(key: string, biz: any): boolean {
+function isPlatformConnected(key: string, biz: Record<string, unknown> | null): boolean {
   if (!biz) return false;
   if (key === "facebook") return !!biz.meta_access_token;
   if (key === "instagram") return !!biz.instagram_account_id && !!biz.meta_access_token;
@@ -75,7 +75,7 @@ export default function DashboardPublish() {
   const isMobile = useIsMobile();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [business, setBusiness] = useState<any>(null);
+  const [business, setBusiness] = useState<Record<string, unknown> | null>(null);
   const [postText, setPostText] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
@@ -105,7 +105,7 @@ export default function DashboardPublish() {
       const connected = platforms.filter(p => isPlatformConnected(p.key, data)).map(p => p.key);
       setSelectedPlatforms(connected);
     }
-  }, [businessId, isReady]);
+  }, [businessId, isReady, selectedPlatforms.length]);
 
   const fetchDrafts = useCallback(async () => {
     if (!businessId || !draftsSupported) return;
@@ -193,7 +193,7 @@ export default function DashboardPublish() {
       const improved = data?.choices?.[0]?.message?.content;
       if (improved) { setPostText(improved); toast.success(SUCCESS_MESSAGES.GENERATED); }
       else toast.error(ERROR_MESSAGES.GENERATION_FAILED);
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error(err?.message?.includes("429") ? "Too many requests — wait a moment" : err?.message || "AI assist failed");
     } finally { setAiLoading(false); }
   };
@@ -266,7 +266,7 @@ export default function DashboardPublish() {
         } else {
           results[pKey] = "success";
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         results[pKey] = "error";
         toast.error(`${platforms.find(p => p.key === pKey)?.name}: ${err.message || "Failed"}`);
       }

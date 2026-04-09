@@ -64,7 +64,7 @@ export default function PerformanceAlert({ businessId, onNavigate }: Performance
         event: "INSERT", schema: "public",
         table: "contacts",
         filter: `business_id=eq.${businessId}`,
-      }, (payload: any) => {
+      }, (payload: { new?: Record<string, unknown>; old?: Record<string, unknown> }) => {
         const score = payload.new?.lead_score;
         if (score && score >= 80) {
           addAlert({
@@ -80,7 +80,7 @@ export default function PerformanceAlert({ businessId, onNavigate }: Performance
         event: "INSERT", schema: "public",
         table: "competitor_reports",
         filter: `business_id=eq.${businessId}`,
-      }, (payload: any) => {
+      }, (payload: { new?: Record<string, unknown>; old?: Record<string, unknown> }) => {
         addAlert({
           id: `comp-${Date.now()}`,
           type: "competitor",

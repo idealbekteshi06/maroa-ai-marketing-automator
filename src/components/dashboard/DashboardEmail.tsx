@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import * as api from "@/lib/api";
@@ -41,27 +41,33 @@ export default function DashboardEmail() {
   const [formSteps, setFormSteps] = useState<EmailStep[]>([{ subject_prompt: "", body_prompt: "", delay_days: 1 }]);
   const [creating, setCreating] = useState(false);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!businessId) return;
     try {
       const res = await api.getAnalytics({ business_id: businessId });
-      const d = res as any;
+      const d = res as { email_sent?: number; email_opens?: number; email_clicks?: number };
       setStats({ email_sent: d?.email_sent ?? 0, email_opens: d?.email_opens ?? 0, email_clicks: d?.email_clicks ?? 0 });
-    } catch {}
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      toast.error(ERROR_MESSAGES.LOAD_FAILED);
+    }
     try {
       const { count } = await externalSupabase.from("contact_enrollments").select("id", { count: "exact", head: true }).eq("business_id", businessId).eq("status", "active");
       setActiveEnrollments(count ?? 0);
-    } catch {}
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      toast.error(ERROR_MESSAGES.LOAD_FAILED);
+    }
     try {
       const { data } = await externalSupabase.from("email_sequences").select("*").eq("business_id", businessId).order("created_at", { ascending: false });
       setSequences((data ?? []) as EmailSequence[]);
     } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
-  };
+  }, [businessId]);
 
   useEffect(() => {
     if (!businessId || !isReady) { setLoading(false); return; }
     (async () => { setLoading(true); await fetchData(); setLoading(false); })();
-  }, [businessId, isReady]);
+  }, [businessId, fetchData, isReady]);
 
   const handleCreate = async () => {
     if (!businessId || !formName.trim()) return;

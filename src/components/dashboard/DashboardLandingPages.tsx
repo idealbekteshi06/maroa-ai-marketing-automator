@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,7 @@ export default function DashboardLandingPages() {
   const [preview, setPreview] = useState<LandingPage | null>(null);
   const [tableExists, setTableExists] = useState(true);
 
-  const fetchPages = async () => {
+  const fetchPages = useCallback(async () => {
     if (!businessId || !isReady) return;
     setLoading(true);
     const { data, error } = await externalSupabase.from("landing_pages").select("*").eq("business_id", businessId).order("created_at", { ascending: false });
@@ -34,9 +34,9 @@ export default function DashboardLandingPages() {
     }
     setPages((data as LandingPage[]) ?? []);
     setLoading(false);
-  };
+  }, [businessId, isReady]);
 
-  useEffect(() => { fetchPages(); }, [businessId, isReady]);
+  useEffect(() => { fetchPages(); }, [fetchPages]);
 
   const handleGenerate = async () => {
     if (!businessId) return;

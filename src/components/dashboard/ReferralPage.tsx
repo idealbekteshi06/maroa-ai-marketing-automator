@@ -52,7 +52,10 @@ export default function ReferralPage() {
             });
           }
         }
-      } catch {}
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === "AbortError") return;
+        toast.error(ERROR_MESSAGES.LOAD_FAILED);
+      }
       setLoading(false);
     };
     fetchReferralData();

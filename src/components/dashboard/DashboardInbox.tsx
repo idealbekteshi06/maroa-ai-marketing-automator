@@ -127,7 +127,10 @@ export default function DashboardInbox() {
             const parsed = JSON.parse(line.slice(6));
             const content = parsed.choices?.[0]?.delta?.content;
             if (content) reply += content;
-          } catch {}
+          } catch (err: unknown) {
+            if (err instanceof Error && err.name === "AbortError") return;
+            toast.error(ERROR_MESSAGES.LOAD_FAILED);
+          }
         }
       });
       if (reply) setReplyText(reply);

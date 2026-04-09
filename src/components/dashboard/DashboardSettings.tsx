@@ -62,8 +62,8 @@ const workflows = [
 export default function DashboardSettings() {
   const [activeTab, setActiveTab] = useState("Profile");
   const { user, businessId, isReady } = useAuth();
-  const [business, setBusiness] = useState<any>(null);
-  const [form, setForm] = useState<Record<string, any>>({
+  const [business, setBusiness] = useState<Record<string, unknown> | null>(null);
+  const [form, setForm] = useState<Record<string, unknown>>({
     business_name: "", email: "", location: "", industry: "", website_url: "", description: "", phone: "",
     target_audience: "", brand_tone: "", marketing_goal: "", competitors: "", daily_budget: 0,
   });
@@ -96,13 +96,16 @@ export default function DashboardSettings() {
         try {
           const p = typeof data.notification_preferences === "string" ? JSON.parse(data.notification_preferences) : data.notification_preferences;
           setNotifPrefs({ ...defaultNotifs, ...p });
-        } catch {}
+        } catch (err: unknown) {
+          if (err instanceof Error && err.name === "AbortError") return;
+          toast.error(ERROR_MESSAGES.LOAD_FAILED);
+        }
       }
     });
   }, [businessId, isReady]);
 
   /* Auto-save profile with debounce */
-  const autoSave = useCallback((newForm: Record<string, any>) => {
+  const autoSave = useCallback((newForm: Record<string, unknown>) => {
     clearTimeout(saveTimerRef.current);
     setSaveStatus("saving");
     saveTimerRef.current = setTimeout(async () => {
@@ -113,7 +116,7 @@ export default function DashboardSettings() {
     }, 2000);
   }, [businessId]);
 
-  const updateField = (key: string, value: any) => {
+  const updateField = (key: string, value: unknown) => {
     const newForm = { ...form, [key]: value };
     setForm(newForm);
     autoSave(newForm);
@@ -131,7 +134,7 @@ export default function DashboardSettings() {
       });
       const data = await res.json();
       if (data?.url) window.open(data.url, "_blank");
-    } catch (err: any) { toast.error(err.message || "Failed"); }
+    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : ERROR_MESSAGES.SAVE_FAILED); }
     setCheckoutLoading(null);
   };
 

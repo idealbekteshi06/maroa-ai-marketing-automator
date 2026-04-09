@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import * as api from "@/lib/api";
@@ -68,25 +68,25 @@ export default function DashboardCRM() {
   const [logSaving, setLogSaving] = useState(false);
   const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
 
-  const fetchContacts = async () => {
+  const fetchContacts = useCallback(async () => {
     if (!businessId) return;
     try {
       const res = await api.getContacts({ business_id: businessId });
-      setContacts(((res as any)?.contacts ?? (res as any)?.data ?? (Array.isArray(res) ? res : [])) as Contact[]);
+      setContacts(((res as { contacts?: Contact[]; data?: Contact[] })?.contacts ?? (res as { contacts?: Contact[]; data?: Contact[] })?.data ?? (Array.isArray(res) ? (res as Contact[]) : [])) as Contact[]);
     } catch {
       toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     }
-  };
+  }, [businessId]);
 
-  const fetchPipeline = async () => {
+  const fetchPipeline = useCallback(async () => {
     if (!businessId) return;
     try {
       const res = await api.getPipeline({ business_id: businessId });
-      setPipeline(((res as any)?.deals ?? (res as any)?.data ?? (Array.isArray(res) ? res : [])) as Deal[]);
+      setPipeline(((res as { deals?: Deal[]; data?: Deal[] })?.deals ?? (res as { deals?: Deal[]; data?: Deal[] })?.data ?? (Array.isArray(res) ? (res as Deal[]) : [])) as Deal[]);
     } catch {
       toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     }
-  };
+  }, [businessId]);
 
   useEffect(() => {
     if (!businessId || !isReady) { setLoading(false); return; }
@@ -96,7 +96,7 @@ export default function DashboardCRM() {
       setLoading(false);
     };
     load();
-  }, [businessId, isReady]);
+  }, [businessId, fetchContacts, fetchPipeline, isReady]);
 
   // Live lead score updates via Supabase real-time
   useEffect(() => {
@@ -107,7 +107,7 @@ export default function DashboardCRM() {
         event: "UPDATE", schema: "public",
         table: "contacts",
         filter: `business_id=eq.${businessId}`,
-      }, (payload: any) => {
+      }, (payload: { new?: Record<string, unknown>; old?: Record<string, unknown> }) => {
         const updated = payload.new;
         const oldScore = payload.old?.lead_score ?? 0;
         const newScore = updated?.lead_score ?? 0;
@@ -132,7 +132,7 @@ export default function DashboardCRM() {
         event: "INSERT", schema: "public",
         table: "contacts",
         filter: `business_id=eq.${businessId}`,
-      }, (payload: any) => {
+      }, (payload: { new?: Record<string, unknown>; old?: Record<string, unknown> }) => {
         const n = payload.new;
         if (n) {
           setContacts(prev => [{ id: n.id, name: n.full_name || `${n.first_name || ""} ${n.last_name || ""}`.trim(), email: n.email || "", phone: n.phone || "", lead_score: n.lead_score || 0, last_activity: n.created_at } as Contact, ...prev]);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { externalSupabase } from "@/integrations/supabase/external-client";
@@ -22,7 +22,7 @@ export default function NotificationDropdown() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!businessId || !isReady) return;
     const { data, error } = await externalSupabase
       .from("win_notifications")
@@ -32,14 +32,14 @@ export default function NotificationDropdown() {
       .limit(20);
     if (error) { return; }
     setNotifications((data as Notification[]) ?? []);
-  };
+  }, [businessId, isReady]);
 
   useEffect(() => {
     if (!isReady || !businessId) return;
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 60000); // Poll every 60s instead of 30s
     return () => clearInterval(interval);
-  }, [businessId, isReady]);
+  }, [businessId, fetchNotifications, isReady]);
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 

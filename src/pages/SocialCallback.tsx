@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,11 +16,7 @@ export default function SocialCallback() {
   const [status, setStatus] = useState<"processing" | "success" | "error">("processing");
   const [message, setMessage] = useState("Connecting your accounts...");
 
-  useEffect(() => {
-    handleOAuthCallback();
-  }, []);
-
-  async function handleOAuthCallback() {
+  const handleOAuthCallback = useCallback(async () => {
     const code = searchParams.get("code");
     const error = searchParams.get("error");
 
@@ -70,7 +66,7 @@ export default function SocialCallback() {
         }),
       });
 
-      let result: any;
+      let result: Record<string, unknown> | null = null;
       try {
         result = await resp.json();
       } catch {
@@ -86,14 +82,18 @@ export default function SocialCallback() {
       setMessage(result.message || "Facebook & Instagram connected!");
       toast.success(SUCCESS_MESSAGES.GENERATED);
       setTimeout(() => navigate("/dashboard?tab=social"), 2000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setStatus("error");
       const errorMsg = err?.message || "Something went wrong connecting your account.";
       setMessage(errorMsg);
       toast.error(errorMsg);
       setTimeout(() => navigate("/dashboard?tab=social"), 4000);
     }
-  }
+  }, [businessId, navigate, searchParams, user]);
+
+  useEffect(() => {
+    void handleOAuthCallback();
+  }, [handleOAuthCallback]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">

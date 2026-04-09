@@ -51,7 +51,7 @@ export default function NotificationCenter() {
       .limit(50);
 
     if (data) {
-      const mapped: Notification[] = data.map((n: any) => ({
+      const mapped: Notification[] = data.map((n: Record<string, unknown>) => ({
         id: n.id,
         type: mapWinType(n.win_type),
         title: n.title || n.win_type || "Notification",
@@ -80,7 +80,7 @@ export default function NotificationCenter() {
         schema: "public",
         table: "generated_content",
         filter: `business_id=eq.${businessId}`,
-      }, (payload: any) => {
+      }, (payload: { new?: Record<string, unknown>; old?: Record<string, unknown> }) => {
         const newNotif: Notification = {
           id: `content-${Date.now()}`,
           type: "ai_action",
@@ -96,7 +96,7 @@ export default function NotificationCenter() {
         schema: "public",
         table: "contacts",
         filter: `business_id=eq.${businessId}`,
-      }, (payload: any) => {
+      }, (payload: { new?: Record<string, unknown>; old?: Record<string, unknown> }) => {
         const newNotif: Notification = {
           id: `lead-${Date.now()}`,
           type: "hot_lead",

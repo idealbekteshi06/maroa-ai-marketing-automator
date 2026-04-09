@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Megaphone, Plus, Loader2, TrendingUp, BarChart3, Users } from "lucide-react";
@@ -18,7 +18,7 @@ interface Campaign {
 }
 interface PerfLog { spend: number; ctr: number; roas: number; clicks: number; impressions: number; reach: number; conversions: number; }
 
-const safeNum = (v: any) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+const safeNum = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 
 function timeAgo(d: string | null) {
   if (!d) return "—";

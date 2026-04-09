@@ -241,7 +241,10 @@ export default function DashboardOverview() {
       } else if (typeof raw === "object" && raw !== null) {
         aiDecisions = Object.entries(raw).map(([k, v]) => ({ title: k, value: v }));
       }
-    } catch {}
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      toast.error(ERROR_MESSAGES.LOAD_FAILED);
+    }
   }
 
   /* ── FIX 6: Setup checklist with real data ── */

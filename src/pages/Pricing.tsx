@@ -52,7 +52,7 @@ export default function Pricing() {
       const data = await response.json();
       if (data?.error) throw new Error(data.error);
       if (data?.url) window.open(data.url, "_blank");
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error(err.message || "Failed to start checkout.");
     }
     setLoading(null);

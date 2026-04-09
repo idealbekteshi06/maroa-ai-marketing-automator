@@ -75,7 +75,7 @@ export const fmt = {
     const n = Number(v);
     return Number.isFinite(n) ? n + '/100' : '0/100';
   },
-  name: (contact: any): string => {
+  name: (contact: Record<string, unknown>): string => {
     if (contact?.first_name || contact?.last_name)
       return [contact.first_name, contact.last_name].filter(Boolean).join(' ');
     if (contact?.name) return contact.name;

@@ -46,7 +46,10 @@ export default function PhotoLibrary({ onUseInPost }: PhotoLibraryProps) {
         .from("business_photos").select("*").eq("business_id", businessId).order("uploaded_at", { ascending: false });
       if (error) { return; }
       setPhotos((data as Photo[]) ?? []);
-    } catch {}
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      toast.error(ERROR_MESSAGES.LOAD_FAILED);
+    }
     finally { setLoading(false); }
   }, [businessId, isReady]);
 

@@ -25,7 +25,7 @@ export default function AIChatAssistant({ externalOpen, onExternalOpenChange }: 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [business, setBusiness] = useState<any>(null);
+  const [business, setBusiness] = useState<Record<string, unknown> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { businessId, isReady } = useAuth();
@@ -118,7 +118,7 @@ export default function AIChatAssistant({ externalOpen, onExternalOpenChange }: 
       }
 
       setMessages((prev) => [...prev, { role: "assistant", content: assistantContent! }]);
-    } catch (err: any) {
+    } catch (err: unknown) {
       const errorMsg = err?.message?.includes("429")
         ? "I'm getting too many requests right now. Please wait a moment and try again."
         : err?.message?.includes("402")

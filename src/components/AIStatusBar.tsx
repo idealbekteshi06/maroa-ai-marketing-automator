@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { X } from "lucide-react";
+import { ERROR_MESSAGES } from "@/lib/errorMessages";
+import { toast } from "sonner";
 
 interface AIStatusBarProps {
   businessId: string | null;
@@ -75,10 +77,16 @@ export default function AIStatusBar({ businessId }: AIStatusBarProps) {
             setStatus("idle");
             setMessage(IDLE_MESSAGES[0]);
           }, 5000);
-        } catch {}
+        } catch (err: unknown) {
+          if (err instanceof Error && err.name === "AbortError") return;
+          toast.error(ERROR_MESSAGES.LOAD_FAILED);
+        }
       };
       es.onerror = () => es.close();
-    } catch {}
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      toast.error(ERROR_MESSAGES.LOAD_FAILED);
+    }
     return () => { es?.close(); clearTimeout(timerRef.current); };
   }, [businessId]);
 

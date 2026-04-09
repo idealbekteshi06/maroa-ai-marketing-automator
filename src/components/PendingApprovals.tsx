@@ -44,7 +44,7 @@ export default function PendingApprovals({ onNavigate }: PendingApprovalsProps) 
       .order("created_at", { ascending: false })
       .limit(5);
 
-    setItems((data || []).map((d: any) => ({
+    setItems((data || []).map((d: Record<string, unknown>) => ({
       id: d.id,
       platform: d.platform || "default",
       caption: d.caption || d.content_theme || "Untitled post",

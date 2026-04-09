@@ -16,7 +16,7 @@ const stateMessages: Record<BrainState, string> = {
 
 interface AIBrainStatusProps {
   businessId: string | null;
-  aiDecisions?: any[];
+  aiDecisions?: Array<Record<string, unknown>>;
 }
 
 /* Gradient border wrapper — uses React state for guaranteed animation */
@@ -68,7 +68,7 @@ export default function AIBrainStatus({ businessId, aiDecisions = [] }: AIBrainS
     const channel = externalSupabase
       .channel(`brain-${businessId}`)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "businesses", filter: `id=eq.${businessId}` },
-        (payload: any) => {
+        (payload: { new?: Record<string, unknown> }) => {
           if (payload.new?.last_decision && payload.new.last_decision !== payload.old?.last_decision) {
             triggerThinkingAnimation(payload.new.last_decision);
           }
@@ -130,7 +130,7 @@ export default function AIBrainStatus({ businessId, aiDecisions = [] }: AIBrainS
       {aiDecisions.length > 0 && (
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Recent decisions</p>
-          {aiDecisions.slice(0, 3).map((d: any, i: number) => (
+          {aiDecisions.slice(0, 3).map((d, i: number) => (
             <div key={i} className="flex items-start gap-2.5 pb-2 last:pb-0">
               <div className="flex flex-col items-center">
                 <div className="h-2 w-2 rounded-full bg-success shrink-0 mt-1" />

@@ -52,10 +52,10 @@ export default function DashboardCompetitors() {
       const raw = bizRes.data?.competitors;
       if (typeof raw === "string") {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) setCompetitors(parsed.map((c: any) => typeof c === "string" ? { name: c } : c));
+        if (Array.isArray(parsed)) setCompetitors(parsed.map((c: string | Record<string, unknown>) => typeof c === "string" ? { name: c } : c));
         else setCompetitors(raw.split(",").map((n: string) => ({ name: n.trim() })));
       } else if (Array.isArray(raw)) {
-        setCompetitors(raw.map((c: any) => typeof c === "string" ? { name: c } : c));
+        setCompetitors(raw.map((c: string | Record<string, unknown>) => typeof c === "string" ? { name: c } : c));
       } else {
         setCompetitors([]);
       }

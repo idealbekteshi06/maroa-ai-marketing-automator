@@ -73,7 +73,7 @@ export default function ContentCalendar({ businessId }: ContentCalendarProps) {
 
     setContent((data || []) as ContentItem[]);
     setLoading(false);
-  }, [businessId, weekOffset]);
+  }, [businessId, weekDates]);
 
   useEffect(() => { fetchContent(); }, [fetchContent]);
 

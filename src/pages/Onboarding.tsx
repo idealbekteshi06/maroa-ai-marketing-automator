@@ -67,7 +67,7 @@ function RadioCards({ options, value, onChange }: { options: { label: string; de
   );
 }
 
-function DynamicList({ items, onChange, fields, max = 5 }: { items: any[]; onChange: (v: any[]) => void; fields: { key: string; placeholder: string }[]; max?: number }) {
+function DynamicList({ items, onChange, fields, max = 5 }: { items: Array<Record<string, unknown>>; onChange: (v: Array<Record<string, unknown>>) => void; fields: { key: string; placeholder: string }[]; max?: number }) {
   return (
     <div className="space-y-2">
       {items.map((item, i) => (
@@ -99,7 +99,7 @@ export default function Onboarding() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Complete form state — all 83 questions
-  const [form, setForm] = useState<Record<string, any>>(() => {
+  const [form, setForm] = useState<Record<string, unknown>>(() => {
     try { const saved = localStorage.getItem(STORAGE_KEY); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
   });
 
@@ -111,9 +111,12 @@ export default function Onboarding() {
         const countryHints: Record<string, string> = { sq: "Kosovo", en: "United States", de: "Germany", fr: "France", ar: "UAE", tr: "Turkey", it: "Italy", pt: "Brazil", hi: "India", sr: "Serbia", mk: "Macedonia" };
         const lang = locale.split("-")[0];
         if (countryHints[lang]) update("country", countryHints[lang]);
-      } catch {}
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === "AbortError") return;
+        toast.error("Failed to detect locale");
+      }
     }
-  }, []);
+  }, [form.country]);
 
   // Load saved progress from Supabase
   useEffect(() => {
@@ -124,7 +127,10 @@ export default function Onboarding() {
           const saved = typeof data.onboarding_data === "string" ? JSON.parse(data.onboarding_data) : data.onboarding_data;
           if (saved?.form) setForm(f => ({ ...saved.form, ...f }));
           if (saved?.block != null) setBlock(saved.block);
-        } catch {}
+        } catch (err: unknown) {
+          if (err instanceof Error && err.name === "AbortError") return;
+          toast.error("Failed to parse onboarding data");
+        }
       }
       // Pre-fill from existing business data
       if (data && !form.business_name) {
@@ -137,14 +143,14 @@ export default function Onboarding() {
         }));
       }
     });
-  }, [businessId]);
+  }, [businessId, form.business_name]);
 
   // Save to localStorage on every change
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
   }, [form]);
 
-  const update = (key: string, value: any) => setForm(f => ({ ...f, [key]: value }));
+  const update = (key: string, value: unknown) => setForm(f => ({ ...f, [key]: value }));
   const toggleArray = (key: string, val: string) => {
     setForm(f => {
       const arr = Array.isArray(f[key]) ? f[key] : [];
@@ -159,7 +165,10 @@ export default function Onboarding() {
     if (!businessId) return;
     try {
       await externalSupabase.from("businesses").update({ onboarding_data: JSON.stringify({ block, form }) }).eq("id", businessId);
-    } catch {}
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      toast.error("Failed to save progress");
+    }
   };
 
   const handleNext = async () => {
@@ -204,7 +213,7 @@ export default function Onboarding() {
           audience_description: form.customer_description || "",
           pain_point: [form.pain1, form.pain2, form.pain3].filter(Boolean).join(". "),
           avg_spend: form.avg_spend || "",
-          products: (form.products || []).filter((p: any) => p?.name),
+          products: (form.products || []).filter((p: Record<string, unknown>) => Boolean(p?.name)),
           current_offer: form.current_offer || "",
           primary_goal: form.primary_goal || "",
           monthly_budget: form.budget || "",
@@ -215,7 +224,7 @@ export default function Onboarding() {
           seasonal: form.seasonal === "yes" ? "busy_season" : "year_round",
           busy_months: form.busy_months || [],
           best_posting_times: form.posting_times ? "custom" : "auto",
-          competitors: (form.competitors || []).filter((c: any) => c?.name).map((c: any) => ({ name: c.name, city: c.city || form.city })),
+          competitors: (form.competitors || []).filter((c: Record<string, unknown>) => Boolean(c?.name)).map((c: Record<string, unknown>) => ({ name: String(c.name), city: String(c.city || form.city) })),
           they_do_better: form.competitor_strengths || "",
           we_do_better: form.competitor_weaknesses || "",
         };

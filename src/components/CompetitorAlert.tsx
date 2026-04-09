@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { X, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { externalSupabase } from "@/integrations/supabase/external-client";
@@ -24,7 +24,14 @@ export default function CompetitorAlert({ businessId, onNavigate }: CompetitorAl
   const frameRef = useRef<number>();
   const DURATION = 30000;
 
-  const showAlert = (data: CompReport) => {
+  const dismiss = useCallback(() => {
+    setVisible(false);
+    if (frameRef.current) cancelAnimationFrame(frameRef.current);
+    clearTimeout(timerRef.current);
+    setTimeout(() => setAlert(null), 400);
+  }, []);
+
+  const showAlert = useCallback((data: CompReport) => {
     setAlert(data);
     setVisible(true);
     startRef.current = Date.now();
@@ -38,14 +45,7 @@ export default function CompetitorAlert({ businessId, onNavigate }: CompetitorAl
       frameRef.current = requestAnimationFrame(tick);
     };
     frameRef.current = requestAnimationFrame(tick);
-  };
-
-  const dismiss = () => {
-    setVisible(false);
-    if (frameRef.current) cancelAnimationFrame(frameRef.current);
-    clearTimeout(timerRef.current);
-    setTimeout(() => setAlert(null), 400);
-  };
+  }, [dismiss]);
 
   useEffect(() => {
     if (!businessId) return;
@@ -55,7 +55,7 @@ export default function CompetitorAlert({ businessId, onNavigate }: CompetitorAl
         event: "INSERT", schema: "public",
         table: "competitor_reports",
         filter: `business_id=eq.${businessId}`,
-      }, (payload: any) => {
+      }, (payload: { new?: Record<string, unknown> }) => {
         showAlert({
           competitor_name: payload.new?.competitor_name,
           alert_level: payload.new?.alert_level || "medium",
@@ -68,7 +68,7 @@ export default function CompetitorAlert({ businessId, onNavigate }: CompetitorAl
       externalSupabase.removeChannel(channel);
       if (frameRef.current) cancelAnimationFrame(frameRef.current);
     };
-  }, [businessId]);
+  }, [businessId, showAlert]);
 
   if (!alert) return null;
 

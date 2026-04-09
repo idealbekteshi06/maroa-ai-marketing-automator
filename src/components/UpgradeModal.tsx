@@ -3,6 +3,8 @@ import { Lock, Check, X, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import * as api from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { ERROR_MESSAGES } from "@/lib/errorMessages";
+import { toast } from "sonner";
 
 interface UpgradeModalProps {
   open: boolean;
@@ -39,9 +41,12 @@ export default function UpgradeModal({ open, onClose, featureName, description, 
   const handleUpgrade = async (plan: string) => {
     if (!businessId) return;
     try {
-      const result: any = await api.createCheckout({ business_id: businessId, plan });
+      const result: { url?: string } = await api.createCheckout({ business_id: businessId, plan });
       if (result?.url) window.location.href = result.url;
-    } catch {}
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      toast.error(ERROR_MESSAGES.LOAD_FAILED);
+    }
   };
 
   if (!open) return null;

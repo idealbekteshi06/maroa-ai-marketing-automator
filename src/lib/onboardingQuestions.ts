@@ -151,7 +151,7 @@ export const NOTIFICATION_OPTIONS = [
 ];
 
 // Helper to calculate which block a user should start from based on filled data
-export function getFirstIncompleteBlock(data: Record<string, any>): number {
+export function getFirstIncompleteBlock(data: Record<string, unknown>): number {
   if (!data.business_name) return 0;
   if (!data.city) return 1;
   if (!data.audience_description) return 2;

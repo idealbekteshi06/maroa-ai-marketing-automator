@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import * as api from "@/lib/api";
@@ -68,7 +68,7 @@ export default function DashboardReviews() {
   const [contactName, setContactName] = useState("");
   const [requestSending, setRequestSending] = useState(false);
 
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     if (!businessId || !isReady) { setLoading(false); return; }
     try {
       const { data, error } = await externalSupabase
@@ -81,7 +81,7 @@ export default function DashboardReviews() {
     } catch {
       toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     }
-  };
+  }, [businessId, isReady]);
 
   useEffect(() => {
     if (!businessId || !isReady) { setLoading(false); return; }
@@ -91,7 +91,7 @@ export default function DashboardReviews() {
       setLoading(false);
     };
     load();
-  }, [businessId, isReady]);
+  }, [businessId, fetchReviews, isReady]);
 
   const handleGenerateResponse = async (reviewId: string) => {
     if (!businessId) return;
