@@ -33,7 +33,7 @@ export default function DashboardUpgradeCRO() {
     try {
       const res = await fetch(`${API_BASE}/api/upgrade/generate-prompts`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business_id: businessId }),
+        body: JSON.stringify({ userId: businessId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");

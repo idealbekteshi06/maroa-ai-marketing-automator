@@ -30,7 +30,7 @@ export default function DashboardPopupCRO() {
     try {
       const res = await fetch(`${API_BASE}/api/popup/generate`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business_id: businessId, popup_type: selectedType }),
+        body: JSON.stringify({ userId: businessId, popup_type: selectedType }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");

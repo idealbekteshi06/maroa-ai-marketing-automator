@@ -44,7 +44,7 @@ export default function DashboardAISEO() {
       const res = await fetch(`${API_BASE}/api/ai-seo/optimize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business_id: businessId, url: url.trim() }),
+        body: JSON.stringify({ userId: businessId, url: url.trim() }),
       });
       if (!res.ok) throw new Error();
       const data = await res.json();

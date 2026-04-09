@@ -63,7 +63,7 @@ export default function DashboardIdeas() {
     try {
       const res = await fetch(`${API_BASE}/api/ideas/generate`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business_id: businessId }),
+        body: JSON.stringify({ userId: businessId }),
       });
       if (!res.ok) throw new Error();
       const data = await res.json();

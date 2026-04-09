@@ -34,7 +34,7 @@ export default function DashboardCommunity() {
       const res = await fetch(`${API_BASE}/api/community/generate-posts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business_id: businessId, platform: selectedPlatform }),
+        body: JSON.stringify({ userId: businessId, platform: selectedPlatform }),
       });
       if (!res.ok) throw new Error();
       const data = await res.json();

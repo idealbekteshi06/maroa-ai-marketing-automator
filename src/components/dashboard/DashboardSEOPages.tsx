@@ -45,7 +45,7 @@ export default function DashboardSEOPages() {
       const res = await fetch(`${API_BASE}/api/seo-pages/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business_id: businessId, keyword: keyword.trim() }),
+        body: JSON.stringify({ userId: businessId, keyword: keyword.trim() }),
       });
       if (!res.ok) throw new Error();
       const data = await res.json();

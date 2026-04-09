@@ -25,7 +25,7 @@ export default function DashboardSales() {
     try {
       const res = await fetch(`${API_BASE}/api/sales/generate-pitch`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business_id: businessId, product: product.trim() }),
+        body: JSON.stringify({ userId: businessId, product: product.trim() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
@@ -42,7 +42,7 @@ export default function DashboardSales() {
     try {
       const res = await fetch(`${API_BASE}/api/sales/objection-handler`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business_id: businessId, objection: objectionText.trim() }),
+        body: JSON.stringify({ userId: businessId, objection: objectionText.trim() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");

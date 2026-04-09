@@ -44,7 +44,7 @@ export default function DashboardReferral2() {
       const res = await fetch(`${API_BASE}/api/referral/setup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business_id: businessId }),
+        body: JSON.stringify({ userId: businessId }),
       });
       if (!res.ok) throw new Error();
       const data = await res.json();

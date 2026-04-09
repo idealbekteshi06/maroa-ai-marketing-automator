@@ -87,7 +87,7 @@ export default function DashboardCampaign() {
       const res = await fetch(`${API_BASE}/api/campaigns/instant`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business_id: businessId, goal: goal.trim(), duration }),
+        body: JSON.stringify({ userId: businessId, goal: goal.trim(), duration }),
       });
 
       clearInterval(interval);

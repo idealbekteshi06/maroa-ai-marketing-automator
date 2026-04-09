@@ -51,7 +51,7 @@ export default function DashboardLeadMagnets() {
       const res = await fetch(`${API_BASE}/api/lead-magnets/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business_id: businessId, type: selectedType }),
+        body: JSON.stringify({ userId: businessId, type: selectedType }),
       });
       if (!res.ok) throw new Error();
       const data = await res.json();

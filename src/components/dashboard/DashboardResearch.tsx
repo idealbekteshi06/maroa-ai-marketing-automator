@@ -34,7 +34,7 @@ export default function DashboardResearch() {
       const res = await fetch(`${API_BASE}/api/research/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business_id: businessId, topic: t.trim() }),
+        body: JSON.stringify({ userId: businessId, topic: t.trim() }),
       });
       if (!res.ok) throw new Error();
       const data = await res.json();

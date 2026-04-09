@@ -35,7 +35,7 @@ export default function DashboardOnboardingCRO() {
     try {
       const res = await fetch(`${API_BASE}/api/onboarding-cro/generate`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business_id: businessId }),
+        body: JSON.stringify({ userId: businessId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");

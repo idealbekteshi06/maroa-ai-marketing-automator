@@ -42,7 +42,7 @@ export default function DashboardRevOps() {
     try {
       const res = await fetch(`${API_BASE}/api/revops/score-lead`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business_id: businessId, contact_id: "all" }),
+        body: JSON.stringify({ userId: businessId, contact_id: "all" }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");

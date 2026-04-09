@@ -34,7 +34,7 @@ export default function DashboardSignupCRO() {
     try {
       const res = await fetch(`${API_BASE}/api/signup-cro/analyze`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business_id: businessId, signup_url: signupUrl.trim() }),
+        body: JSON.stringify({ userId: businessId, signup_url: signupUrl.trim() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");

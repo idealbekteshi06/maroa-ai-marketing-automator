@@ -57,7 +57,7 @@ export default function DashboardLaunch() {
       const res = await fetch(`${API_BASE}/api/launch/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business_id: businessId, campaign_type: type }),
+        body: JSON.stringify({ userId: businessId, campaign_type: type }),
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
