@@ -70,7 +70,12 @@ export default function DashboardAIBrain() {
         setTotalSignals(parsed.length);
         setContentWins(parsed.filter((l) => l.type === "content" || l.action === "content_published").length);
       } catch {
-        setLogs([]);
+        // Fallback to demo data
+        const { DEMO_ORCHESTRATION_LOGS, DEMO_INTELLIGENCE } = await import("@/lib/demoData");
+        const demo = DEMO_ORCHESTRATION_LOGS.map((l, i) => ({ id: `demo-${i}`, type: l.task, action: l.task, description: l.reason, status: l.success ? "success" : "failed", timestamp: l.created_at, created_at: l.created_at }));
+        setLogs(demo as any);
+        setTotalSignals(DEMO_INTELLIGENCE.signals);
+        setContentWins(DEMO_INTELLIGENCE.content_wins);
       } finally {
         setLoading(false);
       }
