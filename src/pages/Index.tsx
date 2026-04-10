@@ -8,9 +8,9 @@ const API = "https://maroa-api-production.up.railway.app";
 const FLAGS = ["🇽🇰", "🇦🇱", "🇬🇧", "🇩🇪", "🇦🇪", "🇺🇸", "🇫🇷", "🇮🇹"];
 
 const PLANS = [
-  { key: "starter", name: "Starter", was: 29, now: 19, save: "34%", popular: false, features: ["2 social platforms", "15 AI posts/month", "AI runs daily", "22 countries + 17 languages"] },
-  { key: "growth", name: "Growth", was: 69, now: 39, save: "43%", popular: true, features: ["5 social platforms", "Unlimited AI content", "AI runs 3× daily", "Paid ads management", "Competitor tracking", "Email + WhatsApp campaigns", "All 28 AI modules"] },
-  { key: "agency", name: "Agency", was: 149, now: 79, save: "47%", popular: false, features: ["10 business profiles", "Everything in Growth", "AI runs 5× daily", "White-label", "API access"] },
+  { key: "starter", name: "Starter", was: 29, now: 19, save: "34%", popular: false, features: ["1 platform", "20 AI images/mo", "AI brain 1×/day", "Content calendar", "Email support"] },
+  { key: "growth", name: "Growth", was: 59, now: 39, save: "34%", popular: true, features: ["3 platforms", "60 AI images/mo", "25 Kling videos", "5 Sora videos", "AI brain 3×/day", "Paid ads", "Competitor tracking", "Analytics"] },
+  { key: "agency", name: "Agency", was: 99, now: 69, save: "30%", popular: false, features: ["Unlimited platforms", "120 AI images/mo", "50 Kling + 15 Sora videos", "3 brands", "White-label", "API access", "AI brain 5×/day"] },
 ];
 
 const BIZ_TYPES = ["Restaurant", "Gym/Fitness", "Retail", "Beauty/Salon", "Real Estate", "Agency", "Café/Bar", "Medical", "Education", "Other"];
@@ -245,9 +245,9 @@ export default function Index() {
               <input type="text" required value={form.name} onChange={e => up("name", e.target.value)} placeholder="Full name" className={inputCls} />
               <input type="email" required value={form.email} onChange={e => up("email", e.target.value)} placeholder="Email address" className={inputCls} />
               <select value={form.plan} onChange={e => up("plan", e.target.value)} className={inputCls}>
-                <option value="starter">Starter — €19/mo</option>
+                <option value="starter">Starter — €19/mo (was €29)</option>
                 <option value="growth">Growth — €39/mo (Most Popular)</option>
-                <option value="agency">Agency — €79/mo</option>
+                <option value="agency">Agency — €69/mo (was €99)</option>
               </select>
               <div className="grid grid-cols-2 gap-3">
                 <select value={form.business_type} onChange={e => up("business_type", e.target.value)} className={inputCls}>
