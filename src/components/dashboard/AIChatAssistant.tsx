@@ -58,6 +58,9 @@ export default function AIChatAssistant({ externalOpen, onExternalOpenChange }: 
     setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
 
+    // Add empty assistant message to fill in as stream arrives
+    setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+
     try {
       const res = await fetch("https://maroa-api-production.up.railway.app/webhook/ai-chat", {
         method: "POST",
@@ -65,18 +68,79 @@ export default function AIChatAssistant({ externalOpen, onExternalOpenChange }: 
         body: JSON.stringify({ message: text, business_id: businessId }),
       });
 
-      if (!res.ok) throw new Error(`Chat error: ${res.status}`);
+      if (!res.ok) throw new Error("Chat failed");
 
-      const data = await res.json();
-      const reply = data?.reply || data?.response || data?.content || "Sorry, I couldn't process that. Please try again.";
-      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
-    } catch (err: unknown) {
-      const errorMsg = err?.message?.includes("429")
-        ? "I'm getting too many requests right now. Please wait a moment and try again."
-        : err?.message?.includes("402")
-        ? "AI credits have been used up. Please add more credits in your workspace settings."
-        : "Sorry, something went wrong. Please try again.";
-      setMessages((prev) => [...prev, { role: "assistant", content: errorMsg }]);
+      // Try streaming first
+      if (res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let fullText = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split("\n");
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const data = line.slice(6);
+              if (data === "[DONE]") continue;
+              try {
+                const parsed = JSON.parse(data);
+                if (parsed.text) {
+                  fullText += parsed.text;
+                  setMessages((prev) => {
+                    const updated = [...prev];
+                    updated[updated.length - 1] = { role: "assistant", content: fullText };
+                    return updated;
+                  });
+                }
+              } catch {
+                // Non-JSON chunk — might be plain text response
+                fullText += data;
+                setMessages((prev) => {
+                  const updated = [...prev];
+                  updated[updated.length - 1] = { role: "assistant", content: fullText };
+                  return updated;
+                });
+              }
+            }
+          }
+        }
+
+        // If stream produced no text, try parsing as regular JSON
+        if (!fullText) {
+          const fallback = await res.text().catch(() => "");
+          try {
+            const json = JSON.parse(fallback);
+            fullText = json?.reply || json?.response || json?.content || fullText;
+          } catch {
+            fullText = fallback || "Sorry, I couldn't process that.";
+          }
+          setMessages((prev) => {
+            const updated = [...prev];
+            updated[updated.length - 1] = { role: "assistant", content: fullText };
+            return updated;
+          });
+        }
+      } else {
+        // No streaming support — fall back to regular JSON
+        const data = await res.json();
+        const reply = data?.reply || data?.response || data?.content || "Sorry, I couldn't process that.";
+        setMessages((prev) => {
+          const updated = [...prev];
+          updated[updated.length - 1] = { role: "assistant", content: reply };
+          return updated;
+        });
+      }
+    } catch {
+      setMessages((prev) => {
+        const updated = [...prev];
+        updated[updated.length - 1] = { role: "assistant", content: "Sorry, something went wrong. Please try again." };
+        return updated;
+      });
     } finally {
       setLoading(false);
     }
