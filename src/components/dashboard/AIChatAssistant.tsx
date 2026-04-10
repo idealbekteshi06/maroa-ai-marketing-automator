@@ -59,65 +59,17 @@ export default function AIChatAssistant({ externalOpen, onExternalOpenChange }: 
     setLoading(true);
 
     try {
-      const allMessages = [
-        ...messages.map((m) => ({ role: m.role, content: m.content })),
-        { role: "user" as const, content: text },
-      ];
+      const res = await fetch("https://maroa-api-production.up.railway.app/webhook/ai-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text, business_id: businessId }),
+      });
 
-      let assistantContent: string | null = null;
+      if (!res.ok) throw new Error(`Chat error: ${res.status}`);
 
-      // Primary: call backend /webhook/ai-chat which has full business context
-      const apiBase = import.meta.env.VITE_API_BASE;
-      if (apiBase && businessId) {
-        try {
-          const backendRes = await fetch(`${apiBase}/webhook/ai-chat`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              business_id: businessId,
-              message: text,
-              conversation_history: messages.map(m => ({ role: m.role, content: m.content })),
-            }),
-          });
-          if (backendRes.ok) {
-            const backendData = await backendRes.json();
-            assistantContent = backendData?.response || backendData?.content || null;
-          }
-        } catch {
-          // Backend unavailable — fall through to Supabase edge function
-        }
-      }
-
-      // Fallback: call the Supabase edge function directly
-      if (!assistantContent) {
-        const businessContext = business
-          ? `User's business: ${business.business_name || "Unknown"}, Industry: ${business.industry || "Unknown"}, Location: ${business.location || "Unknown"}, Target audience: ${business.target_audience || "Unknown"}, Brand tone: ${business.brand_tone || "Unknown"}, Marketing goal: ${business.marketing_goal || "Unknown"}.`
-          : "";
-
-        const systemPrompt = `You are the maroa.ai marketing assistant. You are an expert digital marketer helping small business owners. ${businessContext} Always give specific actionable advice tailored to their exact business. Be warm, confident, and direct. Never be generic. When writing captions or ad copy always match their brand tone. Keep responses concise. Use markdown formatting for clarity.`;
-
-        const response = await fetch("https://zqhyrbttuqkvmdewiytf.supabase.co/functions/v1/chat", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "apikey": "sb_publishable_4O2w1ObpYPQ7eOIlOhwl5A_8GxCt-gs",
-          },
-          body: JSON.stringify({ messages: allMessages, systemPrompt }),
-        });
-
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          throw new Error(errData.error || `Chat service error (${response.status})`);
-        }
-
-        const data = await response.json();
-        assistantContent =
-          data?.choices?.[0]?.message?.content ||
-          data?.content ||
-          (typeof data === "string" ? data : "Sorry, I couldn't process that. Please try again.");
-      }
-
-      setMessages((prev) => [...prev, { role: "assistant", content: assistantContent! }]);
+      const data = await res.json();
+      const reply = data?.reply || data?.response || data?.content || "Sorry, I couldn't process that. Please try again.";
+      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch (err: unknown) {
       const errorMsg = err?.message?.includes("429")
         ? "I'm getting too many requests right now. Please wait a moment and try again."
