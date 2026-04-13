@@ -628,3 +628,151 @@ export const wf15UploadAttachment = (data: FormData) =>
     method: "POST",
     body: data,
   }).then((r) => r.json() as Promise<{ id: string; modality: string; url: string }>);
+
+// ─── Workflow #2 — Lead Scoring & Routing ────────────────────
+// Backend spec in LEARNINGS.md §3 WF2.
+
+export type LeadTier = "hot" | "warm_high" | "warm" | "cool" | "junk";
+
+export interface LeadRow {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  title: string | null;
+  companyName: string | null;
+  companyEmployees: number | null;
+  companyIndustry: string | null;
+  country: string | null;
+  tier: LeadTier;
+  score: number;
+  topPredictiveSignals: string[];
+  topRiskSignals: string[];
+  slaDeadline: string | null;
+  ownerId: string | null;
+  status: "new" | "contacted" | "replied" | "qualified" | "opportunity" | "won" | "lost" | "nurture" | "junk";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LeadDetail extends LeadRow {
+  components: {
+    demographicFit: { score: number; notes: string[] };
+    behavioralIntent: { score: number; notes: string[] };
+    companyFit: { score: number; notes: string[] };
+    commitmentSignals: { score: number; notes: string[] };
+  };
+  person: Record<string, unknown>;
+  company: Record<string, unknown>;
+  behavior: Record<string, unknown>;
+  intake: Record<string, unknown>;
+  generatedDraft?: {
+    subject: string;
+    body: string;
+    personalizationScore: number;
+    status: "draft" | "awaiting_approval" | "sent" | "rejected";
+    generatedAt: string;
+  };
+  committee?: {
+    domain: string;
+    members: Array<{ leadId: string; role: string; name: string; title: string }>;
+    totalActivityScore: number;
+    isActiveDeal: boolean;
+  };
+}
+
+export const wf2ListLeads = (params: {
+  business_id: string;
+  tier?: LeadTier;
+  status?: string;
+  owner_id?: string;
+  limit?: string;
+  cursor?: string;
+  q?: string;
+}) =>
+  get<{ items: LeadRow[]; nextCursor: string | null; counts: Record<LeadTier, number> }>(
+    "/webhook/wf2-leads-list",
+    params,
+  );
+
+export const wf2GetLead = (params: { business_id: string; lead_id: string }) =>
+  get<LeadDetail>("/webhook/wf2-lead-get", params);
+
+export const wf2RescoreLead = (data: { businessId: string; leadId: string }) =>
+  post<{ score: number; tier: LeadTier }>("/webhook/wf2-lead-rescore", data);
+
+export const wf2GenerateResponse = (data: { businessId: string; leadId: string }) =>
+  post<{
+    subject: string;
+    body: string;
+    personalizationScore: number;
+    predictedResponseRate: { low: number; high: number };
+    psychologyLevers: string[];
+  }>("/webhook/wf2-generate-response", data);
+
+export const wf2SendResponse = (data: {
+  businessId: string;
+  leadId: string;
+  subject: string;
+  body: string;
+  force?: boolean;
+}) => post("/webhook/wf2-send-response", data);
+
+export const wf2UpdateLead = (data: {
+  businessId: string;
+  leadId: string;
+  tier?: LeadTier;
+  status?: string;
+  ownerId?: string | null;
+  tagAsJunk?: boolean;
+  unjunk?: boolean;
+}) => post("/webhook/wf2-lead-update", data);
+
+export const wf2GetRoutingRules = (params: { business_id: string }) =>
+  get<{
+    rules: Array<{
+      id: string;
+      kind: "round_robin" | "territory" | "industry" | "deal_size" | "workload_balanced" | "account_based";
+      priority: number;
+      config: Record<string, unknown>;
+    }>;
+  }>("/webhook/wf2-routing-rules-get", params);
+
+export const wf2SaveRoutingRules = (data: {
+  businessId: string;
+  rules: Array<{
+    kind: "round_robin" | "territory" | "industry" | "deal_size" | "workload_balanced" | "account_based";
+    priority: number;
+    config: Record<string, unknown>;
+  }>;
+}) => post("/webhook/wf2-routing-rules-save", data);
+
+export const wf2GetScoringCalibration = (params: { business_id: string }) =>
+  get<{
+    last30DaysAccuracy: number;
+    topPredictiveSignal: string;
+    mostMisleadingSignal: string;
+    winsExplained: Array<{ trait: string; weight: number }>;
+    lossesExplained: Array<{ trait: string; weight: number }>;
+    sampleSize: number;
+  }>("/webhook/wf2-calibration", params);
+
+export const wf2GetIcp = (params: { business_id: string }) =>
+  get<{
+    idealTitles: string[];
+    idealCompanySizeMin: number | null;
+    idealCompanySizeMax: number | null;
+    idealIndustries: string[];
+    servedGeographies: string[];
+    deadbeatList: string[];
+  }>("/webhook/wf2-icp-get", params);
+
+export const wf2SaveIcp = (data: {
+  businessId: string;
+  idealTitles: string[];
+  idealCompanySizeMin?: number | null;
+  idealCompanySizeMax?: number | null;
+  idealIndustries: string[];
+  servedGeographies: string[];
+  deadbeatList: string[];
+}) => post("/webhook/wf2-icp-save", data);

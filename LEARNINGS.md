@@ -436,6 +436,147 @@ create table brain_owner_preferences (
 - Whisper for voice input transcription.
 - ElevenLabs for voice output (brand-appropriate voice profile).
 
+#### WF2 — Lead Scoring & Routing
+
+Deterministic scorer + LLM response generation. Behavioral signals (35%) dominate demographic (20%), per Marketo 2021 replicated 2024 research.
+
+Scoring components (100 total):
+- Demographic fit: 20 pts (ICP match + role authority)
+- Behavioral intent: 35 pts (buying-stage signals + engagement velocity)
+- Company fit: 25 pts (size + industry + funding + growth − negative signals)
+- Commitment signals: 20 pts (message quality + verification)
+
+Tiers: hot (80+, 5min SLA), warm_high (60–79, 1h), warm (40–59, 24h), cool (20–39, weekly), junk (<20, flagged but never deleted).
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET  | `/webhook/wf2-leads-list` | Paginated list with filters (tier/status/owner/search). Returns items + nextCursor + per-tier counts. |
+| GET  | `/webhook/wf2-lead-get` | Full detail with scoring components, enrichment payload, committee data, generated draft. |
+| POST | `/webhook/wf2-lead-rescore` | Re-run scoring (manual or triggered). |
+| POST | `/webhook/wf2-generate-response` | LLM draft response with personalization score + predicted response rate + psychology levers used. |
+| POST | `/webhook/wf2-send-response` | Send drafted message. |
+| POST | `/webhook/wf2-lead-update` | Tier/status/owner/tagAsJunk/unjunk. |
+| GET  | `/webhook/wf2-routing-rules-get` | Ordered routing rules for the business. |
+| POST | `/webhook/wf2-routing-rules-save` | Save ordered rules (round_robin, territory, industry, deal_size, workload_balanced, account_based). |
+| GET  | `/webhook/wf2-calibration` | 30-day accuracy, top predictive signal, most misleading signal, wins/losses weight attribution. |
+| GET  | `/webhook/wf2-icp-get` | ICP definitions. |
+| POST | `/webhook/wf2-icp-save` | Save ICP definitions (triggers rescore of all leads). |
+
+**Supabase migrations for WF2:**
+```sql
+create type lead_tier as enum ('hot','warm_high','warm','cool','junk');
+create type lead_status as enum (
+  'new','contacted','replied','qualified','opportunity','won','lost','nurture','junk'
+);
+
+create table leads (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references businesses(id) on delete cascade,
+  email text not null,
+  first_name text, last_name text, title text,
+  linkedin_url text,
+  person jsonb not null default '{}',
+  company jsonb not null default '{}',
+  intent_signals jsonb not null default '{}',
+  behavior jsonb not null default '{}',
+  social jsonb not null default '{}',
+  intake jsonb not null default '{}',
+  email_valid boolean not null default false,
+  disposable_email boolean not null default false,
+  role_email boolean not null default false,
+  personal_email boolean not null default false,
+  tier lead_tier not null default 'cool',
+  score int not null default 0,
+  components jsonb not null default '{}',
+  top_predictive_signals text[] not null default '{}',
+  top_risk_signals text[] not null default '{}',
+  owner_id uuid,
+  status lead_status not null default 'new',
+  sla_deadline timestamptz,
+  scored_at timestamptz,
+  last_activity_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index on leads (business_id, tier, score desc);
+create index on leads (business_id, owner_id);
+create index on leads (business_id, status);
+create unique index on leads (business_id, lower(email));
+
+create table lead_responses (
+  id uuid primary key default gen_random_uuid(),
+  lead_id uuid not null references leads(id) on delete cascade,
+  subject text not null,
+  body text not null,
+  personalization_score int not null,
+  predicted_response_rate_low numeric,
+  predicted_response_rate_high numeric,
+  psychology_levers text[] not null default '{}',
+  status text not null default 'draft' check (status in ('draft','awaiting_approval','sent','rejected')),
+  generated_at timestamptz not null default now(),
+  sent_at timestamptz,
+  decided_by uuid
+);
+
+create table icp_definitions (
+  business_id uuid primary key references businesses(id) on delete cascade,
+  ideal_titles text[] not null default '{}',
+  ideal_company_size_min int,
+  ideal_company_size_max int,
+  ideal_industries text[] not null default '{}',
+  served_geographies text[] not null default '{}',
+  deadbeat_list text[] not null default '{}',
+  updated_at timestamptz not null default now()
+);
+
+create table routing_rules (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references businesses(id) on delete cascade,
+  kind text not null check (kind in ('round_robin','territory','industry','deal_size','workload_balanced','account_based')),
+  priority int not null,
+  config jsonb not null default '{}',
+  active boolean not null default true
+);
+create index on routing_rules (business_id, priority);
+
+create table lead_outcomes (
+  -- used for 30-day recalibration (logistic regression on won/lost)
+  id uuid primary key default gen_random_uuid(),
+  lead_id uuid not null references leads(id) on delete cascade,
+  outcome text not null check (outcome in ('won','lost','stalled','in_progress')),
+  acv_usd numeric,
+  closed_at timestamptz,
+  original_score int not null,
+  original_tier lead_tier not null,
+  features_snapshot jsonb not null default '{}'
+);
+
+create table buying_committees (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references businesses(id) on delete cascade,
+  company_domain text not null,
+  member_lead_ids uuid[] not null default '{}',
+  total_activity_score int not null default 0,
+  is_active_deal boolean not null default false,
+  first_contact_at timestamptz,
+  last_activity_at timestamptz,
+  updated_at timestamptz not null default now(),
+  unique (business_id, company_domain)
+);
+```
+
+**Enrichment pipeline (backend):**
+1. Stage 1 validate: zerobounce/neverbounce for email, MX check, disposable detection.
+2. Stage 2 identity: Clearbit/Apollo/ZoomInfo cascade (try cheap first, fall back to expensive).
+3. Stage 3 behavior: aggregate from GA4 Measurement Protocol or Segment + own event table.
+4. Stage 4 social: LinkedIn Sales Navigator API or equivalent.
+5. Scoring: import `scoreLead()` from `workflow_2_lead_scoring.ts` and run on merged payload.
+6. Routing: import `routeLead()` with loaded routing_rules + current owner loads.
+7. Hot leads trigger LLM draft via `buildLeadResponsePrompt()`. Hybrid approval window = 10 min, auto-send if confidence > 0.9.
+
+**30-day recalibration cron (Sunday 03:00 local):**
+Logistic regression on last 90 days of `lead_outcomes` with features from `features_snapshot`. Updates scoring weights in Supabase metadata. Surfaces top predictive + most misleading signal via `/wf2-calibration` endpoint.
+
 ---
 
 ## 4. Decisions
