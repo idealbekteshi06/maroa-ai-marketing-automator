@@ -776,3 +776,178 @@ export const wf2SaveIcp = (data: {
   servedGeographies: string[];
   deadbeatList: string[];
 }) => post("/webhook/wf2-icp-save", data);
+
+// ─── Workflow #4 — Reviews & Reputation ──────────────────────
+// Backend spec in LEARNINGS.md §3 WF4.
+
+export type ReviewPlatform =
+  | "google_business_profile"
+  | "facebook"
+  | "trustpilot"
+  | "g2"
+  | "capterra"
+  | "yelp"
+  | "tripadvisor"
+  | "amazon"
+  | "app_store"
+  | "play_store"
+  | "glassdoor"
+  | "reddit"
+  | "twitter"
+  | "bbb"
+  | "consumer_affairs"
+  | "other";
+
+export type ReviewCategory = "positive" | "neutral" | "negative" | "critical";
+export type ReviewUrgency = "immediate" | "high" | "medium" | "low";
+export type ReviewResponseStatus =
+  | "pending"
+  | "awaiting_approval"
+  | "responded"
+  | "disputed"
+  | "ignored";
+
+export interface ReviewRow {
+  id: string;
+  platform: ReviewPlatform;
+  reviewerName: string;
+  reviewerProfileUrl: string | null;
+  rating: number;
+  title: string | null;
+  body: string;
+  language: string;
+  postedAt: string;
+  category: ReviewCategory;
+  urgency: ReviewUrgency;
+  sentiment: number;
+  topics: string[];
+  authenticityScore: number;
+  isSuspicious: boolean;
+  legalFlags: string[];
+  responseStatus: ReviewResponseStatus;
+  slaDeadline: string | null;
+}
+
+export interface ReviewDetail extends ReviewRow {
+  reviewerAccountAgeDays: number | null;
+  reviewerReviewCount: number | null;
+  reviewerLocation: string | null;
+  transactionVerified: boolean | null;
+  draftedResponses: Array<{
+    id: string;
+    body: string;
+    signatureName: string;
+    signatureTitle: string;
+    personalizationScore: number;
+    brandVoiceMatchScore: number;
+    wordCount: number;
+    psychologyLevers: string[];
+    predictedImpact: "updated_review" | "goodwill" | "neutralized" | "no_change";
+    isActive: boolean;
+    createdAt: string;
+  }>;
+}
+
+export const wf4ListReviews = (params: {
+  business_id: string;
+  category?: ReviewCategory;
+  platform?: ReviewPlatform;
+  response_status?: ReviewResponseStatus;
+  limit?: string;
+  cursor?: string;
+  q?: string;
+}) =>
+  get<{
+    items: ReviewRow[];
+    nextCursor: string | null;
+    counts: Record<ReviewCategory, number>;
+    pendingResponseCount: number;
+  }>("/webhook/wf4-reviews-list", params);
+
+export const wf4GetReview = (params: { business_id: string; review_id: string }) =>
+  get<ReviewDetail>("/webhook/wf4-review-get", params);
+
+export const wf4GenerateResponse = (data: {
+  businessId: string;
+  reviewId: string;
+  regenerate?: boolean;
+}) =>
+  post<{
+    drafts: Array<{
+      id: string;
+      body: string;
+      signatureName: string;
+      signatureTitle: string;
+      personalizationScore: number;
+      brandVoiceMatchScore: number;
+      psychologyLevers: string[];
+      predictedImpact: string;
+    }>;
+  }>("/webhook/wf4-generate-response", data);
+
+export const wf4PublishResponse = (data: {
+  businessId: string;
+  reviewId: string;
+  draftId: string;
+  editedBody?: string;
+}) => post<{ publishedAt: string }>("/webhook/wf4-publish-response", data);
+
+export const wf4DisputeReview = (data: { businessId: string; reviewId: string }) =>
+  post<{ disputeId: string; submittedAt: string }>("/webhook/wf4-dispute-review", data);
+
+export const wf4IgnoreReview = (data: { businessId: string; reviewId: string; reason?: string }) =>
+  post("/webhook/wf4-ignore-review", data);
+
+export const wf4RequestReviewFromCustomer = (data: {
+  businessId: string;
+  customerId?: string;
+  customerName: string;
+  customerContact: { email?: string; phone?: string };
+  channel: "email" | "sms" | "whatsapp";
+  platform: ReviewPlatform;
+  triggerKind: "post_purchase" | "post_service" | "post_checkin" | "post_support_resolution" | "nps_promoter";
+  productOrService?: string;
+  staffMember?: string;
+}) => post<{ requestId: string }>("/webhook/wf4-request-review", data);
+
+export const wf4GetReputationSnapshot = (params: { business_id: string }) =>
+  get<{
+    byPlatform: Array<{
+      platform: ReviewPlatform;
+      currentAvgRating: number;
+      reviewCount: number;
+      monthlyVelocity: number;
+      trajectory3m: number;
+      trajectory6m: number;
+      trajectory12m: number;
+      responseRate: number;
+      avgResponseTimeHours: number;
+    }>;
+    sentimentTimeline: Array<{ date: string; positive: number; neutral: number; negative: number }>;
+    topPositiveThemes: Array<{ theme: string; count: number; sampleQuote: string }>;
+    topNegativeThemes: Array<{ theme: string; count: number; sampleQuote: string }>;
+    benchmarks: {
+      industryAvgRating: number;
+      topCompetitorAvgRating: number;
+      directionVsIndustry: "improving" | "flat" | "declining";
+    };
+    topComplaintsForOps: string[];
+  }>("/webhook/wf4-reputation-snapshot", params);
+
+export const wf4GetTestimonialLibrary = (params: { business_id: string }) =>
+  get<{
+    items: Array<{
+      reviewId: string;
+      platform: ReviewPlatform;
+      reviewerName: string;
+      rating: number;
+      quote: string;
+      permissionStatus: "not_requested" | "requested" | "granted" | "declined";
+      usedIn: string[];
+    }>;
+  }>("/webhook/wf4-testimonials-get", params);
+
+export const wf4RequestTestimonialPermission = (data: {
+  businessId: string;
+  reviewId: string;
+}) => post("/webhook/wf4-testimonial-request-permission", data);

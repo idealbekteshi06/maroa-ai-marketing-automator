@@ -577,6 +577,165 @@ create table buying_committees (
 **30-day recalibration cron (Sunday 03:00 local):**
 Logistic regression on last 90 days of `lead_outcomes` with features from `features_snapshot`. Updates scoring weights in Supabase metadata. Surfaces top predictive + most misleading signal via `/wf2-calibration` endpoint.
 
+#### WF4 — Reviews & Reputation
+
+Chief Experience Officer-grade reputation engine. 88% of consumers trust reviews as much as personal recs (BrightLocal 2024). 3.5→4.0 stars = +12% revenue (HBS). >50% response rate = +21% revenue vs non-responders (BrightLocal). 30–45% of negative reviewers UPDATE their review when response is thoughtful (Harvard).
+
+**Platforms monitored (primary, every hour):** GBP, Facebook, Trustpilot, G2/Capterra, Yelp, TripAdvisor, Amazon, App Store, Play Store, Glassdoor. **Secondary (daily):** Reddit, Twitter/X, BBB, Consumer Affairs, industry-specific sites.
+
+**Response SLAs by urgency:** immediate <1h (legal/safety/viral), high <6h (detailed negative, influential), medium <24h (standard), low <48h (positive/routine).
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET  | `/webhook/wf4-reviews-list` | List with category/platform/status filters + pending response count. |
+| GET  | `/webhook/wf4-review-get` | Full detail + drafted responses. |
+| POST | `/webhook/wf4-generate-response` | LLM-generate response (1 for positive/neutral, 2–3 variants for negative, 1 + escalation for critical). |
+| POST | `/webhook/wf4-publish-response` | Approve and publish. |
+| POST | `/webhook/wf4-dispute-review` | Draft platform dispute for fake/malicious reviews with evidence package. |
+| POST | `/webhook/wf4-ignore-review` | Mark ignored (still counted in metrics). |
+| POST | `/webhook/wf4-request-review` | Trigger review request to a customer (email/SMS/WhatsApp). |
+| GET  | `/webhook/wf4-reputation-snapshot` | Per-platform snapshot, sentiment timeline, themes, benchmarks, top complaints. |
+| GET  | `/webhook/wf4-testimonials-get` | Testimonial library (5⭐ reviews with permission state). |
+| POST | `/webhook/wf4-testimonial-request-permission` | Email reviewer asking to use quote in marketing. |
+
+**Supabase migrations for WF4:**
+```sql
+create type review_category as enum ('positive','neutral','negative','critical');
+create type review_urgency as enum ('immediate','high','medium','low');
+create type review_response_status as enum (
+  'pending','awaiting_approval','responded','disputed','ignored'
+);
+
+create table reviews (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references businesses(id) on delete cascade,
+  platform text not null,
+  external_id text not null,
+  reviewer_name text not null,
+  reviewer_profile_url text,
+  reviewer_account_age_days int,
+  reviewer_review_count int,
+  reviewer_location text,
+  rating int not null check (rating between 1 and 5),
+  title text,
+  body text not null,
+  language text not null default 'en',
+  posted_at timestamptz not null,
+  detected_at timestamptz not null default now(),
+  category review_category not null,
+  urgency review_urgency not null,
+  sentiment numeric not null,
+  topics text[] not null default '{}',
+  authenticity_score int not null default 100,
+  authenticity_flags text[] not null default '{}',
+  is_suspicious boolean not null default false,
+  legal_flags text[] not null default '{}',
+  response_status review_response_status not null default 'pending',
+  sla_deadline timestamptz,
+  transaction_verified boolean,
+  responded_at timestamptz,
+  responded_by uuid,
+  unique (business_id, platform, external_id)
+);
+create index on reviews (business_id, response_status, sla_deadline);
+create index on reviews (business_id, category, posted_at desc);
+
+create table review_responses (
+  id uuid primary key default gen_random_uuid(),
+  review_id uuid not null references reviews(id) on delete cascade,
+  body text not null,
+  signature_name text not null,
+  signature_title text not null,
+  personalization_score int not null,
+  brand_voice_match_score int not null,
+  word_count int not null,
+  psychology_levers text[] not null default '{}',
+  predicted_impact text,
+  is_active boolean not null default false,
+  is_published boolean not null default false,
+  published_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create table review_disputes (
+  id uuid primary key default gen_random_uuid(),
+  review_id uuid not null references reviews(id) on delete cascade,
+  platform text not null,
+  dispute_body text not null,
+  evidence_items text[] not null default '{}',
+  requested_action text not null,
+  status text not null default 'submitted',
+  submitted_at timestamptz not null default now(),
+  resolved_at timestamptz,
+  resolution text
+);
+
+create table testimonials (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references businesses(id) on delete cascade,
+  review_id uuid references reviews(id) on delete set null,
+  quote text not null,
+  reviewer_name text not null,
+  platform text not null,
+  rating int not null,
+  permission_status text not null default 'not_requested' check (
+    permission_status in ('not_requested','requested','granted','declined')
+  ),
+  permission_requested_at timestamptz,
+  permission_granted_at timestamptz,
+  used_in text[] not null default '{}',
+  created_at timestamptz not null default now()
+);
+create index on testimonials (business_id, permission_status);
+
+create table review_request_triggers (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references businesses(id) on delete cascade,
+  kind text not null check (kind in (
+    'post_purchase','post_service','post_checkin','post_support_resolution','nps_promoter'
+  )),
+  delay_hours int not null,
+  channel text not null check (channel in ('email','sms','whatsapp')),
+  target_platform text not null,
+  active boolean not null default true
+);
+
+create table review_requests_sent (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null,
+  customer_identifier text not null,
+  trigger_id uuid references review_request_triggers(id),
+  channel text not null,
+  target_platform text not null,
+  sent_at timestamptz not null default now(),
+  clicked_at timestamptz,
+  review_posted_at timestamptz,
+  review_id uuid references reviews(id)
+);
+```
+
+**Classification pipeline (backend):**
+1. Platform hourly polling (primary) + daily (secondary) → insert into `reviews` with `response_status='pending'`.
+2. LLM classification via `buildReviewClassificationPrompt()` sets category, urgency, sentiment, topics, authenticity, legalFlags.
+3. If `is_suspicious` → surface dispute draft UI.
+4. If `legal_flags` not empty → always `awaiting_approval`, flag to 3 stakeholders via email+SMS.
+5. Otherwise → generate response via `buildReviewResponsePrompt()`.
+   - Positive reviews with `brandVoiceMatchScore > 85` → eligible for auto-publish (per business autonomy setting).
+   - Neutral → single draft, requires approval.
+   - Negative → 2–3 variants generated, requires approval (per spec "your choice").
+   - Critical → 1 draft + escalation, NEVER auto-publish.
+6. On publish → call platform API to post reply. Record `responded_at`.
+7. Post-publish monitoring: track if negative reviewer updates their review within 14 days (Harvard 30–45% update rate — measure locally).
+
+**Testimonial → marketing loop:**
+- 5⭐ reviews with specific, vivid language auto-flagged as testimonial candidates.
+- Automated permission request email via `wf4-testimonial-request-permission`.
+- Granted testimonials surfaced to WF1 (content engine) and WF10 (Studio) as approved social proof.
+
+**Ops accountability loop:**
+- Weekly: aggregate top 5 negative themes → push to ops team (email + dashboard).
+- Monthly rollup into WF13 Weekly Strategy Brief "customer voice" section.
+
 ---
 
 ## 4. Decisions

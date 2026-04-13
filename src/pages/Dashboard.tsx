@@ -85,6 +85,7 @@ const WF1DailyContentEngine = lazy(() => import("@/pages/workflows/DailyContentE
 const WF13WeeklyStrategyBrief = lazy(() => import("@/pages/workflows/WeeklyStrategyBrief"));
 const WF15AiBrain = lazy(() => import("@/pages/workflows/AiBrain"));
 const WF2LeadScoring = lazy(() => import("@/pages/workflows/LeadScoring"));
+const WF4ReviewsReputation = lazy(() => import("@/pages/workflows/ReviewsReputation"));
 
 /* ── v2 Navigation (REFACTOR_BRIEF_V2 section 2.1) ────────────
  * 7 primary items per Miller's 7±2 law. Workflows expand into 4 categories
@@ -301,7 +302,7 @@ export default function Dashboard() {
          * to the legacy component closest in meaning. */
         case "wf2-leads": return <WF2LeadScoring />;
         case "wf3-ads": return <DashboardAds />;
-        case "wf4-reviews": return <DashboardReviews />;
+        case "wf4-reviews": return <WF4ReviewsReputation />;
         case "wf5-competitors": return <DashboardCompetitors />;
         case "wf6-local-presence": return <DashboardSEO />;
         case "wf7-email": return <DashboardEmail />;
