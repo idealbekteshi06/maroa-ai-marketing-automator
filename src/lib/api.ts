@@ -485,3 +485,146 @@ export const wf13PlanActionDecision = (data: {
   actionId: string;
   decision: "approve" | "reject" | "defer";
 }) => post("/webhook/wf13-plan-action-decision", data);
+
+// ─── Workflow #15 — AI Brain (Conversational Command Center) ───
+// Backend spec in LEARNINGS.md §3 WF15.
+
+export type BrainMessageRole = "user" | "assistant" | "system" | "tool";
+export type BrainModel = "haiku" | "sonnet" | "opus";
+export type BrainToolStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "awaiting_approval"
+  | "rejected";
+
+export interface BrainMessageDto {
+  id: string;
+  role: BrainMessageRole;
+  content: string;
+  attachments?: Array<{
+    id: string;
+    modality: "voice" | "image" | "url" | "file";
+    url: string;
+    mimeType: string;
+    name?: string;
+    transcription?: string;
+    ocrText?: string;
+    scrapedSummary?: string;
+  }>;
+  toolCalls?: Array<{
+    id: string;
+    tool: string;
+    inputSummary: string;
+    status: BrainToolStatus;
+    progress?: { percent: number; note: string };
+    result?: unknown;
+    error?: string;
+    startedAt: string;
+    completedAt?: string;
+    requiresApproval: boolean;
+    rationale?: string;
+    alternativesConsidered?: string[];
+  }>;
+  reasoning?: string;
+  modelUsed?: BrainModel;
+  costUsd?: number;
+  createdAt: string;
+}
+
+export interface BrainConversation {
+  id: string;
+  title: string;
+  lastMessageAt: string;
+  messageCount: number;
+}
+
+/** List all conversations for a business. */
+export const wf15ListConversations = (params: { business_id: string }) =>
+  get<{ items: BrainConversation[] }>("/webhook/wf15-conversations", params);
+
+/** Fetch messages in a conversation. */
+export const wf15GetConversation = (params: { business_id: string; conversation_id: string }) =>
+  get<{
+    conversation: BrainConversation;
+    messages: BrainMessageDto[];
+  }>("/webhook/wf15-conversation-get", params);
+
+/** Create a new conversation. */
+export const wf15CreateConversation = (data: { businessId: string; initialMessage?: string }) =>
+  post<{ conversationId: string }>("/webhook/wf15-conversation-create", data);
+
+/**
+ * Send a message. Returns an SSE stream URL + server-assigned message id.
+ * The client opens an EventSource to that URL and receives streaming tokens,
+ * tool-call events, and a final done event.
+ *
+ * Stream event shapes (server-sent events):
+ *   event: token       data: { delta: string }
+ *   event: reasoning   data: { delta: string }           // shown in "explain" panel
+ *   event: tool_call   data: { toolCall: ToolCall }      // start of a tool invocation
+ *   event: tool_update data: { id, progress, status }    // progress update
+ *   event: tool_result data: { id, result, status }      // result (or awaiting_approval)
+ *   event: done        data: { messageId, modelUsed, costUsd }
+ *   event: error       data: { message }
+ */
+export const wf15SendMessage = (data: {
+  businessId: string;
+  conversationId: string;
+  content: string;
+  attachmentIds?: string[];
+}) =>
+  post<{
+    assistantMessageId: string;
+    streamUrl: string; // absolute or path; client opens EventSource
+  }>("/webhook/wf15-send-message", data);
+
+/** Approve or reject a pending tool call (when requiresApproval=true). */
+export const wf15ToolDecision = (data: {
+  businessId: string;
+  toolCallId: string;
+  decision: "approve" | "reject";
+  edits?: Record<string, unknown>;
+}) => post("/webhook/wf15-tool-decision", data);
+
+/** Explain a past decision — renders senior-strategist teaching mode. */
+export const wf15ExplainDecision = (data: {
+  businessId: string;
+  messageId: string;
+}) =>
+  post<{
+    decision: string;
+    evidence: string[];
+    alternatives: Array<{ option: string; why_rejected: string }>;
+    nextStep: string;
+  }>("/webhook/wf15-explain", data);
+
+/** Decision log — searchable history of actions Brain has taken. */
+export const wf15DecisionLog = (params: {
+  business_id: string;
+  limit?: string;
+  kind?: string;
+  before?: string;
+}) =>
+  get<{
+    items: Array<{
+      id: string;
+      createdAt: string;
+      trigger: "cron" | "user" | "event";
+      summary: string;
+      workflow: string;
+      toolsUsed: string[];
+      outcome: "success" | "failure" | "rejected" | "awaiting_approval";
+      modelUsed: BrainModel;
+      costUsd: number;
+    }>;
+    nextCursor: string | null;
+  }>("/webhook/wf15-decision-log", params);
+
+/** Upload a multimodal attachment (voice/image/file). Returns attachment id. */
+export const wf15UploadAttachment = (data: FormData) =>
+  fetch(`${getApiBase()}/webhook/wf15-upload-attachment`, {
+    method: "POST",
+    body: data,
+  }).then((r) => r.json() as Promise<{ id: string; modality: string; url: string }>);

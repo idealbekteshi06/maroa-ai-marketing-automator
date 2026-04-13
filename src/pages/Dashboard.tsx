@@ -83,6 +83,7 @@ const DashboardOrchestrator = lazy(() => import("@/components/dashboard/Dashboar
 /* ── v2 workflow pages (MAROA_15_WORKFLOWS_V2) ── */
 const WF1DailyContentEngine = lazy(() => import("@/pages/workflows/DailyContentEngine"));
 const WF13WeeklyStrategyBrief = lazy(() => import("@/pages/workflows/WeeklyStrategyBrief"));
+const WF15AiBrain = lazy(() => import("@/pages/workflows/AiBrain"));
 
 /* ── v2 Navigation (REFACTOR_BRIEF_V2 section 2.1) ────────────
  * 7 primary items per Miller's 7±2 law. Workflows expand into 4 categories
@@ -287,7 +288,8 @@ export default function Dashboard() {
         case "upgrade-cro": return <DashboardUpgradeCRO />;
         case "signup-cro": return <DashboardSignupCRO />;
         case "orchestrator": return <DashboardOrchestrator />;
-        case "ai-brain": return <DashboardAIBrain />;
+        case "ai-brain": return <WF15AiBrain />;
+        case "ai-brain-legacy": return <DashboardAIBrain />;
         case "health": return <DashboardHealth />;
         case "campaign": return <DashboardCampaign />;
         /* v2 workflow routes (MAROA_15_WORKFLOWS_V2) */

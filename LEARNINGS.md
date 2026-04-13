@@ -303,6 +303,139 @@ create table brief_settings (
 
 **Framework import requirement:** Backend Opus call MUST prepend the full `buildSystemPrompt(ctx, addendum)` output from `workflow_13_weekly_brief.ts`. The `FOUNDATION_SYSTEM_PROMPT` from `foundation.ts` is the canonical strategic framework — do not paraphrase in the backend.
 
+#### WF15 — AI Brain (Conversational Command Center)
+
+The Chief of Staff. Streaming SSE chat + tool use + approval gates + three-layer memory (short / medium / long-term via Pinecone) + intelligent model routing (Haiku / Sonnet / Opus).
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET  | `/webhook/wf15-conversations` | List conversations for a business. |
+| GET  | `/webhook/wf15-conversation-get` | Fetch messages in a conversation. |
+| POST | `/webhook/wf15-conversation-create` | Create a new conversation. |
+| POST | `/webhook/wf15-send-message` | Post a user message. Returns `{ assistantMessageId, streamUrl }`. Client opens EventSource on `streamUrl`. |
+| POST | `/webhook/wf15-tool-decision` | Approve/reject a pending tool call. |
+| POST | `/webhook/wf15-explain` | Render senior-strategist teaching mode for a past decision. |
+| GET  | `/webhook/wf15-decision-log` | Paginated log of every action Brain has taken. |
+| POST | `/webhook/wf15-upload-attachment` | Multipart upload for voice/image/file attachments. |
+
+**SSE stream event shapes** (server-sent events on the streamUrl):
+```
+event: token        data: { delta: string }
+event: reasoning    data: { delta: string }
+event: tool_call    data: { toolCall: <ToolCall> }
+event: tool_update  data: { id, progress?: {percent, note}, status? }
+event: tool_result  data: { id, result?, status }
+event: done         data: { messageId, modelUsed, costUsd }
+event: error        data: { message }
+```
+
+**Supabase migrations for WF15:**
+```sql
+create type brain_message_role as enum ('user', 'assistant', 'system', 'tool');
+create type brain_model as enum ('haiku', 'sonnet', 'opus');
+create type brain_tool_status as enum (
+  'pending', 'running', 'completed', 'failed', 'awaiting_approval', 'rejected'
+);
+
+create table brain_conversations (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references businesses(id) on delete cascade,
+  title text not null default 'New conversation',
+  last_message_at timestamptz not null default now(),
+  message_count int not null default 0,
+  created_at timestamptz not null default now()
+);
+create index on brain_conversations (business_id, last_message_at desc);
+
+create table brain_messages (
+  id uuid primary key default gen_random_uuid(),
+  conversation_id uuid not null references brain_conversations(id) on delete cascade,
+  role brain_message_role not null,
+  content text not null default '',
+  reasoning text,
+  model_used brain_model,
+  cost_usd numeric,
+  created_at timestamptz not null default now()
+);
+create index on brain_messages (conversation_id, created_at);
+
+create table brain_attachments (
+  id uuid primary key default gen_random_uuid(),
+  message_id uuid not null references brain_messages(id) on delete cascade,
+  modality text not null check (modality in ('voice','image','url','file')),
+  url text not null,
+  mime_type text not null,
+  name text,
+  transcription text,
+  ocr_text text,
+  scraped_summary text
+);
+
+create table brain_tool_calls (
+  id uuid primary key default gen_random_uuid(),
+  message_id uuid not null references brain_messages(id) on delete cascade,
+  tool text not null,
+  input_summary text not null,
+  input_payload jsonb not null default '{}',
+  status brain_tool_status not null default 'pending',
+  progress jsonb,
+  result jsonb,
+  error text,
+  started_at timestamptz not null default now(),
+  completed_at timestamptz,
+  requires_approval boolean not null default false,
+  rationale text,
+  alternatives_considered text[] not null default '{}',
+  approved_by uuid,
+  approved_at timestamptz
+);
+create index on brain_tool_calls (status) where status in ('awaiting_approval','pending','running');
+
+create table brain_decision_log (
+  -- mirror of meaningful actions for the auditable decision log sidebar
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null,
+  message_id uuid references brain_messages(id),
+  trigger text not null check (trigger in ('cron','user','event')),
+  summary text not null,
+  workflow text not null,
+  tools_used text[] not null default '{}',
+  outcome text not null check (outcome in ('success','failure','rejected','awaiting_approval')),
+  model_used brain_model not null,
+  cost_usd numeric not null default 0,
+  payload jsonb,
+  created_at timestamptz not null default now()
+);
+create index on brain_decision_log (business_id, created_at desc);
+
+create table brain_owner_preferences (
+  business_id uuid primary key references businesses(id) on delete cascade,
+  verbosity text not null default 'standard' check (verbosity in ('terse','standard','verbose')),
+  technical_depth text not null default 'intermediate',
+  language text not null default 'en',
+  topics_of_high_interest text[] not null default '{}',
+  recommendations_often_rejected text[] not null default '{}',
+  recommendations_often_approved text[] not null default '{}',
+  morning_checkin_enabled boolean not null default true,
+  morning_checkin_hour int not null default 7,
+  quiet_hours_start time,
+  quiet_hours_end time,
+  updated_at timestamptz not null default now()
+);
+```
+
+**Backend integration requirements**
+- Model router: call `routeModel(query, hasAttachments)` from `workflow_15_ai_brain.ts` to pick Haiku/Sonnet/Opus. Auto-escalate to Opus when query >40 words or matches strategic regex patterns.
+- Pinecone: per-business namespace. Index every user message + every assistant message with non-empty reasoning + every stored brand document. Retrieve top-5 relevant chunks on every turn.
+- Tool execution: all tools with `approval: true` in `BRAIN_TOOLS` must stage for approval. Never execute without confirmation.
+- Sensitive-data masking: apply `WF15_GUARDRAILS.sensitiveDataMasking` regexes to user content before persisting to logs.
+- Proactive messages: respect `quiet_hours` + `minHoursBetweenProactiveMessages=4` unless severity=critical.
+- Cost tracking: per-message costUsd must be recorded and aggregated to enforce monthly caps (growth=500/mo, agency=unlimited fair use).
+
+**Voice path (optional, Agency plan)**
+- Whisper for voice input transcription.
+- ElevenLabs for voice output (brand-appropriate voice profile).
+
 ---
 
 ## 4. Decisions
