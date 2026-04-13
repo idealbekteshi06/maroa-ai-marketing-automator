@@ -255,3 +255,86 @@ export const whiteLabelUpdate = (data: Record<string, unknown>) =>
 
 export const getWhiteLabel = (params: Record<string, string>) =>
   get("/webhook/white-label-get", params);
+
+// ─── Workflow #1 — Daily Content Engine ──────────────────────
+// All endpoints below are called by the new src/pages/workflows/* UIs. The
+// Railway backend must implement them as specified in LEARNINGS.md §3 WF1.
+
+/** Run the 06:00 strategic decision phase manually (dev + "run now" button). */
+export const wf1RunStrategicDecision = (data: { businessId: string; forceReplan?: boolean }) =>
+  post<{ runId: string; analysis: unknown; concepts: unknown[] }>(
+    "/webhook/wf1-strategic-decision",
+    data,
+  );
+
+/** Fetch the current daily plan (concepts + status) for a business. */
+export const wf1GetDailyPlan = (params: { business_id: string; date?: string }) =>
+  get<{
+    date: string;
+    status: "draft" | "queued" | "awaiting_approval" | "published" | "skipped";
+    analysis: {
+      brandMaturity: string;
+      narrativeArc: string;
+      culturalOpportunity: string;
+      funnelStagesNeedingAttention: string[];
+      underservedPillars: string[];
+      targetEmotions: string[];
+      reasoning: string;
+    };
+    concepts: Array<{
+      id: string;
+      platform: string;
+      format: string;
+      pillar: string;
+      funnelStage: string;
+      emotion: string;
+      coreIdea: string;
+      hook: string;
+      cta: string;
+      framework: string;
+      whyThisWhyNow: string;
+      predictedEngagementRange: [number, number];
+      riskLevel: "low" | "medium" | "high";
+      qualityScore: number | null;
+      status: "pending" | "approved" | "rejected" | "published";
+      generatedAsset?: {
+        caption: string;
+        hashtags: string[];
+        visualBrief: unknown;
+        postingTime: { localTime: string; rationale: string };
+        predictedQualityScore: number;
+      } | null;
+    }>;
+  }>("/webhook/wf1-plan-get", params);
+
+/** Generate the platform-native asset for an approved concept. */
+export const wf1GenerateAsset = (data: { businessId: string; conceptId: string }) =>
+  post<{ assetId: string; qualityScore: number }>(
+    "/webhook/wf1-generate-asset",
+    data,
+  );
+
+/** Approve or reject a concept or a generated asset (feeds the learning loop). */
+export const wf1Decision = (data: {
+  businessId: string;
+  conceptId: string;
+  decision: "approve" | "reject" | "edit";
+  editedCaption?: string;
+  reason?: string;
+}) => post("/webhook/wf1-decision", data);
+
+/** Fetch learning-loop state: winning + anti-patterns, hashtag bank, prediction accuracy. */
+export const wf1GetLearningState = (params: { business_id: string }) =>
+  get<{
+    winningPatterns: Array<{ trait: string; lift: number; sampleSize: number }>;
+    antiPatterns: Array<{ trait: string; drag: number; sampleSize: number }>;
+    hashtagBank: Array<{ tag: string; platform: string; avgReach: number; usages: number }>;
+    predictionAccuracy: { mae: number; sampleSize: number };
+  }>("/webhook/wf1-learning-state", params);
+
+/** Update the autonomy mode for this business. */
+export const wf1SetAutonomyMode = (data: {
+  businessId: string;
+  mode: "full_autopilot" | "hybrid" | "approve_everything";
+  hybridWindowHours?: number;
+}) => post("/webhook/wf1-autonomy-mode", data);
