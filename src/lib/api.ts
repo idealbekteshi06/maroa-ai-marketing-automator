@@ -338,3 +338,150 @@ export const wf1SetAutonomyMode = (data: {
   mode: "full_autopilot" | "hybrid" | "approve_everything";
   hybridWindowHours?: number;
 }) => post("/webhook/wf1-autonomy-mode", data);
+
+// ─── Workflow #13 — Weekly Strategy Brief ────────────────────
+// Backend spec in LEARNINGS.md §3 WF13.
+
+export type Wf13BriefStatus =
+  | "queued"
+  | "aggregating"
+  | "synthesizing"
+  | "polishing"
+  | "awaiting_review"
+  | "approved"
+  | "delivered"
+  | "rejected";
+
+export interface Wf13BriefSummary {
+  id: string;
+  weekStart: string;
+  weekEnd: string;
+  status: Wf13BriefStatus;
+  subjectLine: string | null;
+  headline: string | null;
+  wordCount: number | null;
+  generatedAt: string | null;
+  deliveredAt: string | null;
+}
+
+export interface Wf13BriefDetail extends Wf13BriefSummary {
+  executiveSummary: string;
+  kpiNarrative: Array<{ metric: string; value: string; context: string; meaning: string }>;
+  wins: Array<{
+    headline: string;
+    evidence: string;
+    causalAnalysis: string;
+    frameworkLever: string;
+    protectionPlan: string;
+  }>;
+  losses: Array<{
+    headline: string;
+    evidence: string;
+    rootCause: string;
+    frameworkDiagnosis: string;
+    remediationPlan: string;
+    consequenceIfIgnored: string;
+  }>;
+  whatChanged: Array<{ observation: string; vsBaseline: string; signal: string }>;
+  marketContext: Array<{ event: string; implication: string; actionable: boolean }>;
+  biggestInsight: string;
+  nextWeekPlan: Array<{
+    id: string;
+    action: string;
+    whyNow: string;
+    expectedImpact: { low: number; high: number; metric: string };
+    effortHours: number;
+    owner: "ai" | "founder" | "team";
+    deadline: string;
+    oneClickApprove: boolean;
+    metric: string;
+    status: "pending" | "approved" | "rejected" | "deferred";
+  }>;
+  whatsComingPreview: string;
+  riskWatch: Array<{
+    risk: string;
+    leadingIndicator: string;
+    probabilityHint: "low" | "medium" | "high";
+    mitigation: string;
+  }>;
+  strategicQuestion: string;
+  dataSources: string[];
+  frameworksCited: string[];
+  kpiCards: Array<{
+    key: string;
+    label: string;
+    value: string;
+    vsLastWeek: number;
+    vsBenchmark: number;
+    vsGoal?: number;
+    sparkline: number[];
+  }>;
+}
+
+/** Trigger synthesis now (used by manual mode and "regenerate" button). */
+export const wf13GenerateBrief = (data: { businessId: string; weekStart?: string }) =>
+  post<{ briefId: string; status: Wf13BriefStatus }>("/webhook/wf13-generate-brief", data);
+
+/** Fetch the latest (current week) brief for a business. */
+export const wf13GetLatestBrief = (params: { business_id: string }) =>
+  get<Wf13BriefDetail | null>("/webhook/wf13-latest-brief", params);
+
+/** Paginated history of past briefs. */
+export const wf13GetBriefHistory = (params: {
+  business_id: string;
+  limit?: string;
+  before?: string;
+  q?: string;
+}) =>
+  get<{
+    items: Wf13BriefSummary[];
+    nextCursor: string | null;
+  }>("/webhook/wf13-brief-history", params);
+
+/** Approve / reject / edit a brief when autonomy mode is review_first. */
+export const wf13BriefDecision = (data: {
+  businessId: string;
+  briefId: string;
+  decision: "approve" | "edit" | "reject";
+  editedSections?: Partial<{
+    executiveSummary: string;
+    biggestInsight: string;
+    strategicQuestion: string;
+  }>;
+  reason?: string;
+}) => post("/webhook/wf13-brief-decision", data);
+
+/** Delivery settings: autonomy mode + channels + recipients + schedule. */
+export const wf13SaveDeliverySettings = (data: {
+  businessId: string;
+  autonomyMode: "auto_send" | "review_first" | "manual";
+  channels: Array<"email" | "slack" | "whatsapp" | "dashboard_only" | "pdf">;
+  recipients: Array<{ name: string; email?: string; slackUserId?: string; whatsappE164?: string }>;
+  deliveryDay: "sunday" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday";
+  deliveryLocalTime: string; // "07:00"
+  preferredLength: "brief" | "standard" | "detailed";
+  tonePreference: "formal" | "casual" | "direct";
+  technicalDepth: "layman" | "intermediate" | "expert";
+  language: string;
+}) => post("/webhook/wf13-delivery-settings", data);
+
+export const wf13GetDeliverySettings = (params: { business_id: string }) =>
+  get<{
+    autonomyMode: "auto_send" | "review_first" | "manual";
+    channels: Array<"email" | "slack" | "whatsapp" | "dashboard_only" | "pdf">;
+    recipients: Array<{ name: string; email?: string; slackUserId?: string; whatsappE164?: string }>;
+    deliveryDay: string;
+    deliveryLocalTime: string;
+    preferredLength: "brief" | "standard" | "detailed";
+    tonePreference: "formal" | "casual" | "direct";
+    technicalDepth: "layman" | "intermediate" | "expert";
+    language: string;
+  }>("/webhook/wf13-delivery-settings-get", params);
+
+/** Approve / reject a specific next-week plan action (one-click). */
+export const wf13PlanActionDecision = (data: {
+  businessId: string;
+  briefId: string;
+  actionId: string;
+  decision: "approve" | "reject" | "defer";
+}) => post("/webhook/wf13-plan-action-decision", data);

@@ -82,6 +82,7 @@ const DashboardOrchestrator = lazy(() => import("@/components/dashboard/Dashboar
 
 /* ── v2 workflow pages (MAROA_15_WORKFLOWS_V2) ── */
 const WF1DailyContentEngine = lazy(() => import("@/pages/workflows/DailyContentEngine"));
+const WF13WeeklyStrategyBrief = lazy(() => import("@/pages/workflows/WeeklyStrategyBrief"));
 
 /* ── v2 Navigation (REFACTOR_BRIEF_V2 section 2.1) ────────────
  * 7 primary items per Miller's 7±2 law. Workflows expand into 4 categories
@@ -291,6 +292,7 @@ export default function Dashboard() {
         case "campaign": return <DashboardCampaign />;
         /* v2 workflow routes (MAROA_15_WORKFLOWS_V2) */
         case "wf1-daily-content": return <WF1DailyContentEngine />;
+        case "wf13-brief": return <WF13WeeklyStrategyBrief />;
         /* The following v2 routes will be added in subsequent commits as each
          * workflow is implemented per its spec. Until then they fall through
          * to the legacy component closest in meaning. */
@@ -303,7 +305,7 @@ export default function Dashboard() {
         case "wf8-insights": return <DashboardResearch />;
         case "wf11-inbox": return <DashboardCRM />;
         case "wf12-launch": return <DashboardLaunch />;
-        case "wf13-brief": return <DashboardHealth />;
+        // wf13-brief handled above
         case "wf14-budget": return <DashboardHealth />;
         case "inbox": return <DashboardCRM />;
         case "studio": return <DashboardContent />;

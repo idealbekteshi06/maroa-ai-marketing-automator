@@ -115,7 +115,193 @@ create table if not exists brain_decisions (
 
 ### 3.2 Endpoints to add (grouped per workflow, filled as each workflow is built)
 
-_(added per workflow section below)_
+#### WF1 — Daily Content Engine
+
+Cron: daily 06:00 local (aggregation) → 07:00 local (strategic decision, Opus) → 07:30 local (per-concept generation, Sonnet) → quality gate → autonomy routing.
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/webhook/wf1-strategic-decision` | Manual "run now" → runs the Phase 2 strategist prompt. Body `{ businessId, forceReplan? }`. Returns `{ runId, analysis, concepts[] }`. |
+| GET  | `/webhook/wf1-plan-get` | Fetch today's plan. Query `?business_id=…&date=YYYY-MM-DD`. Returns full plan with concepts + generated assets + quality scores. |
+| POST | `/webhook/wf1-generate-asset` | Trigger Phase 3 platform generation for an approved concept. Body `{ businessId, conceptId }`. |
+| POST | `/webhook/wf1-decision` | Approve/reject/edit a concept. Feeds the learning loop. |
+| GET  | `/webhook/wf1-learning-state` | Returns winning patterns, anti-patterns, hashtag bank, prediction accuracy. |
+| POST | `/webhook/wf1-autonomy-mode` | Update autonomy mode (full_autopilot / hybrid / approve_everything). |
+
+Supabase tables (in addition to §3.1): `wf1_daily_plans`, `wf1_concepts`, `wf1_generated_assets`, `wf1_learning_patterns`, `wf1_hashtag_bank`, `wf1_autonomy_settings`.
+
+Backend must import `src/lib/prompts/foundation.ts` + `src/lib/prompts/workflow_1_daily_content.ts` verbatim (shared npm package or monorepo symlink). Do NOT paraphrase the system prompt.
+
+#### WF13 — Weekly Strategy Brief
+
+Cron schedule:
+- **Sunday 18:00 local** — data aggregation (produces `WeeklyContextBundle` — see prompt module types).
+- **Sunday 22:00 local** — Phase 2 strategic synthesis (Opus). Writes `StrategySynthesis` JSON.
+- **Sunday 22:30 local** — Phase 3 client-voice polish (Sonnet). Writes `BriefDeliverable` JSON.
+- **Monday 07:00 local** — delivery if `autonomy_mode = auto_send` or brief approved. Sends via configured channels (email, Slack, WhatsApp, dashboard_only, PDF).
+- **If `review_first` and not approved by Tuesday 12:00 local** — second gentle nudge to approver.
+- **First Monday of month** — monthly rollup (30-day window).
+- **Every 90 days** — quarterly strategic review.
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/webhook/wf13-generate-brief` | Trigger synthesis on-demand. Body `{ businessId, weekStart? }`. Returns `{ briefId, status }`. |
+| GET  | `/webhook/wf13-latest-brief` | Current week's brief for business. Returns full `Wf13BriefDetail` or null. |
+| GET  | `/webhook/wf13-brief-history` | Paginated past briefs. Query `business_id, limit, before, q`. |
+| POST | `/webhook/wf13-brief-decision` | Approve/edit/reject when autonomy is `review_first`. |
+| POST | `/webhook/wf13-plan-action-decision` | One-click approve/reject/defer on a next-week plan action. |
+| POST | `/webhook/wf13-delivery-settings` | Save autonomy mode + channels + recipients + schedule + tone/depth/length preferences. |
+| GET  | `/webhook/wf13-delivery-settings-get` | Load delivery settings. |
+
+**Supabase migrations for WF13:**
+
+```sql
+create type wf13_brief_status as enum (
+  'queued', 'aggregating', 'synthesizing', 'polishing',
+  'awaiting_review', 'approved', 'delivered', 'rejected'
+);
+
+create type wf13_autonomy_mode as enum ('auto_send', 'review_first', 'manual');
+
+create table weekly_briefs (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references businesses(id) on delete cascade,
+  week_start date not null,
+  week_end date not null,
+  status wf13_brief_status not null default 'queued',
+  subject_line text,
+  headline text,
+  executive_summary text,
+  biggest_insight text,
+  strategic_question text,
+  whats_coming_preview text,
+  word_count int,
+  data_sources text[] not null default '{}',
+  frameworks_cited text[] not null default '{}',
+  context_bundle jsonb not null default '{}', -- the raw WeeklyContextBundle
+  synthesis jsonb,    -- the StrategySynthesis output from Opus
+  deliverable jsonb,  -- the BriefDeliverable output from Sonnet
+  generated_at timestamptz,
+  delivered_at timestamptz,
+  approved_at timestamptz,
+  approved_by uuid,
+  created_at timestamptz not null default now(),
+  unique (business_id, week_start)
+);
+create index on weekly_briefs (business_id, week_start desc);
+
+create table brief_kpi_cards (
+  id uuid primary key default gen_random_uuid(),
+  brief_id uuid not null references weekly_briefs(id) on delete cascade,
+  key text not null,
+  label text not null,
+  value text not null,
+  vs_last_week numeric,
+  vs_benchmark numeric,
+  vs_goal numeric,
+  sparkline numeric[] not null default '{}',
+  sort_order int not null default 0
+);
+
+create table brief_wins (
+  id uuid primary key default gen_random_uuid(),
+  brief_id uuid not null references weekly_briefs(id) on delete cascade,
+  headline text not null,
+  evidence text not null,
+  causal_analysis text not null,
+  framework_lever text not null,
+  protection_plan text not null,
+  sort_order int not null default 0
+);
+
+create table brief_losses (
+  id uuid primary key default gen_random_uuid(),
+  brief_id uuid not null references weekly_briefs(id) on delete cascade,
+  headline text not null,
+  evidence text not null,
+  root_cause text not null,
+  framework_diagnosis text not null,
+  remediation_plan text not null,
+  consequence_if_ignored text not null,
+  sort_order int not null default 0
+);
+
+create table brief_plan_actions (
+  id uuid primary key default gen_random_uuid(),
+  brief_id uuid not null references weekly_briefs(id) on delete cascade,
+  action text not null,
+  why_now text not null,
+  expected_impact_low numeric not null,
+  expected_impact_high numeric not null,
+  expected_impact_metric text not null,
+  effort_hours numeric not null,
+  owner text not null check (owner in ('ai', 'founder', 'team')),
+  deadline date not null,
+  one_click_approve boolean not null default true,
+  metric text not null,
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected', 'deferred')),
+  decided_at timestamptz,
+  decided_by uuid
+);
+
+create table brief_risks (
+  id uuid primary key default gen_random_uuid(),
+  brief_id uuid not null references weekly_briefs(id) on delete cascade,
+  risk text not null,
+  leading_indicator text not null,
+  probability_hint text not null check (probability_hint in ('low', 'medium', 'high')),
+  mitigation text not null
+);
+
+create table brief_sections (
+  -- generic catch-all for whatChanged / marketContext / kpiNarrative
+  id uuid primary key default gen_random_uuid(),
+  brief_id uuid not null references weekly_briefs(id) on delete cascade,
+  section_type text not null,
+  payload jsonb not null,
+  sort_order int not null default 0
+);
+
+create table brief_deliveries (
+  id uuid primary key default gen_random_uuid(),
+  brief_id uuid not null references weekly_briefs(id) on delete cascade,
+  channel text not null check (channel in ('email', 'slack', 'whatsapp', 'dashboard_only', 'pdf')),
+  recipient jsonb not null, -- { name, email?, slackUserId?, whatsappE164? }
+  delivered_at timestamptz,
+  opened_at timestamptz,
+  error text
+);
+create index on brief_deliveries (brief_id);
+
+create table brief_settings (
+  business_id uuid primary key references businesses(id) on delete cascade,
+  autonomy_mode wf13_autonomy_mode not null default 'review_first',
+  channels text[] not null default '{email}',
+  recipients jsonb not null default '[]',
+  delivery_day text not null default 'monday',
+  delivery_local_time time not null default '07:00',
+  preferred_length text not null default 'standard',
+  tone_preference text not null default 'direct',
+  technical_depth text not null default 'intermediate',
+  language text not null default 'en',
+  updated_at timestamptz not null default now()
+);
+```
+
+**Data sources the backend aggregator must pull (per WeeklyContextBundle fields):**
+- Social: Meta Graph (IG/FB reach + engagement + follower count), LinkedIn Marketing API, TikTok Business API, Twitter v2.
+- Ads: Meta Marketing API (spend, ROAS, CPA, CTR), Google Ads API, LinkedIn Ads API.
+- Email: ESP webhook events (Sendgrid/Mailgun/Resend) aggregated over week.
+- Website: GA4 Data API (sessions, conversion rate, landing pages, bounce).
+- Pipeline: internal Supabase tables from WF2 (leads, mql/sql, opportunities, stages).
+- Revenue: Stripe API (mrr, arr, churn, ltv from customer cohorts) or Shopify Orders API for DTC.
+- Reviews: Google Business Profile API, Yelp, TripAdvisor, Trustpilot (per industry).
+- GBP: Google Business Profile Performance API.
+- Competitive: WF5 output tables.
+- Customer voice: WF8 output tables.
+- Cultural: TimeDB calendar API + Google Trends + news RSS.
+
+**Framework import requirement:** Backend Opus call MUST prepend the full `buildSystemPrompt(ctx, addendum)` output from `workflow_13_weekly_brief.ts`. The `FOUNDATION_SYSTEM_PROMPT` from `foundation.ts` is the canonical strategic framework — do not paraphrase in the backend.
 
 ---
 
