@@ -4,8 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Users, Loader2, Copy, MessageSquare, HelpCircle, Hash, Gamepad2 } from "lucide-react";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
-
-const API_BASE = "https://maroa-api-production.up.railway.app";
+import { apiPost } from "@/lib/apiClient";
 
 interface CommunityPost {
   id: string;
@@ -23,7 +22,7 @@ const platforms = [
 ];
 
 export default function DashboardCommunity() {
-  const { businessId } = useAuth();
+  const { businessId, user } = useAuth();
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [selectedPlatform, setSelectedPlatform] = useState("reddit");
   const [generating, setGenerating] = useState(false);
@@ -32,13 +31,11 @@ export default function DashboardCommunity() {
     if (!businessId) return;
     setGenerating(true);
     try {
-      const res = await fetch(`${API_BASE}/api/community/generate-posts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: businessId, platform: selectedPlatform }),
+      const data = await apiPost<CommunityPost[] | CommunityPost>("/api/community/generate-posts", {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
+        platform: selectedPlatform,
       });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
       const newPosts = Array.isArray(data) ? data : [data];
       setPosts(prev => [...newPosts, ...prev]);
       toast.success(`${newPosts.length} post${newPosts.length !== 1 ? "s" : ""} generated!`);

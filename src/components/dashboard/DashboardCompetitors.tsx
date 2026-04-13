@@ -5,6 +5,7 @@ import { Target, Loader2, Trophy, Lightbulb, Compass, ChevronDown, ExternalLink 
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
+import { apiPost } from "@/lib/apiClient";
 
 interface Insight {
   id: string; competitor_doing_well: string | null; gap_opportunity: string | null;
@@ -28,7 +29,7 @@ function formatBullets(text: string | null): string[] {
 }
 
 export default function DashboardCompetitors() {
-  const { businessId, isReady } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const [insights, setInsights] = useState<Insight[]>([]);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
@@ -75,9 +76,9 @@ export default function DashboardCompetitors() {
 
     try {
       toast("🎯 AI is analyzing competitors...");
-      await fetch("https://maroa-api-production.up.railway.app/webhook/competitor-check", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business_id: businessId }),
+      await apiPost("/webhook/competitor-check", {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
       });
       // Poll for new results
       const startCount = insights.length;

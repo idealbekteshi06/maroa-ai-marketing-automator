@@ -54,7 +54,7 @@ function StarRating({ rating, size = 14 }: { rating: number; size?: number }) {
 }
 
 export default function DashboardReviews() {
-  const { businessId, isReady } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
@@ -97,7 +97,11 @@ export default function DashboardReviews() {
     if (!businessId) return;
     setGeneratingId(reviewId);
     try {
-      await api.reviewResponseGenerate({ business_id: businessId, review_id: reviewId });
+      await api.reviewResponseGenerate({
+        business_id: businessId,
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        review_id: reviewId,
+      });
       toast.success(SUCCESS_MESSAGES.GENERATED);
       await fetchReviews();
     } catch {
@@ -112,7 +116,12 @@ export default function DashboardReviews() {
     const draftText = editDrafts[reviewId];
     setPublishingId(reviewId);
     try {
-      await api.reviewResponsePublish({ business_id: businessId, review_id: reviewId, response_text: draftText });
+      await api.reviewResponsePublish({
+        business_id: businessId,
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        review_id: reviewId,
+        response_text: draftText,
+      });
       toast.success(SUCCESS_MESSAGES.GENERATED);
       await fetchReviews();
     } catch {
@@ -126,7 +135,12 @@ export default function DashboardReviews() {
     if (!businessId || !contactEmail || !contactName) return;
     setRequestSending(true);
     try {
-      await api.reviewRequestSend({ business_id: businessId, contact_email: contactEmail, contact_name: contactName });
+      await api.reviewRequestSend({
+        business_id: businessId,
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        contact_email: contactEmail,
+        contact_name: contactName,
+      });
       toast.success(SUCCESS_MESSAGES.GENERATED);
       setRequestOpen(false);
       setContactEmail(""); setContactName("");

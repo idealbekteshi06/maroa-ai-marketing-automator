@@ -4,8 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { FileText, Loader2, Download, CheckSquare, BookOpen, LayoutTemplate, HelpCircle } from "lucide-react";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
-
-const API_BASE = "https://maroa-api-production.up.railway.app";
+import { apiGet, apiPost } from "@/lib/apiClient";
 
 interface LeadMagnet {
   id: string;
@@ -23,7 +22,7 @@ const typeOptions = [
 ];
 
 export default function DashboardLeadMagnets() {
-  const { businessId, isReady } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const [magnets, setMagnets] = useState<LeadMagnet[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -34,11 +33,8 @@ export default function DashboardLeadMagnets() {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/api/lead-magnets/${businessId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setMagnets(Array.isArray(data) ? data : data?.items || data?.data || []);
-        }
+        const data = await apiGet<LeadMagnet[] | { items?: LeadMagnet[]; data?: LeadMagnet[] }>(`/api/lead-magnets/${businessId}`);
+        setMagnets(Array.isArray(data) ? data : data?.items || data?.data || []);
       } catch { /* empty */ }
       setLoading(false);
     };
@@ -49,13 +45,11 @@ export default function DashboardLeadMagnets() {
     if (!businessId) return;
     setGenerating(true);
     try {
-      const res = await fetch(`${API_BASE}/api/lead-magnets/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: businessId, type: selectedType }),
+      const data = await apiPost<LeadMagnet>("/api/lead-magnets/generate", {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
+        type: selectedType,
       });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
       setMagnets(prev => [data, ...prev]);
       toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch {

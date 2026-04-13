@@ -16,4 +16,6 @@ export const SUCCESS_MESSAGES = {
   COPIED: "Copied to clipboard!",
   CAMPAIGN_LAUNCHED: "Campaign launched!",
   IDEA_UPDATED: "Idea updated!",
+  SIGNED_IN: "Welcome back!",
+  RESET_EMAIL_SENT: "Check your email for a reset link.",
 } as const;

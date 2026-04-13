@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Bot, Loader2, Play, CheckCircle2, XCircle, Clock, Mail, Search, Share2, Megaphone, BarChart3 } from "lucide-react";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
+import { apiGet, apiPost } from "@/lib/apiClient";
 
 interface LogEntry {
   id: string;
@@ -28,10 +29,8 @@ const statusConfig: Record<string, { icon: typeof CheckCircle2; class: string }>
   running: { icon: Clock, class: "bg-primary/10 text-primary" },
 };
 
-const API_BASE = "https://maroa-api-production.up.railway.app";
-
 export default function DashboardOrchestrator() {
-  const { businessId, isReady } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
@@ -41,9 +40,8 @@ export default function DashboardOrchestrator() {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/api/orchestrator/log/${businessId}`);
-        const data = await res.json();
-        if (res.ok) setLogs(data.logs ?? []);
+        const data = await apiGet<{ logs?: LogEntry[] }>(`/api/orchestrator/log/${businessId}`);
+        setLogs(data.logs ?? []);
       } catch { /* empty */ }
       finally { setLoading(false); }
     };
@@ -55,11 +53,10 @@ export default function DashboardOrchestrator() {
     setRunning(true);
     toast("Running full AI cycle...", { description: "This may take a few minutes" });
     try {
-      const res = await fetch(`${API_BASE}/api/orchestrator/run/${businessId}`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+      const data = await apiPost<{ logs?: LogEntry[]; error?: string }>(`/api/orchestrator/run/${businessId}`, {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
       setLogs(data.logs ?? []);
       toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }

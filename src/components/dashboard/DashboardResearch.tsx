@@ -4,8 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Search, Loader2, TrendingUp, Quote, Lightbulb } from "lucide-react";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
-
-const API_BASE = "https://maroa-api-production.up.railway.app";
+import { apiPost } from "@/lib/apiClient";
 
 interface ResearchResult {
   insights: string[];
@@ -22,7 +21,7 @@ const topicSuggestions = [
 ];
 
 export default function DashboardResearch() {
-  const { businessId } = useAuth();
+  const { businessId, user } = useAuth();
   const [topic, setTopic] = useState("");
   const [results, setResults] = useState<ResearchResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -32,13 +31,11 @@ export default function DashboardResearch() {
     if (!businessId || !t.trim()) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/research/analyze`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: businessId, topic: t.trim() }),
+      const data = await apiPost<ResearchResult>("/api/research/analyze", {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
+        topic: t.trim(),
       });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
       setResults({ insights: data.insights || [], quotes: data.quotes || [], trends: data.trends || [] });
       toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch {

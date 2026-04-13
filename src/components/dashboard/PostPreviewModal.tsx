@@ -5,6 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { externalSupabase } from "@/integrations/supabase/external-client";
+import { useAuth } from "@/contexts/AuthContext";
+import { apiFireAndForget } from "@/lib/apiClient";
 import { toast } from "sonner";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
@@ -42,6 +44,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function PostPreviewModal({ item, businessName, businessId, onClose, onApproved }: PostPreviewModalProps) {
+  const { user } = useAuth();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -64,11 +67,11 @@ export default function PostPreviewModal({ item, businessName, businessId, onClo
       .eq("id", item.id);
     if (error) { toast.error(ERROR_MESSAGES.GENERATION_FAILED); return; }
     toast.success(SUCCESS_MESSAGES.GENERATED);
-    void fetch("https://maroa-api-production.up.railway.app/webhook/content-approved", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content_id: item.id, business_id: businessId }),
-    }).catch(console.warn);
+    apiFireAndForget("/webhook/content-approved", {
+      user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+      content_id: item.id,
+      business_id: businessId,
+    });
     onApproved();
   };
 

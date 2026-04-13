@@ -4,14 +4,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DollarSign, Loader2, Copy, ShieldQuestion } from "lucide-react";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
+import { apiPost } from "@/lib/apiClient";
 
 interface Pitch { id: string; product: string; pitch: string; created_at: string }
 interface Objection { id: string; objection: string; response: string; created_at: string }
 
-const API_BASE = "https://maroa-api-production.up.railway.app";
-
 export default function DashboardSales() {
-  const { businessId, isReady } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const [tab, setTab] = useState<"pitches" | "objections">("pitches");
   const [pitches, setPitches] = useState<Pitch[]>([]);
   const [objections, setObjections] = useState<Objection[]>([]);
@@ -24,12 +23,11 @@ export default function DashboardSales() {
     if (!businessId || !product.trim()) return;
     setGenerating(true);
     try {
-      const res = await fetch(`${API_BASE}/api/sales/generate-pitch`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: businessId, product: product.trim() }),
+      const data = await apiPost<Pitch>("/api/sales/generate-pitch", {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
+        product: product.trim(),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
       setPitches(prev => [data, ...prev]);
       setProduct("");
       toast.success(SUCCESS_MESSAGES.GENERATED);
@@ -41,12 +39,11 @@ export default function DashboardSales() {
     if (!businessId || !objectionText.trim()) return;
     setGenerating(true);
     try {
-      const res = await fetch(`${API_BASE}/api/sales/objection-handler`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: businessId, objection: objectionText.trim() }),
+      const data = await apiPost<Objection>("/api/sales/objection-handler", {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
+        objection: objectionText.trim(),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
       setObjections(prev => [data, ...prev]);
       setObjectionText("");
       toast.success(SUCCESS_MESSAGES.GENERATED);

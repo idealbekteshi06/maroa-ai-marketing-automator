@@ -4,8 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DollarSign, Loader2, TrendingUp, TrendingDown, BarChart3, ArrowUpRight } from "lucide-react";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
-
-const API_BASE = "https://maroa-api-production.up.railway.app";
+import { apiGet, apiPost } from "@/lib/apiClient";
 
 interface PricingRecommendation {
   product: string;
@@ -29,7 +28,7 @@ interface PricingAnalysis {
 }
 
 export default function DashboardPricing() {
-  const { businessId, isReady } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const [analysis, setAnalysis] = useState<PricingAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
@@ -39,11 +38,8 @@ export default function DashboardPricing() {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/api/pricing/${businessId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setAnalysis({ ...data, recommendations: data.recommendations || [], competitor_prices: data.competitor_prices || [] });
-        }
+        const data = await apiGet<PricingAnalysis>(`/api/pricing/${businessId}`);
+        setAnalysis({ ...data, recommendations: data.recommendations || [], competitor_prices: data.competitor_prices || [] });
       } catch { /* empty */ }
       setLoading(false);
     };
@@ -54,13 +50,10 @@ export default function DashboardPricing() {
     if (!businessId) return;
     setAnalyzing(true);
     try {
-      const res = await fetch(`${API_BASE}/api/pricing/analyze`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: businessId }),
+      const data = await apiPost<PricingAnalysis>("/api/pricing/analyze", {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
       });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
       setAnalysis({ ...data, recommendations: data.recommendations || [], competitor_prices: data.competitor_prices || [] });
       toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch {

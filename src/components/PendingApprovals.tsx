@@ -28,7 +28,7 @@ interface PendingApprovalsProps {
 }
 
 export default function PendingApprovals({ onNavigate }: PendingApprovalsProps) {
-  const { businessId, isReady } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const [items, setItems] = useState<PendingContent[]>([]);
   const [loading, setLoading] = useState(true);
   const [approvingId, setApprovingId] = useState<string | null>(null);
@@ -59,7 +59,11 @@ export default function PendingApprovals({ onNavigate }: PendingApprovalsProps) 
   const handleApprove = async (contentId: string) => {
     setApprovingId(contentId);
     try {
-      await api.approveContentPiece({ content_id: contentId, business_id: businessId });
+      await api.approveContentPiece({
+        content_id: contentId,
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
+      });
       setItems(prev => prev.filter(i => i.id !== contentId));
       toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch {

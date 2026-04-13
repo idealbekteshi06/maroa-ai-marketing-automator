@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Wrench, Loader2, Calculator, HelpCircle, CheckSquare, Sparkles } from "lucide-react";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
+import { apiGet, apiPost } from "@/lib/apiClient";
 
 interface FreeTool {
   id: string;
@@ -28,10 +29,8 @@ const difficultyBadge: Record<string, string> = {
   hard: "bg-destructive/10 text-destructive",
 };
 
-const API_BASE = "https://maroa-api-production.up.railway.app";
-
 export default function DashboardFreeTools() {
-  const { businessId, isReady } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const [tools, setTools] = useState<FreeTool[]>([]);
   const [loading, setLoading] = useState(true);
   const [suggesting, setSuggesting] = useState(false);
@@ -41,9 +40,8 @@ export default function DashboardFreeTools() {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/api/tools/${businessId}`);
-        const data = await res.json();
-        if (res.ok) setTools(data.tools ?? []);
+        const data = await apiGet<{ tools?: FreeTool[] }>(`/api/tools/${businessId}`);
+        setTools(data.tools ?? []);
       } catch { /* empty */ }
       finally { setLoading(false); }
     };
@@ -54,12 +52,10 @@ export default function DashboardFreeTools() {
     if (!businessId) return;
     setSuggesting(true);
     try {
-      const res = await fetch(`${API_BASE}/api/tools/suggest`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: businessId }),
+      const data = await apiPost<{ tools?: FreeTool[]; error?: string }>("/api/tools/suggest", {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
       setTools(data.tools ?? []);
       toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }

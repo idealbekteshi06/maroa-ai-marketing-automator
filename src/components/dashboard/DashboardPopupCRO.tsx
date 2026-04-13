@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { MousePointerClick, Loader2, Copy } from "lucide-react";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
+import { apiPost } from "@/lib/apiClient";
 
 interface PopupResult {
   id: string;
@@ -16,10 +17,9 @@ interface PopupResult {
 }
 
 const POPUP_TYPES = ["exit-intent", "scroll-trigger", "time-delay", "welcome"] as const;
-const API_BASE = "https://maroa-api-production.up.railway.app";
 
 export default function DashboardPopupCRO() {
-  const { businessId, isReady } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const [popups, setPopups] = useState<PopupResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -29,12 +29,11 @@ export default function DashboardPopupCRO() {
     if (!businessId) return;
     setGenerating(true);
     try {
-      const res = await fetch(`${API_BASE}/api/popup/generate`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: businessId, popup_type: selectedType }),
+      const data = await apiPost<PopupResult>("/api/popup/generate", {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
+        popup_type: selectedType,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
       setPopups(prev => [data, ...prev]);
       toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }

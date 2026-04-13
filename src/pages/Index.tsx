@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { apiPost } from "@/lib/apiClient";
 import { Loader2, Check, Bot, Calendar, Target, BarChart3, Globe, Zap, ArrowRight, Sun, Moon } from "lucide-react";
 
 const LAUNCH_DATE = new Date("2026-04-28T00:00:00Z").getTime();
-const API = "https://maroa-api-production.up.railway.app";
 const FLAGS = ["🇽🇰", "🇦🇱", "🇬🇧", "🇩🇪", "🇦🇪", "🇺🇸", "🇫🇷", "🇮🇹"];
 
 const PLANS = [
@@ -101,8 +101,7 @@ export default function Index() {
     if (!form.name || !form.email) { toast.error("Name and email are required"); return; }
     setSubmitting(true);
     try {
-      const r = await fetch(`${API}/api/waitlist/register`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, registered_at: new Date().toISOString() }) });
-      if (!r.ok) throw 0;
+      await apiPost("/api/waitlist/register", { ...form, registered_at: new Date().toISOString() });
       setSubmitted(true);
       toast.success("You're on the list!");
     } catch { toast.error("Something went wrong — try again"); }

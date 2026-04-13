@@ -47,7 +47,7 @@ function timeAgo(d: string | null) {
 }
 
 export default function DashboardCRM() {
-  const { businessId, isReady } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const [tab, setTab] = useState<"contacts" | "pipeline">("contacts");
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [pipeline, setPipeline] = useState<Deal[]>([]);
@@ -71,22 +71,28 @@ export default function DashboardCRM() {
   const fetchContacts = useCallback(async () => {
     if (!businessId) return;
     try {
-      const res = await api.getContacts({ business_id: businessId });
+      const res = await api.getContacts({
+        business_id: businessId,
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+      });
       setContacts(((res as { contacts?: Contact[]; data?: Contact[] })?.contacts ?? (res as { contacts?: Contact[]; data?: Contact[] })?.data ?? (Array.isArray(res) ? (res as Contact[]) : [])) as Contact[]);
     } catch {
       toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     }
-  }, [businessId]);
+  }, [businessId, user?.id]);
 
   const fetchPipeline = useCallback(async () => {
     if (!businessId) return;
     try {
-      const res = await api.getPipeline({ business_id: businessId });
+      const res = await api.getPipeline({
+        business_id: businessId,
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+      });
       setPipeline(((res as { deals?: Deal[]; data?: Deal[] })?.deals ?? (res as { deals?: Deal[]; data?: Deal[] })?.data ?? (Array.isArray(res) ? (res as Deal[]) : [])) as Deal[]);
     } catch {
       toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     }
-  }, [businessId]);
+  }, [businessId, user?.id]);
 
   useEffect(() => {
     if (!businessId || !isReady) { setLoading(false); return; }
@@ -148,7 +154,11 @@ export default function DashboardCRM() {
     if (!businessId || !addName || !addEmail) return;
     setAddSaving(true);
     try {
-      await api.contactCreate({ business_id: businessId, name: addName, email: addEmail, phone: addPhone });
+      await api.contactCreate({
+        business_id: businessId,
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        name: addName, email: addEmail, phone: addPhone,
+      });
       toast.success(SUCCESS_MESSAGES.GENERATED);
       setAddOpen(false);
       setAddName(""); setAddEmail(""); setAddPhone("");
@@ -164,7 +174,11 @@ export default function DashboardCRM() {
     if (!businessId || !logContactId || !logNote) return;
     setLogSaving(true);
     try {
-      await api.contactActivityLog({ business_id: businessId, contact_id: logContactId, activity_type: "note", note: logNote });
+      await api.contactActivityLog({
+        business_id: businessId,
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        contact_id: logContactId, activity_type: "note", note: logNote,
+      });
       toast.success(SUCCESS_MESSAGES.GENERATED);
       setLogOpen(false);
       setLogNote(""); setLogContactId("");

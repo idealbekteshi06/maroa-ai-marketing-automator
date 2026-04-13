@@ -5,8 +5,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
+import { apiPost } from "@/lib/apiClient";
 
-const RAILWAY_URL = "https://maroa-api-production.up.railway.app";
 const REDIRECT_URI = "https://maroa-ai-marketing-automator.lovable.app/social-callback";
 
 export default function SocialCallback() {
@@ -56,25 +56,22 @@ export default function SocialCallback() {
 
       setMessage("Exchanging tokens with Facebook...");
 
-      const resp = await fetch(`${RAILWAY_URL}/meta-oauth-exchange`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code,
-          business_id: bizId,
-          redirect_uri: REDIRECT_URI,
-        }),
-      });
-
-      let result: Record<string, unknown> | null = null;
-      try {
-        result = await resp.json();
-      } catch {
-        throw new Error(`Server returned status ${resp.status} with no JSON body`);
+      if (!user?.id) {
+        setStatus("error");
+        setMessage("Not signed in.");
+        setTimeout(() => navigate("/dashboard?tab=social"), 3000);
+        return;
       }
 
-      if (!resp.ok || !result.success) {
-        throw new Error(result.error || result.message || `OAuth exchange failed (status ${resp.status})`);
+      const result = await apiPost<Record<string, unknown>>("/meta-oauth-exchange", {
+        code,
+        user_id: user.id, // server expects user_id — this is auth.user.id = businesses.id
+        business_id: bizId,
+        redirect_uri: REDIRECT_URI,
+      });
+
+      if (!result.success) {
+        throw new Error(String(result.error || result.message || "OAuth exchange failed"));
       }
 
       localStorage.removeItem("meta_oauth_business_id");
@@ -84,12 +81,12 @@ export default function SocialCallback() {
       setTimeout(() => navigate("/dashboard?tab=social"), 2000);
     } catch (err: unknown) {
       setStatus("error");
-      const errorMsg = err?.message || "Something went wrong connecting your account.";
+      const errorMsg = err instanceof Error ? err.message : "Something went wrong connecting your account.";
       setMessage(errorMsg);
       toast.error(errorMsg);
       setTimeout(() => navigate("/dashboard?tab=social"), 4000);
     }
-  }, [businessId, navigate, searchParams, user]);
+  }, [businessId, navigate, searchParams, user, user?.id]);
 
   useEffect(() => {
     void handleOAuthCallback();

@@ -4,8 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Gift, Loader2, Copy, Share2, Users, DollarSign } from "lucide-react";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
-
-const API_BASE = "https://maroa-api-production.up.railway.app";
+import { apiGet, apiPost } from "@/lib/apiClient";
 
 interface ReferralStatus {
   referral_link: string;
@@ -14,7 +13,7 @@ interface ReferralStatus {
 }
 
 export default function DashboardReferral2() {
-  const { businessId, isReady } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const [status, setStatus] = useState<ReferralStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [setting, setSetting] = useState(false);
@@ -24,11 +23,8 @@ export default function DashboardReferral2() {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/api/referral/status/${businessId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setStatus(data);
-        }
+        const data = await apiGet<ReferralStatus>(`/api/referral/status/${businessId}`);
+        setStatus(data);
       } catch {
         /* no referral yet */
       } finally {
@@ -42,13 +38,10 @@ export default function DashboardReferral2() {
     if (!businessId) return;
     setSetting(true);
     try {
-      const res = await fetch(`${API_BASE}/api/referral/setup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: businessId }),
+      const data = await apiPost<ReferralStatus>("/api/referral/setup", {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
       });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
       setStatus(data);
       toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch {

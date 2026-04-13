@@ -1,8 +1,8 @@
 import { useEffect, useCallback } from "react";
-import { Lock, Check, X, Crown } from "lucide-react";
+import { Lock, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import * as api from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { postCheckout } from "@/lib/apiClient";
+import { useAuth } from "@/contexts/AuthContext";
 import { ERROR_MESSAGES } from "@/lib/errorMessages";
 import { toast } from "sonner";
 
@@ -23,6 +23,7 @@ const featureBullets: Record<string, string[]> = {
 };
 
 export default function UpgradeModal({ open, onClose, featureName, description, businessId }: UpgradeModalProps) {
+  const { user } = useAuth();
   const handleEscape = useCallback((e: KeyboardEvent) => {
     if (e.key === "Escape") onClose();
   }, [onClose]);
@@ -39,10 +40,10 @@ export default function UpgradeModal({ open, onClose, featureName, description, 
   }, [open, handleEscape]);
 
   const handleUpgrade = async (plan: string) => {
-    if (!businessId) return;
+    if (!businessId || !user?.id) return;
     try {
-      const result: { url?: string } = await api.createCheckout({ business_id: businessId, plan });
-      if (result?.url) window.location.href = result.url;
+      const result = await postCheckout(user.id, plan);
+      if (result.checkout_url) window.location.href = result.checkout_url;
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") return;
       toast.error(ERROR_MESSAGES.LOAD_FAILED);
@@ -87,7 +88,7 @@ export default function UpgradeModal({ open, onClose, featureName, description, 
           >
             <span className="absolute -top-2.5 left-3 rounded-full bg-primary px-2 py-0.5 text-[9px] font-bold text-primary-foreground uppercase">Most popular</span>
             <p className="text-sm font-bold text-foreground">Growth</p>
-            <p className="text-lg font-bold text-foreground">$49<span className="text-xs font-normal text-muted-foreground">/mo</span></p>
+            <p className="text-lg font-bold text-foreground">$59<span className="text-xs font-normal text-muted-foreground">/mo</span></p>
           </button>
           <button
             onClick={() => handleUpgrade("agency")}

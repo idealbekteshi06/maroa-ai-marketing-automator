@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { UserPlus, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
+import { apiPost } from "@/lib/apiClient";
 
 interface StepAnalysis {
   step: string;
@@ -21,10 +22,8 @@ interface SignupAnalysis {
   created_at: string;
 }
 
-const API_BASE = "https://maroa-api-production.up.railway.app";
-
 export default function DashboardSignupCRO() {
-  const { businessId, isReady } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const [analysis, setAnalysis] = useState<SignupAnalysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [signupUrl, setSignupUrl] = useState("");
@@ -33,12 +32,11 @@ export default function DashboardSignupCRO() {
     if (!businessId || !signupUrl.trim()) return;
     setAnalyzing(true);
     try {
-      const res = await fetch(`${API_BASE}/api/signup-cro/analyze`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: businessId, signup_url: signupUrl.trim() }),
+      const data = await apiPost<SignupAnalysis>("/api/signup-cro/analyze", {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
+        signup_url: signupUrl.trim(),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
       setAnalysis(data);
       toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }

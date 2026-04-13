@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, Loader2, Users, DollarSign, Percent, BarChart3 } from "lucide-react";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
+import { apiGet, apiPost } from "@/lib/apiClient";
 
 interface ScoredLead {
   id: string;
@@ -15,10 +16,8 @@ interface ScoredLead {
   scored_at: string;
 }
 
-const API_BASE = "https://maroa-api-production.up.railway.app";
-
 export default function DashboardRevOps() {
-  const { businessId, isReady } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const [leads, setLeads] = useState<ScoredLead[]>([]);
   const [loading, setLoading] = useState(true);
   const [scoring, setScoring] = useState(false);
@@ -28,9 +27,8 @@ export default function DashboardRevOps() {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/api/revops/scores/${businessId}`);
-        const data = await res.json();
-        if (res.ok) setLeads(data.leads ?? []);
+        const data = await apiGet<{ leads?: ScoredLead[] }>(`/api/revops/scores/${businessId}`);
+        setLeads(data.leads ?? []);
       } catch { /* empty */ }
       finally { setLoading(false); }
     };
@@ -41,12 +39,11 @@ export default function DashboardRevOps() {
     if (!businessId) return;
     setScoring(true);
     try {
-      const res = await fetch(`${API_BASE}/api/revops/score-lead`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: businessId, contact_id: "all" }),
+      const data = await apiPost<{ leads?: ScoredLead[] }>("/api/revops/score-lead", {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
+        contact_id: "all",
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
       setLeads(data.leads ?? []);
       toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }

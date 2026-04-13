@@ -37,7 +37,7 @@ const typeConfig: Record<string, { icon: typeof Search; label: string }> = {
 };
 
 export default function DashboardSEO() {
-  const { businessId, isReady } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [auditing, setAuditing] = useState(false);
@@ -84,7 +84,10 @@ export default function DashboardSEO() {
 
     // 1. Trigger the async audit
     try {
-      await api.seoAudit({ business_id: businessId });
+      await api.seoAudit({
+        business_id: businessId,
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+      });
     } catch {
       toast.error(ERROR_MESSAGES.GENERATION_FAILED);
       setAuditing(false);
@@ -125,7 +128,11 @@ export default function DashboardSEO() {
     if (!businessId) return;
     setApplyingId(id);
     try {
-      await api.seoRecommendationApply({ business_id: businessId, recommendation_id: id });
+      await api.seoRecommendationApply({
+        business_id: businessId,
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        recommendation_id: id,
+      });
       toast.success(SUCCESS_MESSAGES.GENERATED);
       // Optimistic update
       setRecommendations(prev => prev.map(r => r.id === id ? { ...r, status: "applied", applied_at: new Date().toISOString() } : r));

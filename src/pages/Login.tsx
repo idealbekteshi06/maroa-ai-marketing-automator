@@ -96,13 +96,11 @@ export default function Login() {
 
       if (bizError) throw bizError;
 
-      toast.success(SUCCESS_MESSAGES.GENERATED);
-
+      toast.success(SUCCESS_MESSAGES.SIGNED_IN);
       if (biz?.onboarding_complete === false) {
         navigate("/onboarding", { replace: true });
         return;
       }
-
       navigate("/dashboard", { replace: true });
     } catch (error) {
       toast.error(toAuthErrorMessage(error));
@@ -136,7 +134,7 @@ export default function Login() {
         redirectTo: `${window.location.origin}/reset-password`,
       });
       if (error) throw error;
-      toast.success(SUCCESS_MESSAGES.GENERATED);
+      toast.success(SUCCESS_MESSAGES.RESET_EMAIL_SENT);
       setForgotOpen(false);
     } catch (err: unknown) {
       toast.error(err.message || "Failed to send reset email.");

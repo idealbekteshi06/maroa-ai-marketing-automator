@@ -3,6 +3,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Loader2, Rocket, Calendar, ChevronDown, ChevronUp, Sparkles, Mail, Megaphone, Clock } from "lucide-react";
+import { apiPost } from "@/lib/apiClient";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 interface CampaignResult {
   theme?: string;
@@ -15,8 +17,6 @@ interface CampaignResult {
   ads?: { headline: string; description: string; cta: string; platform: string }[];
   summary?: string;
 }
-import { apiPost } from "@/lib/apiClient";
-import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 const durationOptions = [
   { value: 7, label: "7 Days", desc: "Quick sprint" },
@@ -43,7 +43,7 @@ function getChannelStyle(channel: string) {
 }
 
 export default function DashboardCampaign() {
-  const { businessId, isReady } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const [goal, setGoal] = useState("");
   const [duration, setDuration] = useState(14);
   const [generating, setGenerating] = useState(false);
@@ -84,7 +84,12 @@ export default function DashboardCampaign() {
         if (i < msgs.length) setGenMessage(msgs[i]);
       }, 4000);
 
-      const data = await apiPost<CampaignResult>("/api/campaigns/instant", { userId: businessId, goal: goal.trim(), duration });
+      const data = await apiPost<CampaignResult>("/api/campaigns/instant", {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
+        goal: goal.trim(),
+        duration,
+      });
       clearInterval(interval);
       setResult(data);
       setExpandedSections({ schedule: true, emails: true, ads: true });
@@ -95,7 +100,7 @@ export default function DashboardCampaign() {
       setGenerating(false);
       setGenMessage("");
     }
-  }, [businessId, duration, goal]);
+  }, [businessId, duration, goal, user?.id]);
 
   const schedule = result?.schedule || result?.day_by_day || [];
   const emails = result?.emails || result?.email_sequence || [];

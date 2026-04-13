@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { UserCheck, Loader2, ArrowRight, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
+import { apiPost } from "@/lib/apiClient";
 
 interface OnboardingStep {
   step_number: number;
@@ -22,10 +23,8 @@ interface OnboardingResult {
   created_at: string;
 }
 
-const API_BASE = "https://maroa-api-production.up.railway.app";
-
 export default function DashboardOnboardingCRO() {
-  const { businessId, isReady } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const [result, setResult] = useState<OnboardingResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -34,12 +33,10 @@ export default function DashboardOnboardingCRO() {
     if (!businessId) return;
     setGenerating(true);
     try {
-      const res = await fetch(`${API_BASE}/api/onboarding-cro/generate`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: businessId }),
+      const data = await apiPost<OnboardingResult>("/api/onboarding-cro/generate", {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
       setResult(data);
       toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }

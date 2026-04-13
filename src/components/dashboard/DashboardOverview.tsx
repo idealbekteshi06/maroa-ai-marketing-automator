@@ -267,7 +267,11 @@ export default function DashboardOverview() {
     setActionLoading(action.name);
     try {
       toast(`🤖 AI is working on "${action.name}"...`);
-      await apiPost(action.endpoint, { business_id: businessId, email: user?.email });
+      await apiPost(action.endpoint, {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
+        email: user?.email,
+      });
       setActionSuccess(action.name);
       toast.success(action.successMsg);
       setTimeout(() => setActionSuccess(null), 3000);

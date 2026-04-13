@@ -28,7 +28,7 @@ const safePercent = (v: unknown) => { const n = Number(v); return Number.isFinit
 interface EmailStep { subject_prompt: string; body_prompt: string; delay_days: number; }
 
 export default function DashboardEmail() {
-  const { businessId, isReady } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const [sequences, setSequences] = useState<EmailSequence[]>([]);
   const [stats, setStats] = useState<EmailStats>({ email_sent: 0, email_opens: 0, email_clicks: 0 });
   const [activeEnrollments, setActiveEnrollments] = useState(0);
@@ -44,7 +44,10 @@ export default function DashboardEmail() {
   const fetchData = useCallback(async () => {
     if (!businessId) return;
     try {
-      const res = await api.getAnalytics({ business_id: businessId });
+      const res = await api.getAnalytics({
+        business_id: businessId,
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+      });
       const d = res as { email_sent?: number; email_opens?: number; email_clicks?: number };
       setStats({ email_sent: d?.email_sent ?? 0, email_opens: d?.email_opens ?? 0, email_clicks: d?.email_clicks ?? 0 });
     } catch (err: unknown) {
@@ -62,7 +65,7 @@ export default function DashboardEmail() {
       const { data } = await externalSupabase.from("email_sequences").select("*").eq("business_id", businessId).order("created_at", { ascending: false });
       setSequences((data ?? []) as EmailSequence[]);
     } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
-  }, [businessId]);
+  }, [businessId, user?.id]);
 
   useEffect(() => {
     if (!businessId || !isReady) { setLoading(false); return; }
@@ -74,7 +77,9 @@ export default function DashboardEmail() {
     setCreating(true);
     try {
       await api.emailSequenceCreate({
-        business_id: businessId, name: formName, trigger: formTrigger,
+        business_id: businessId,
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        name: formName, trigger: formTrigger,
         delay_hours: formSteps[0]?.delay_days * 24 || 24,
         emails: formSteps.map(s => ({ subject_prompt: s.subject_prompt, body_prompt: s.body_prompt, delay_hours: s.delay_days * 24 })),
       });

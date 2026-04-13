@@ -3,8 +3,8 @@ import { Gift, Copy, Check, ExternalLink, Users, Award, Loader2 } from "lucide-r
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-
-const API_BASE = import.meta.env.VITE_API_BASE as string;
+import { apiGet, apiPost } from "@/lib/apiClient";
+import { ERROR_MESSAGES } from "@/lib/errorMessages";
 
 interface ReferralStats {
   referrals_sent: number;
@@ -26,32 +26,23 @@ export default function ReferralPage() {
     const fetchReferralData = async () => {
       setLoading(true);
       try {
-        // Create or retrieve referral code
-        if (API_BASE) {
-          const codeRes = await fetch(`${API_BASE}/webhook/referral-create`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ business_id: businessId }),
+        try {
+          const codeData = await apiPost<{ referral_code?: string; code?: string }>("/webhook/referral-create", {
+            user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+            business_id: businessId,
           });
-          if (codeRes.ok) {
-            const codeData = await codeRes.json();
-            setReferralCode(codeData.referral_code || codeData.code || null);
-          }
-        }
+          setReferralCode(codeData.referral_code || codeData.code || null);
+        } catch { /* optional */ }
 
-        // Fetch stats
-        if (API_BASE) {
-          const statsRes = await fetch(`${API_BASE}/webhook/referral-stats?business_id=${businessId}`);
-          if (statsRes.ok) {
-            const statsData = await statsRes.json();
-            setStats({
-              referrals_sent: statsData.referrals_sent ?? statsData.total ?? 0,
-              converted: statsData.converted ?? 0,
-              months_earned: statsData.months_earned ?? statsData.rewards ?? 0,
-              referrals: statsData.referrals || [],
-            });
-          }
-        }
+        try {
+          const statsData = await apiGet<Record<string, unknown>>(`/webhook/referral-stats?business_id=${businessId}`);
+          setStats({
+            referrals_sent: (statsData.referrals_sent as number) ?? (statsData.total as number) ?? 0,
+            converted: (statsData.converted as number) ?? 0,
+            months_earned: (statsData.months_earned as number) ?? (statsData.rewards as number) ?? 0,
+            referrals: (statsData.referrals as ReferralStats["referrals"]) || [],
+          });
+        } catch { /* optional */ }
       } catch (err: unknown) {
         if (err instanceof Error && err.name === "AbortError") return;
         toast.error(ERROR_MESSAGES.LOAD_FAILED);
@@ -59,7 +50,7 @@ export default function ReferralPage() {
       setLoading(false);
     };
     fetchReferralData();
-  }, [businessId]);
+  }, [businessId, user?.id]);
 
   // Fallback referral code from user ID if backend doesn't return one
   const code = referralCode || user?.id?.substring(0, 8) || "xxxxxxxx";

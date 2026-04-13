@@ -4,8 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Search, Loader2, CheckCircle2, AlertTriangle, Tag, Globe } from "lucide-react";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
-
-const API_BASE = "https://maroa-api-production.up.railway.app";
+import { apiPost } from "@/lib/apiClient";
 
 interface Suggestion {
   type: string;
@@ -33,7 +32,7 @@ const priorityColor: Record<string, string> = {
 };
 
 export default function DashboardAISEO() {
-  const { businessId } = useAuth();
+  const { businessId, user } = useAuth();
   const [url, setUrl] = useState("");
   const [result, setResult] = useState<OptimizationResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -42,13 +41,11 @@ export default function DashboardAISEO() {
     if (!businessId || !url.trim()) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/ai-seo/optimize`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: businessId, url: url.trim() }),
+      const data = await apiPost<OptimizationResult>("/api/ai-seo/optimize", {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
+        url: url.trim(),
       });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
       setResult({ ...data, suggestions: data.suggestions || [], keywords: data.keywords || [] });
       toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch {

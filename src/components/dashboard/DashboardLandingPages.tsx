@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { FileText, Eye, Copy, Loader2, Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
+import { apiPost } from "@/lib/apiClient";
 
 interface LandingPage {
   id: string; headline: string | null; subheadline: string | null; cta_text: string | null;
@@ -42,9 +43,10 @@ export default function DashboardLandingPages() {
     if (!businessId) return;
     setGenerating(true);
     try {
-      await fetch("https://maroa-api-production.up.railway.app/webhook/generate-landing-page", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business_id: businessId, email: user?.email }),
+      await apiPost("/webhook/generate-landing-page", {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
+        email: user?.email,
       });
       toast.success(SUCCESS_MESSAGES.GENERATED);
       setTimeout(() => fetchPages(), 15000);

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { CheckCircle2, Lock, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { apiGet } from "@/lib/apiClient";
 
 interface ProfileScoreProps {
   businessId: string;
@@ -30,8 +31,7 @@ export default function ProfileScore({ businessId, userId }: ProfileScoreProps) 
 
   useEffect(() => {
     if (!userId) return;
-    fetch(`https://maroa-api-production.up.railway.app/api/onboarding/score/${userId}`)
-      .then(r => r.json())
+    apiGet<ScoreData>(`/api/onboarding/score/${userId}`)
       .then(setData)
       .catch(() => {});
   }, [userId]);

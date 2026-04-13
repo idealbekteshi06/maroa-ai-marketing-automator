@@ -4,8 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Code, Loader2, Copy, Building2, ShoppingBag, HelpCircle, FileText } from "lucide-react";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
-
-const API_BASE = "https://maroa-api-production.up.railway.app";
+import { apiGet, apiPost } from "@/lib/apiClient";
 
 interface SchemaMarkup {
   id: string;
@@ -22,7 +21,7 @@ const pageTypes = [
 ];
 
 export default function DashboardSchema() {
-  const { businessId, isReady } = useAuth();
+  const { businessId, isReady, user } = useAuth();
   const [schemas, setSchemas] = useState<SchemaMarkup[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -33,11 +32,8 @@ export default function DashboardSchema() {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/api/schema/${businessId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setSchemas(Array.isArray(data) ? data : data?.items || data?.data || []);
-        }
+        const data = await apiGet<unknown>(`/api/schema/${businessId}`);
+        setSchemas(Array.isArray(data) ? data : (data as { items?: SchemaMarkup[]; data?: SchemaMarkup[] })?.items || (data as { data?: SchemaMarkup[] })?.data || []);
       } catch { /* empty */ }
       setLoading(false);
     };
@@ -48,13 +44,11 @@ export default function DashboardSchema() {
     if (!businessId) return;
     setGenerating(true);
     try {
-      const res = await fetch(`${API_BASE}/api/schema/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: businessId, page_type: selectedType }),
+      const data = await apiPost<SchemaMarkup>("/api/schema/generate", {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
+        page_type: selectedType,
       });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
       setSchemas(prev => [data, ...prev]);
       toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch {

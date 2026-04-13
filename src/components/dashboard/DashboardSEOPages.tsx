@@ -4,8 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { FileText, Loader2, ExternalLink, CheckCircle2, Clock, Globe } from "lucide-react";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
-
-const API_BASE = "https://maroa-api-production.up.railway.app";
+import { apiGet, apiPost } from "@/lib/apiClient";
 
 interface SEOPage {
   id: string;
@@ -17,7 +16,7 @@ interface SEOPage {
 }
 
 export default function DashboardSEOPages() {
-  const { businessId, isReady } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const [pages, setPages] = useState<SEOPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -28,11 +27,8 @@ export default function DashboardSEOPages() {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/api/seo-pages/${businessId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setPages(Array.isArray(data) ? data : data?.items || data?.data || []);
-        }
+        const data = await apiGet<SEOPage[] | { items?: SEOPage[]; data?: SEOPage[] }>(`/api/seo-pages/${businessId}`);
+        setPages(Array.isArray(data) ? data : data?.items || data?.data || []);
       } catch { /* empty */ }
       setLoading(false);
     };
@@ -43,13 +39,11 @@ export default function DashboardSEOPages() {
     if (!businessId || !keyword.trim()) return;
     setGenerating(true);
     try {
-      const res = await fetch(`${API_BASE}/api/seo-pages/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: businessId, keyword: keyword.trim() }),
+      const data = await apiPost<SEOPage>("/api/seo-pages/generate", {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
+        keyword: keyword.trim(),
       });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
       setPages(prev => [data, ...prev]);
       setKeyword("");
       toast.success(SUCCESS_MESSAGES.GENERATED);

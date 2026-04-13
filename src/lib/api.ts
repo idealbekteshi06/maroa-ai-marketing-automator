@@ -1,20 +1,12 @@
-const API_BASE = import.meta.env.VITE_API_BASE as string;
+import { apiPost as corePost, apiFireAndForget, getApiBase } from "./apiClient";
 
 async function post<T = unknown>(path: string, body: Record<string, unknown>): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => res.statusText);
-    throw new Error(text || `API error ${res.status}`);
-  }
-  return res.json();
+  return corePost<T>(path, body);
 }
 
 async function get<T = unknown>(path: string, params?: Record<string, string>): Promise<T> {
-  const url = new URL(`${API_BASE}${path}`);
+  const base = getApiBase();
+  const url = new URL(`${base}${path}`);
   if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   const res = await fetch(url.toString());
   if (!res.ok) {
@@ -26,11 +18,7 @@ async function get<T = unknown>(path: string, params?: Record<string, string>): 
 
 /** Fire-and-forget POST — logs but never throws */
 function fire(path: string, body: Record<string, unknown>): void {
-  void fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  }).catch(() => {});
+  apiFireAndForget(path, body);
 }
 
 // ─── Auth / Signup ───────────────────────────────────────────
@@ -245,9 +233,6 @@ export const getReviews = (params: Record<string, string>) =>
 
 // ─── Billing ─────────────────────────────────────────────────
 export const getBillingPlans = () => get("/api/billing/plans");
-
-export const createCheckout = (data: Record<string, unknown>) =>
-  post("/webhook/create-checkout", data);
 
 // ─── Organizations / White-label ─────────────────────────────
 export const orgCreate = (data: Record<string, unknown>) =>

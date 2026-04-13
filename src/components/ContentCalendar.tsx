@@ -11,9 +11,11 @@ interface ContentCalendarProps {
 interface ContentItem {
   id: string;
   platform: string;
-  caption: string;
+  instagram_caption: string | null;
+  facebook_post: string | null;
   status: string;
   created_at: string;
+  content_score?: number | null;
 }
 
 const platformIcons: Record<string, React.ReactNode> = {
@@ -65,7 +67,7 @@ export default function ContentCalendar({ businessId }: ContentCalendarProps) {
 
     const { data } = await externalSupabase
       .from("generated_content")
-      .select("id, platform, caption, status, created_at")
+      .select("*")
       .eq("business_id", businessId)
       .gte("created_at", start)
       .lt("created_at", end)
@@ -148,10 +150,13 @@ export default function ContentCalendar({ businessId }: ContentCalendarProps) {
                 return (
                   <div key={item.id} className="flex items-center gap-3 rounded-md bg-muted/50 px-3 py-2">
                     {platformIcons[item.platform?.toLowerCase()] || <FileText className="h-3.5 w-3.5 text-muted-foreground" />}
-                    <span className="flex-1 text-xs text-foreground truncate">{item.caption || "Untitled post"}</span>
-                    <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded-full", badge.class)}>
+                    <span className="flex-1 text-xs text-foreground truncate">{item.instagram_caption || item.facebook_post || "Untitled post"}</span>
+                    <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0", badge.class)}>
                       {badge.text}
                     </span>
+                    {item.content_score != null && (
+                      <span className="text-[10px] text-muted-foreground shrink-0">{Number(item.content_score).toFixed(0)}</span>
+                    )}
                   </div>
                 );
               })}

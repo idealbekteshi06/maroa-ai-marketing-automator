@@ -4,8 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Rocket, Loader2, CheckCircle2, Circle, Calendar, Zap, Mail, Megaphone } from "lucide-react";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
-
-const API_BASE = "https://maroa-api-production.up.railway.app";
+import { apiGet, apiPost } from "@/lib/apiClient";
 
 interface Task {
   id: string;
@@ -30,7 +29,7 @@ const campaignTypes = [
 ];
 
 export default function DashboardLaunch() {
-  const { businessId, isReady } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -40,11 +39,8 @@ export default function DashboardLaunch() {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/api/launch/${businessId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setCampaigns(Array.isArray(data) ? data : data?.items || data?.data || []);
-        }
+        const data = await apiGet<Campaign[] | { items?: Campaign[]; data?: Campaign[] }>(`/api/launch/${businessId}`);
+        setCampaigns(Array.isArray(data) ? data : data?.items || data?.data || []);
       } catch { /* empty */ }
       setLoading(false);
     };
@@ -55,13 +51,11 @@ export default function DashboardLaunch() {
     if (!businessId) return;
     setCreating(true);
     try {
-      const res = await fetch(`${API_BASE}/api/launch/create`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: businessId, campaign_type: type }),
+      const data = await apiPost<Campaign>("/api/launch/create", {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
+        campaign_type: type,
       });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
       setCampaigns(prev => [data, ...prev]);
       toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch {

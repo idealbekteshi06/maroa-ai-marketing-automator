@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ReactMarkdown from "react-markdown";
+import { getApiBase } from "@/lib/apiClient";
 
 interface Message {
   role: "user" | "assistant";
@@ -28,7 +29,7 @@ export default function AIChatAssistant({ externalOpen, onExternalOpenChange }: 
   const [business, setBusiness] = useState<Record<string, unknown> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { businessId, isReady } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -62,10 +63,14 @@ export default function AIChatAssistant({ externalOpen, onExternalOpenChange }: 
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
     try {
-      const res = await fetch("https://maroa-api-production.up.railway.app/webhook/ai-chat", {
+      const res = await fetch(`${getApiBase()}/webhook/ai-chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, business_id: businessId }),
+        body: JSON.stringify({
+          message: text,
+          user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+          business_id: businessId,
+        }),
       });
 
       if (!res.ok) throw new Error("Chat failed");

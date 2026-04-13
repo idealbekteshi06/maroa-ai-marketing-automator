@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
+import { apiFireAndForget } from "@/lib/apiClient";
 import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
 } from "@/components/ui/table";
@@ -73,9 +74,15 @@ export default function DashboardAds() {
     try {
       const { data: biz } = await externalSupabase.from("businesses").select("business_name, email, daily_budget, target_audience, industry, location").eq("id", businessId).maybeSingle();
       toast("🤖 AI is building your campaigns...");
-      await fetch("https://maroa-api-production.up.railway.app/webhook/create-campaigns", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business_id: businessId, email: biz?.email || user?.email, business_name: biz?.business_name, daily_budget: budgetValue[0] / 30, target_audience: biz?.target_audience, industry: biz?.industry, location: biz?.location }),
+      apiFireAndForget("/webhook/create-campaigns", {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
+        email: biz?.email || user?.email,
+        business_name: biz?.business_name,
+        daily_budget: budgetValue[0] / 30,
+        target_audience: biz?.target_audience,
+        industry: biz?.industry,
+        location: biz?.location,
       });
       toast.success(SUCCESS_MESSAGES.GENERATED);
       setTimeout(async () => {

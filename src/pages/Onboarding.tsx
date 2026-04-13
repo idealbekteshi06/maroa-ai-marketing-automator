@@ -19,8 +19,8 @@ import {
   SPEND_OPTIONS, LIFETIME_OPTIONS, DISCOVERY_CHANNELS, EMOJI_OPTIONS,
   APPROVAL_OPTIONS, POSTING_FREQUENCY, VISUAL_STYLES,
 } from "@/lib/onboardingQuestions";
+import { apiFireAndForget } from "@/lib/apiClient";
 
-const API_BASE = "https://maroa-api-production.up.railway.app";
 const STORAGE_KEY = "maroa-onboarding-v2";
 
 const blockIcons = [Building2, MapPin, Users, Package, Palette, Target, Share2, Swords, Clock, Image, Heart, Settings];
@@ -195,7 +195,7 @@ export default function Onboarding() {
       if (biz) {
         // Build profile payload from all 83 questions
         const profilePayload = {
-          user_id: biz.user_id || businessId,
+          user_id: user?.id ?? (biz.user_id as string) ?? businessId, // server expects user_id — this is auth.user.id = businesses.id
           business_name: form.business_name || biz.business_name,
           business_type: form.business_type || biz.industry,
           business_age: form.business_stage === "Just starting" ? "new" : form.business_stage === "Growing" ? "growing" : "established",
@@ -229,32 +229,27 @@ export default function Onboarding() {
           we_do_better: form.competitor_weaknesses || "",
         };
 
-        void fetch(`${API_BASE}/api/onboarding/save`, {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(profilePayload),
-        }).catch(console.warn);
+        apiFireAndForget("/api/onboarding/save", profilePayload as Record<string, unknown>);
 
-        void fetch(`${API_BASE}/webhook/new-user-signup`, {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            user_id: biz.user_id, email: biz.email, first_name: biz.first_name,
-            business_name: biz.business_name, industry: biz.industry,
-            location: biz.location, target_audience: biz.target_audience,
-            brand_tone: biz.brand_tone, marketing_goal: biz.marketing_goal,
-            plan: biz.plan, competitors: biz.competitors, daily_budget: biz.daily_budget,
-            onboarding_data: { ...form },
-          }),
-        }).catch(console.warn);
+        apiFireAndForget("/webhook/new-user-signup", {
+          user_id: user?.id ?? biz.user_id, email: biz.email, first_name: biz.first_name,
+          business_name: biz.business_name, industry: biz.industry,
+          location: biz.location, target_audience: biz.target_audience,
+          brand_tone: biz.brand_tone, marketing_goal: biz.marketing_goal,
+          plan: biz.plan, competitors: biz.competitors, daily_budget: biz.daily_budget,
+          onboarding_data: { ...form },
+        });
 
-        void fetch(`${API_BASE}/webhook/instant-content`, {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ business_id: businessId, email: biz.email }),
-        }).catch(console.warn);
+        apiFireAndForget("/webhook/instant-content", {
+          user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+          business_id: businessId,
+          email: biz.email,
+        });
 
-        void fetch(`${API_BASE}/api/ideas/generate`, {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ business_id: businessId }),
-        }).catch(console.warn);
+        apiFireAndForget("/api/ideas/generate", {
+          user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+          business_id: businessId,
+        });
       }
     }
 

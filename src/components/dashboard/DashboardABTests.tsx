@@ -4,15 +4,15 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { FlaskConical, Loader2, Trophy, Plus } from "lucide-react";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
+import { apiGet, apiPost } from "@/lib/apiClient";
 
 interface Variant { name: string; impressions: number; clicks: number; conversions: number; confidence: number }
 interface ABTest { id: string; test_type: string; status: string; variants: Variant[]; winner: string | null; created_at: string }
 
 const TEST_TYPES = ["headline", "image", "CTA", "landing page"] as const;
-const API_BASE = "https://maroa-api-production.up.railway.app";
 
 export default function DashboardABTests() {
-  const { businessId, isReady } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const [tests, setTests] = useState<ABTest[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -23,9 +23,8 @@ export default function DashboardABTests() {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/api/ab-tests/${businessId}`);
-        const data = await res.json();
-        if (res.ok) setTests(data.tests ?? []);
+        const data = await apiGet<{ tests?: ABTest[] }>(`/api/ab-tests/${businessId}`);
+        setTests(data.tests ?? []);
       } catch { /* empty */ }
       finally { setLoading(false); }
     };
@@ -36,12 +35,12 @@ export default function DashboardABTests() {
     if (!businessId) return;
     setCreating(true);
     try {
-      const res = await fetch(`${API_BASE}/api/ab-tests/create`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: businessId, test_type: selectedType, variants: ["A", "B"] }),
+      const data = await apiPost<ABTest>("/api/ab-tests/create", {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
+        test_type: selectedType,
+        variants: ["A", "B"],
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
       setTests(prev => [data, ...prev]);
       toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }

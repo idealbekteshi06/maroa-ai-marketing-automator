@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Lightbulb, Loader2, Sparkles, ChevronDown, ArrowRight, Check } from "lucide-react";
 import { DEMO_IDEAS } from "@/lib/demoData";
-import { apiGet, apiPost, createAbortController } from "@/lib/apiClient";
+import { apiGet, apiPost, apiPatch, createAbortController } from "@/lib/apiClient";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 import type { MarketingIdea } from "@/types";
 
@@ -24,7 +24,7 @@ const columns = [
 ];
 
 export default function DashboardIdeas() {
-  const { businessId, isReady } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const [ideas, setIdeas] = useState<MarketingIdea[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -57,22 +57,21 @@ export default function DashboardIdeas() {
     if (!businessId) { toast.error(ERROR_MESSAGES.NO_BUSINESS_ID); return; }
     setGenerating(true);
     try {
-      const data = await apiPost<IdeasResponse | MarketingIdea[]>("/api/ideas/generate", { userId: businessId });
+      const data = await apiPost<IdeasResponse | MarketingIdea[]>("/api/ideas/generate", {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
+      });
       const newIdeas = Array.isArray(data) ? data : data?.ideas || data?.items || [];
       if (newIdeas.length > 0) { setIdeas(newIdeas); setIsDemo(false); }
       toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
     finally { setGenerating(false); }
-  }, [businessId]);
+  }, [businessId, user?.id]);
 
   const moveIdea = (id: string, newStatus: "new" | "in_progress" | "completed"): void => {
     setIdeas(prev => (prev || []).map(i => i.id === id ? { ...i, status: newStatus } : i));
     if (!isDemo && businessId) {
-      fetch(`https://maroa-api-production.up.railway.app/api/ideas/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus })
-      }).catch(() => {});
+      apiPatch(`/api/ideas/${id}`, { status: newStatus }).catch(() => {});
     }
   };
 

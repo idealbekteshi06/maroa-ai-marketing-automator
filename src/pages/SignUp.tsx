@@ -5,12 +5,12 @@ import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { externalSupabase } from "@/integrations/supabase/external-client";
+import { apiFireAndForget } from "@/lib/apiClient";
 import { toast } from "sonner";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 
 const industries = ["Bakery", "Restaurant", "Café", "Salon & Spa", "Gym & Fitness", "Boutique & Retail", "Photography", "Real Estate", "Coaching & Consulting", "Medical & Dental", "Auto Services", "Home Services", "Other"];
 
-const N8N_SIGNUP_WEBHOOK_URL = "https://maroa-api-production.up.railway.app/webhook/maroa-signup-2026";
 const AUTH_TIMEOUT_MS = 10_000;
 
 const withTimeout = <T,>(promise: PromiseLike<T>, message: string): Promise<T> =>
@@ -100,23 +100,19 @@ export default function SignUp() {
         .eq("user_id", userId)
         .maybeSingle();
 
-      void fetch(N8N_SIGNUP_WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: userId, email: form.email, first_name: form.firstName,
-          last_name: form.lastName, business_name: form.businessName,
-          industry: form.industry, location: form.location, plan: "free",
-        }),
-      }).catch(() => {});
+      apiFireAndForget("/webhook/maroa-signup-2026", {
+        user_id: userId, email: form.email, first_name: form.firstName,
+        last_name: form.lastName, business_name: form.businessName,
+        industry: form.industry, location: form.location, plan: "free",
+      });
 
       // Trigger instant content generation
       if (newBiz?.id) {
-        void fetch("https://maroa-api-production.up.railway.app/webhook/maroa-content-2026", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ business_id: newBiz.id, email: form.email }),
-        }).catch(() => {});
+        apiFireAndForget("/webhook/maroa-content-2026", {
+          user_id: userId, // server expects user_id — this is auth.user.id = businesses.id
+          business_id: newBiz.id,
+          email: form.email,
+        });
       }
 
       toast.success(SUCCESS_MESSAGES.GENERATED);

@@ -6,25 +6,26 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { postCheckout } from "@/lib/apiClient";
 
 const PLANS = [
   {
     key: "free", name: "Free", monthlyPrice: 0, annualPrice: 0,
     desc: "Try it out with one business.",
     features: ["1 business", "5 posts per month", "Basic dashboard", "Email support"],
-    popular: false, priceId: null,
+    popular: false,
   },
   {
-    key: "growth", name: "Growth", monthlyPrice: 49, annualPrice: 41,
+    key: "growth", name: "Growth", monthlyPrice: 59, annualPrice: 49,
     desc: "Everything you need to grow.",
     features: ["Unlimited content generation", "All social platforms", "Meta ad management", "Daily AI optimization", "Weekly strategy reports", "Competitor tracking", "AI image generation", "Priority support"],
-    popular: true, priceId: "price_1TEzSrRdWtvqvMKio7e5VO2Y",
+    popular: true,
   },
   {
     key: "agency", name: "Agency", monthlyPrice: 99, annualPrice: 83,
     desc: "For agencies managing multiple brands.",
     features: ["Everything in Growth", "Unlimited businesses", "White label dashboard", "Client-facing reports", "Custom integrations", "Dedicated account manager", "API access", "Custom branding"],
-    popular: false, priceId: "price_1TEzTeRdWtvqvMKiWI61UYLk",
+    popular: false,
   },
 ];
 
@@ -35,25 +36,15 @@ export default function Pricing() {
   const navigate = useNavigate();
 
   const handleCheckout = async (plan: typeof PLANS[number]) => {
-    if (!plan.priceId) { navigate("/signup"); return; }
-    if (!user) { navigate("/signup"); return; }
+    if (plan.key === "free") { navigate("/signup"); return; }
+    if (!user?.id) { navigate("/signup"); return; }
 
     setLoading(plan.key);
     try {
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/create-checkout`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "apikey": anonKey },
-        body: JSON.stringify({ priceId: plan.priceId, email: user.email }),
-      });
-
-      const data = await response.json();
-      if (data?.error) throw new Error(data.error);
-      if (data?.url) window.open(data.url, "_blank");
+      const result = await postCheckout(user.id, plan.key);
+      if (result.checkout_url) window.location.href = result.checkout_url;
     } catch (err: unknown) {
-      toast.error(err.message || "Failed to start checkout.");
+      toast.error(err instanceof Error ? err.message : "Failed to start checkout.");
     }
     setLoading(null);
   };

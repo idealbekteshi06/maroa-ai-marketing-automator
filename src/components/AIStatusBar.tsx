@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { ERROR_MESSAGES } from "@/lib/errorMessages";
 import { toast } from "sonner";
+import { getApiBase } from "@/lib/apiClient";
 
 interface AIStatusBarProps {
   businessId: string | null;
@@ -57,7 +58,7 @@ export default function AIStatusBar({ businessId }: AIStatusBarProps) {
   // SSE connection
   useEffect(() => {
     if (!businessId) return;
-    const apiBase = import.meta.env.VITE_API_BASE;
+    const apiBase = getApiBase();
     if (!apiBase) return;
     let es: EventSource;
     try {

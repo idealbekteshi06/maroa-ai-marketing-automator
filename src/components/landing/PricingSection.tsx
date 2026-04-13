@@ -1,10 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Check, X, Shield } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useState } from "react";
+import { postCheckout } from "@/lib/apiClient";
 
 type Currency = "EUR" | "USD" | "GBP" | "AED";
 
@@ -19,7 +19,7 @@ const planData = [
   {
     key: "starter",
     name: "Starter",
-    prices: { EUR: 19, USD: 21, GBP: 17, AED: 77 },
+    prices: { EUR: 29, USD: 32, GBP: 25, AED: 118 },
     desc: "Perfect for getting started.",
     features: [
       { text: "1 social account", included: true },
@@ -31,12 +31,11 @@ const planData = [
     ],
     cta: "Start free trial",
     popular: false,
-    priceId: null as string | null,
   },
   {
     key: "growth",
     name: "Growth",
-    prices: { EUR: 49, USD: 54, GBP: 43, AED: 198 },
+    prices: { EUR: 59, USD: 65, GBP: 52, AED: 238 },
     desc: "Everything you need to grow.",
     features: [
       { text: "5 social accounts", included: true },
@@ -48,7 +47,6 @@ const planData = [
     ],
     cta: "Start free trial",
     popular: true,
-    priceId: "price_1TEzSrRdWtvqvMKio7e5VO2Y" as string | null,
   },
   {
     key: "agency",
@@ -65,7 +63,6 @@ const planData = [
     ],
     cta: "Start free trial",
     popular: false,
-    priceId: "price_1TEzTeRdWtvqvMKiWI61UYLk" as string | null,
   },
 ];
 
@@ -97,28 +94,14 @@ export function PricingSection() {
   };
 
   const handleCheckout = async (plan: typeof planData[number]) => {
-    if (!plan.priceId) { navigate("/signup"); return; }
-    if (!user) { navigate("/signup"); return; }
+    if (!user?.id) { navigate("/signup"); return; }
 
     setLoading(plan.key);
     try {
-      const email = user.email;
-      if (!email) throw new Error("No email found");
-
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/create-checkout`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "apikey": anonKey },
-        body: JSON.stringify({ priceId: plan.priceId, email }),
-      });
-
-      const data = await response.json();
-      if (data?.error) throw new Error(data.error);
-      if (data?.url) window.open(data.url, "_blank");
+      const result = await postCheckout(user.id, plan.key);
+      if (result.checkout_url) window.location.href = result.checkout_url;
     } catch (err: unknown) {
-      toast.error(err.message || "Failed to start checkout.");
+      toast.error(err instanceof Error ? err.message : "Failed to start checkout.");
     }
     setLoading(null);
   };

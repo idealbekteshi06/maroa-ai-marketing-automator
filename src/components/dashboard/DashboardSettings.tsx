@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Check, ExternalLink, User, CreditCard, Bell, Zap, Palette, Link2, CalendarClock, Loader2, Trash2, Shield } from "lucide-react";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
+import { apiPost, postCheckout, getBrandDna, postBuildBrandDna } from "@/lib/apiClient";
 
 /* ── Tabs ── */
 const tabs = [
@@ -23,9 +24,10 @@ const tabs = [
 ];
 
 const PLANS = {
-  free: { name: "Free", price: 0, price_id: null, features: ["3 posts/week", "1 platform", "Basic analytics"] },
-  growth: { name: "Growth", price: 49, price_id: "price_1TEzSrRdWtvqvMKio7e5VO2Y", popular: true, features: ["Unlimited posts", "All platforms", "AI campaigns", "Competitor tracking", "SEO automation", "CRM & leads", "WhatsApp alerts"] },
-  agency: { name: "Agency", price: 99, price_id: "price_1TEzTeRdWtvqvMKiWI61UYLk", features: ["Everything in Growth", "20 client workspaces", "White label branding", "PDF client reports", "Priority support"] },
+  free: { name: "Free", price: 0, features: ["3 posts/week", "1 platform", "Basic analytics"] },
+  starter: { name: "Starter", price: 29, features: ["20 images/mo", "1 platform (Instagram)", "Content calendar", "Email support"] },
+  growth: { name: "Growth", price: 59, popular: true, features: ["60 images/mo", "Kling + Sora videos", "3 platforms", "Analytics", "Competitor tracking", "CRM & leads"] },
+  agency: { name: "Agency", price: 99, features: ["120 images/mo", "All platforms", "3 brands", "White-label", "Priority support"] },
 } as const;
 type PlanKey = keyof typeof PLANS;
 
@@ -75,6 +77,8 @@ export default function DashboardSettings() {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [brandTraining, setBrandTraining] = useState(false);
+  const [brandDnaLoading, setBrandDnaLoading] = useState(false);
+  const [brandDnaPreview, setBrandDnaPreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!businessId || !isReady) return;
@@ -90,7 +94,10 @@ export default function DashboardSettings() {
         marketing_goal: data.marketing_goal ?? "", competitors: data.competitors ?? "",
         daily_budget: data.daily_budget ?? 0,
       });
-      setCurrentPlan((data.plan === "growth" || data.plan === "agency") ? data.plan : "free");
+      const p = data.plan as string;
+      setCurrentPlan(
+        p === "growth" || p === "agency" || p === "starter" ? p : "free"
+      );
       setAutopilot(!!data.autopilot_enabled);
       if (data.notification_preferences) {
         try {
@@ -123,17 +130,11 @@ export default function DashboardSettings() {
   };
 
   const handleUpgrade = async (planKey: PlanKey) => {
-    const plan = PLANS[planKey];
-    if (!plan.price_id) return;
+    if (planKey === "free" || !user?.id) return;
     setCheckoutLoading(planKey);
     try {
-      const email = business?.email || user?.email;
-      const res = await fetch("https://zqhyrbttuqkvmdewiytf.supabase.co/functions/v1/create-checkout", {
-        method: "POST", headers: { "Content-Type": "application/json", apikey: "sb_publishable_4O2w1ObpYPQ7eOIlOhwl5A_8GxCt-gs" },
-        body: JSON.stringify({ priceId: plan.price_id, email }),
-      });
-      const data = await res.json();
-      if (data?.url) window.open(data.url, "_blank");
+      const result = await postCheckout(user.id, planKey);
+      if (result.checkout_url) window.location.href = result.checkout_url;
     } catch (err: unknown) { toast.error(err instanceof Error ? err.message : ERROR_MESSAGES.SAVE_FAILED); }
     setCheckoutLoading(null);
   };
@@ -148,15 +149,31 @@ export default function DashboardSettings() {
   };
 
   const handleBrandTrain = async () => {
-    if (!businessId) return;
+    if (!businessId || !user?.id) return;
     setBrandTraining(true);
     toast("🧠 Training brand voice...");
     try {
-      await fetch("https://maroa-api-production.up.railway.app/webhook/brand-memory-train", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: businessId }) });
+      await postBuildBrandDna(businessId, user.id);
       toast.success(SUCCESS_MESSAGES.GENERATED);
+      const d = await getBrandDna(businessId);
+      setBrandDnaPreview(typeof d === "object" && d !== null ? JSON.stringify(d, null, 2) : String(d));
     } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
     setBrandTraining(false);
   };
+
+  useEffect(() => {
+    if (activeTab !== "Brand" || !businessId || !isReady) return;
+    let cancelled = false;
+    setBrandDnaLoading(true);
+    getBrandDna(businessId)
+      .then((d) => {
+        if (cancelled) return;
+        setBrandDnaPreview(typeof d === "object" && d !== null ? JSON.stringify(d, null, 2) : String(d));
+      })
+      .catch(() => { if (!cancelled) setBrandDnaPreview(null); })
+      .finally(() => { if (!cancelled) setBrandDnaLoading(false); });
+    return () => { cancelled = true; };
+  }, [activeTab, businessId, isReady]);
 
   return (
     <div className="flex gap-6 pb-20 md:pb-0">
@@ -267,8 +284,8 @@ export default function DashboardSettings() {
                   <p className="mt-1 text-2xl font-bold text-foreground">${plan.price}<span className="text-sm font-normal text-muted-foreground">/mo</span></p>
                   <ul className="mt-3 space-y-1.5">{plan.features.map(f => <li key={f} className="flex items-center gap-2 text-xs text-muted-foreground"><Check className="h-3 w-3 text-success shrink-0" />{f}</li>)}</ul>
                   <Button variant={currentPlan === key ? "outline" : "default"} size="sm" className="mt-4 w-full"
-                    disabled={currentPlan === key || !!checkoutLoading} onClick={() => handleUpgrade(key)}>
-                    {checkoutLoading === key ? "Opening checkout..." : currentPlan === key ? "Current Plan" : `Upgrade to ${plan.name}`}
+                    disabled={currentPlan === key || !!checkoutLoading || key === "free"} onClick={() => handleUpgrade(key)}>
+                    {checkoutLoading === key ? "Opening checkout..." : currentPlan === key ? "Current Plan" : key === "free" ? (currentPlan === "free" ? "Current Plan" : "Included") : `Upgrade to ${plan.name}`}
                   </Button>
                 </div>
               ))}
@@ -290,12 +307,20 @@ export default function DashboardSettings() {
                 ))}
               </div>
             </div>
+            {brandDnaLoading && (
+              <p className="text-xs text-muted-foreground flex items-center gap-2"><Loader2 className="h-3 w-3 animate-spin" /> Loading brand intelligence...</p>
+            )}
+            {brandDnaPreview && !brandDnaLoading && (
+              <div className="rounded-xl border border-border bg-card p-3 max-h-48 overflow-auto">
+                <pre className="text-[10px] text-foreground whitespace-pre-wrap font-mono leading-relaxed">{brandDnaPreview}</pre>
+              </div>
+            )}
             <div className="rounded-xl border border-border bg-card p-5">
               <p className="text-xs text-muted-foreground">Content analyzed: 0 pieces</p>
               <p className="text-xs text-muted-foreground">Last trained: Not trained yet</p>
             </div>
-            <Button className="w-full" onClick={handleBrandTrain} disabled={brandTraining}>
-              {brandTraining ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Training...</> : "🎓 Train Brand Voice Now"}
+            <Button className="w-full" onClick={handleBrandTrain} disabled={brandTraining || brandDnaLoading}>
+              {brandTraining ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Rebuilding...</> : "Rebuild brand intelligence"}
             </Button>
             <p className="text-[11px] text-muted-foreground text-center">Takes about 30 seconds</p>
           </div>

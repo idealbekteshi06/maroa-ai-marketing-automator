@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Lock, CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-const API_BASE = import.meta.env.VITE_API_BASE as string;
+import { apiGet } from "@/lib/apiClient";
 
 interface ScoreData {
   score: number;
@@ -23,16 +22,15 @@ const featureLabels: Record<string, string> = {
 };
 
 export default function ProfileScore({ compact }: { compact?: boolean }) {
-  const { businessId } = useAuth();
+  const { businessId, user } = useAuth();
   const [data, setData] = useState<ScoreData | null>(null);
 
   useEffect(() => {
-    if (!businessId || !API_BASE) return;
-    fetch(`${API_BASE}/api/onboarding/score/${businessId}`)
-      .then(r => r.json())
+    if (!businessId || !user?.id) return;
+    apiGet<ScoreData>(`/api/onboarding/score/${user.id}`)
       .then(setData)
       .catch(() => {});
-  }, [businessId]);
+  }, [businessId, user?.id]);
 
   if (!data) return null;
 

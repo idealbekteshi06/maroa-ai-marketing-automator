@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ArrowUpCircle, Loader2, Copy, Clock, Zap, Lock } from "lucide-react";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
+import { apiPost } from "@/lib/apiClient";
 
 interface UpgradePrompt {
   id: string;
@@ -21,10 +22,8 @@ const scenarioIcon: Record<string, typeof Clock> = {
   feature_gate: Lock,
 };
 
-const API_BASE = "https://maroa-api-production.up.railway.app";
-
 export default function DashboardUpgradeCRO() {
-  const { businessId, isReady } = useAuth();
+  const { businessId, user, isReady } = useAuth();
   const [prompts, setPrompts] = useState<UpgradePrompt[]>([]);
   const [generating, setGenerating] = useState(false);
 
@@ -32,12 +31,10 @@ export default function DashboardUpgradeCRO() {
     if (!businessId) return;
     setGenerating(true);
     try {
-      const res = await fetch(`${API_BASE}/api/upgrade/generate-prompts`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: businessId }),
+      const data = await apiPost<{ prompts?: UpgradePrompt[] }>("/api/upgrade/generate-prompts", {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
       setPrompts(data.prompts ?? []);
       toast.success(SUCCESS_MESSAGES.GENERATED);
     } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }

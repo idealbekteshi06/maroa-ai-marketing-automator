@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AlertTriangle } from "lucide-react";
-
-const API_BASE = import.meta.env.VITE_API_BASE as string;
+import { apiGet } from "@/lib/apiClient";
 
 interface Props {
   featureType: "social_posts" | "email_sms" | "paid_ads" | "full_autopilot";
@@ -24,17 +23,16 @@ const featureNames: Record<string, string> = {
 };
 
 export default function ProfileIncompleteWarning({ featureType, className }: Props) {
-  const { businessId } = useAuth();
+  const { businessId, user } = useAuth();
   const [score, setScore] = useState<number | null>(null);
   const required = thresholds[featureType] || 30;
 
   useEffect(() => {
-    if (!businessId || !API_BASE) return;
-    fetch(`${API_BASE}/api/onboarding/score/${businessId}`)
-      .then(r => r.json())
+    if (!businessId || !user?.id) return;
+    apiGet<{ score?: number }>(`/api/onboarding/score/${user.id}`)
       .then(d => setScore(d.score ?? 0))
       .catch(() => setScore(0));
-  }, [businessId]);
+  }, [businessId, user?.id]);
 
   if (score === null || score >= required) return null;
 

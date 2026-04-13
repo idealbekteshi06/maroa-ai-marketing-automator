@@ -26,12 +26,11 @@ import {
 import ContentCalendar from "@/components/ContentCalendar";
 import { timeAgo } from "@/lib/format";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
+import { apiPost, apiFireAndForget, getApiBase } from "@/lib/apiClient";
 
 const META_APP_ID = "26551713411132003";
 const META_PERMISSIONS =
   "email,public_profile,pages_show_list,pages_read_engagement,pages_manage_posts,pages_manage_engagement,pages_read_user_content,instagram_basic,instagram_content_publish,ads_read,ads_management,business_management,read_insights";
-const API_BASE = import.meta.env.VITE_API_BASE;
-
 interface AccountConfig {
   name: string;
   color: string;
@@ -206,16 +205,11 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
         await externalSupabase.from("businesses").update(updateData).eq("id", storedBizId);
         localStorage.removeItem("meta_oauth_business_id");
         await fetchBusiness();
-        void fetch("https://maroa-api-production.up.railway.app/webhook/account-connected", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            business_id: storedBizId,
-            facebook_page_id: data.page_id ?? null,
-            meta_access_token: data.access_token,
-          }),
-        }).catch(() => {
-          toast.error(ERROR_MESSAGES.LOAD_FAILED);
+        apiFireAndForget("/webhook/account-connected", {
+          user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+          business_id: storedBizId,
+          facebook_page_id: data.page_id ?? null,
+          meta_access_token: data.access_token,
         });
         toast.success(SUCCESS_MESSAGES.GENERATED);
       } catch (err: unknown) {
@@ -224,14 +218,14 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
         setConnecting(null);
       }
     })();
-  }, [businessId, fetchBusiness, oauthCode]);
+  }, [businessId, fetchBusiness, oauthCode, user?.id]);
 
   /* ---- Connect handler ---- */
   const handleConnect = (a: AccountConfig) => {
     if (a.type === "meta_oauth") {
       handleMetaOAuth();
     } else if (a.type === "linkedin_oauth") {
-      window.location.href = API_BASE + "/linkedin-oauth-start?business_id=" + businessId;
+      window.location.href = getApiBase() + "/linkedin-oauth-start?business_id=" + businessId;
     } else {
       setConnectForm({});
       setConnectDialog(a);
@@ -283,12 +277,11 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
     if (!businessId) return;
     setGenerating(true);
     try {
-      const res = await fetch(`${API_BASE}/webhook/instant-content`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business_id: businessId, email: user?.email }),
+      await apiPost("/webhook/instant-content", {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
+        email: user?.email,
       });
-      if (!res.ok) throw new Error("Failed to generate post");
       toast.success(SUCCESS_MESSAGES.GENERATED);
       await fetchRecentPosts();
     } catch (err: unknown) {

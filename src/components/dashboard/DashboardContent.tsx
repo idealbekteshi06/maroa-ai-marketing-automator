@@ -8,6 +8,7 @@ import { FileText, Search as SearchIcon, Calendar, LayoutGrid, ChevronLeft, Chev
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import PostPreviewModal from "@/components/dashboard/PostPreviewModal";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
+import { apiFireAndForget } from "@/lib/apiClient";
 
 interface ContentItem {
   id: string; instagram_caption: string | null; instagram_caption_2: string | null;
@@ -16,6 +17,7 @@ interface ContentItem {
   google_ad_headline: string | null; google_ad_description: string | null;
   image_url: string | null; content_theme: string | null; status: string; created_at: string;
   platform?: string | null;
+  content_score?: number | null;
 }
 
 const statusConfig: Record<string, { bg: string; text: string; label: string; overlay: string }> = {
@@ -111,9 +113,10 @@ export default function DashboardContent() {
     setGenerating(true); setGenMessage("AI is writing your post...");
     toast("🤖 AI is creating content...");
     try {
-      await fetch("https://maroa-api-production.up.railway.app/webhook/instant-content", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business_id: businessId, email: user?.email ?? "" }),
+      apiFireAndForget("/webhook/instant-content", {
+        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+        business_id: businessId,
+        email: user?.email ?? "",
       });
       const msgs = ["Crafting captions...", "Generating image...", "Optimizing for platforms...", "Almost done..."];
       for (const msg of msgs) { await new Promise(r => setTimeout(r, 5000)); setGenMessage(msg); }
@@ -128,10 +131,11 @@ export default function DashboardContent() {
     const { error } = await externalSupabase.from("generated_content").update({ status: "approved" }).eq("id", id);
     if (error) { toast.error(ERROR_MESSAGES.GENERATION_FAILED); return; }
     toast.success(SUCCESS_MESSAGES.GENERATED);
-    void fetch("https://maroa-api-production.up.railway.app/webhook/content-approved", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content_id: id, business_id: businessId }),
-    }).catch(console.warn);
+    apiFireAndForget("/webhook/content-approved", {
+      user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+      content_id: id,
+      business_id: businessId,
+    });
     fetchContent();
   };
 
@@ -227,7 +231,10 @@ export default function DashboardContent() {
                     <PopoverContent className="w-72 p-3">{items.map(c => (
                       <div key={c.id} className="mb-2 last:mb-0 rounded-lg bg-muted p-2 cursor-pointer hover:bg-accent transition-colors" onClick={() => setPreviewItem(c)}>
                         <p className="text-xs text-foreground truncate">{c.instagram_caption?.slice(0, 60) || c.facebook_post?.slice(0, 60) || "Content"}</p>
-                        <span className={`mt-1 inline-block rounded px-2 py-0.5 text-[9px] font-medium ${getStatus(c.status).bg} ${getStatus(c.status).text}`}>{getStatus(c.status).label}</span>
+                        <div className="mt-1 flex flex-wrap items-center gap-1">
+                          <span className={`inline-block rounded px-2 py-0.5 text-[9px] font-medium ${getStatus(c.status).bg} ${getStatus(c.status).text}`}>{getStatus(c.status).label}</span>
+                          {c.content_score != null && <span className="text-[9px] text-muted-foreground">Score {Number(c.content_score).toFixed(0)}</span>}
+                        </div>
                       </div>
                     ))}</PopoverContent>
                   )}
@@ -270,7 +277,10 @@ export default function DashboardContent() {
                 {/* Card body */}
                 <div className="p-3">
                   <p className="text-[13px] text-foreground line-clamp-2 leading-relaxed">{caption || "Content"}</p>
-                  <p className="text-[11px] text-muted-foreground mt-1.5">{timeAgo(c.created_at)}</p>
+                  <p className="text-[11px] text-muted-foreground mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <span>{timeAgo(c.created_at)}</span>
+                    {c.content_score != null && <span className="text-muted-foreground/90">Score {Number(c.content_score).toFixed(0)}</span>}
+                  </p>
                 </div>
 
                 {/* Hover action row — desktop only, hidden on mobile to avoid blocking card tap */}
