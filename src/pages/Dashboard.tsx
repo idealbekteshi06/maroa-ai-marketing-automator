@@ -87,6 +87,17 @@ const WF15AiBrain = lazy(() => import("@/pages/workflows/AiBrain"));
 const WF2LeadScoring = lazy(() => import("@/pages/workflows/LeadScoring"));
 const WF4ReviewsReputation = lazy(() => import("@/pages/workflows/ReviewsReputation"));
 
+/* ── v2 premium pages ── */
+const AdOptimization = lazy(() => import("@/pages/AdOptimization"));
+const LocalPresence = lazy(() => import("@/pages/LocalPresence"));
+const EmailLifecycle = lazy(() => import("@/pages/EmailLifecycle"));
+const UnifiedInbox = lazy(() => import("@/pages/UnifiedInbox"));
+const HiggsfieldStudio = lazy(() => import("@/pages/HiggsfieldStudio"));
+const CompetitorIntelligence = lazy(() => import("@/pages/CompetitorIntelligence"));
+const CustomerInsights = lazy(() => import("@/pages/CustomerInsights"));
+const LaunchOrchestrator = lazy(() => import("@/pages/LaunchOrchestrator"));
+const BudgetROI = lazy(() => import("@/pages/BudgetROI"));
+
 /* ── v2 Navigation (REFACTOR_BRIEF_V2 section 2.1) ────────────
  * 7 primary items per Miller's 7±2 law. Workflows expand into 4 categories
  * per the V2 spec. Legacy pages are kept reachable via direct URL (?tab=key)
@@ -205,6 +216,15 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   "ai-brain": { title: "AI Brain", subtitle: "Your autonomous marketing manager" },
   health: { title: "Health Score", subtitle: "Your marketing health assessment" },
   campaign: { title: "Instant Campaign", subtitle: "One-click multi-channel campaigns" },
+  "ad-optimization": { title: "Ad Optimization", subtitle: "AI-powered Meta Ads performance" },
+  "local-presence": { title: "Local Presence", subtitle: "Google Business Profile + local SEO" },
+  "email-lifecycle": { title: "Email Lifecycle", subtitle: "Automated sequences and nurture flows" },
+  "unified-inbox": { title: "Unified Inbox", subtitle: "Every conversation, one queue" },
+  "higgsfield-studio": { title: "Studio", subtitle: "AI video and image generation" },
+  "competitor-intel": { title: "Competitor Intelligence", subtitle: "Track and outperform competitors" },
+  "customer-insights": { title: "Customer Insights", subtitle: "AI-analyzed behavior and segments" },
+  "launch-orchestrator": { title: "Launch Orchestrator", subtitle: "Coordinate product and campaign launches" },
+  "budget-roi": { title: "Budget & ROI", subtitle: "Marketing spend allocation and returns" },
 };
 
 /* FIX 1: Name capitalization */
@@ -301,19 +321,29 @@ export default function Dashboard() {
          * workflow is implemented per its spec. Until then they fall through
          * to the legacy component closest in meaning. */
         case "wf2-leads": return <WF2LeadScoring />;
-        case "wf3-ads": return <DashboardAds />;
+        case "wf3-ads": return <AdOptimization />;
         case "wf4-reviews": return <WF4ReviewsReputation />;
-        case "wf5-competitors": return <DashboardCompetitors />;
-        case "wf6-local-presence": return <DashboardSEO />;
-        case "wf7-email": return <DashboardEmail />;
-        case "wf8-insights": return <DashboardResearch />;
-        case "wf11-inbox": return <DashboardCRM />;
-        case "wf12-launch": return <DashboardLaunch />;
+        case "wf5-competitors": return <CompetitorIntelligence />;
+        case "wf6-local-presence": return <LocalPresence />;
+        case "wf7-email": return <EmailLifecycle />;
+        case "wf8-insights": return <CustomerInsights />;
+        case "wf11-inbox": return <UnifiedInbox />;
+        case "wf12-launch": return <LaunchOrchestrator />;
         // wf13-brief handled above
-        case "wf14-budget": return <DashboardHealth />;
-        case "inbox": return <DashboardCRM />;
-        case "studio": return <DashboardContent />;
-        case "insights": return <DashboardHealth />;
+        case "wf14-budget": return <BudgetROI />;
+        case "inbox": return <UnifiedInbox />;
+        case "studio": return <HiggsfieldStudio />;
+        case "insights": return <CustomerInsights />;
+        /* v2 premium page direct routes */
+        case "ad-optimization": return <AdOptimization />;
+        case "local-presence": return <LocalPresence />;
+        case "email-lifecycle": return <EmailLifecycle />;
+        case "unified-inbox": return <UnifiedInbox />;
+        case "higgsfield-studio": return <HiggsfieldStudio />;
+        case "competitor-intel": return <CompetitorIntelligence />;
+        case "customer-insights": return <CustomerInsights />;
+        case "launch-orchestrator": return <LaunchOrchestrator />;
+        case "budget-roi": return <BudgetROI />;
         default: return <DashboardOverview />;
       }
     })();
