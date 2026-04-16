@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { apiPost } from "@/lib/apiClient";
-import { Loader2, Check, Bot, Calendar, Target, BarChart3, Globe, Zap, ArrowRight, Sun, Moon } from "lucide-react";
+import { Loader2, Check, Bot, Calendar, Target, BarChart3, Globe, Zap, ArrowRight, Sun, Moon, Sparkles, Search, MessageCircle, Mail, Link2, Cpu } from "lucide-react";
 
 const LAUNCH_DATE = new Date("2026-04-28T00:00:00Z").getTime();
 const FLAGS = ["🇽🇰", "🇦🇱", "🇬🇧", "🇩🇪", "🇦🇪", "🇺🇸", "🇫🇷", "🇮🇹"];
@@ -17,12 +17,25 @@ const BIZ_TYPES = ["Restaurant", "Gym/Fitness", "Retail", "Beauty/Salon", "Real 
 const COUNTRIES = ["Kosovo", "Albania", "USA", "UK", "Germany", "UAE", "Turkey", "Italy", "France", "Other"];
 
 const FEATURES = [
-  { icon: Bot, title: "Writes your content", desc: "Posts, captions, ads, and emails — written by AI that knows your business, your city, and your customers." },
-  { icon: Calendar, title: "Plans your calendar", desc: "30 days of content scheduled automatically. Holidays, peak times, local events — all considered." },
-  { icon: Target, title: "Tracks competitors", desc: "Know what your competitors are posting, what's working for them, and how to beat them." },
-  { icon: BarChart3, title: "Reads your analytics", desc: "Understands what content performs best and automatically does more of what works." },
-  { icon: Globe, title: "Speaks your language", desc: "Albanian, English, Arabic, German — generates content in your language for your market." },
-  { icon: Zap, title: "Never stops working", desc: "While you sleep, serve customers, or take a day off — maroa.ai keeps your marketing running." },
+  { icon: Sparkles, title: "AI Content Creation", desc: "Posts, captions, ads, and emails — written by AI that knows your business, your city, and your customers." },
+  { icon: Target, title: "Ad Optimization", desc: "Meta and Google ads managed by AI. Budgets shift automatically to what converts, every single day." },
+  { icon: Search, title: "Competitor Tracking", desc: "Know what your competitors are posting, what's working for them, and how to outperform them." },
+  { icon: MessageCircle, title: "Unified Inbox", desc: "Instagram, Facebook, WhatsApp, and email — every customer conversation in one AI-powered queue." },
+  { icon: Mail, title: "Email Automation", desc: "Welcome sequences, cart recovery, re-engagement — all running on autopilot with personalized content." },
+  { icon: BarChart3, title: "Analytics Dashboard", desc: "Understands what content performs best and automatically does more of what works across every channel." },
+];
+
+const STEPS = [
+  { num: "01", icon: Link2, title: "Connect your accounts", desc: "Link Instagram, Facebook, Google, and email in under 2 minutes. We handle the OAuth, you just click." },
+  { num: "02", icon: Cpu, title: "AI analyzes your brand", desc: "Maroa reads your brand, studies your competitors, and builds a strategy unique to your business and market." },
+  { num: "03", icon: Zap, title: "Everything runs automatically", desc: "Content, ads, emails, and insights — running 24/7. You approve what matters, AI handles the rest." },
+];
+
+const PROOF_STATS = [
+  { value: "22", label: "Countries supported" },
+  { value: "17", label: "Languages" },
+  { value: "99%", label: "Uptime" },
+  { value: "10min", label: "Setup time" },
 ];
 
 function useCountdown() {
@@ -275,8 +288,10 @@ export default function Index() {
           <h2 className="text-3xl sm:text-4xl font-bold text-center tracking-tight">Set it up once. Let AI handle everything.</h2>
           <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map(f => (
-              <div key={f.title} className={`rounded-2xl border ${c.cardBorder} ${c.card} p-6 ${c.cardHover} transition-all duration-300`}>
-                <f.icon className="h-5 w-5 text-indigo-600 dark:text-indigo-400 mb-4" />
+              <div key={f.title} className={`group rounded-2xl border ${c.cardBorder} ${c.card} p-6 ${c.cardHover} transition-all duration-300`}>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600/10 dark:bg-indigo-400/10 mb-4 group-hover:scale-110 transition-transform">
+                  <f.icon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                </div>
                 <h3 className="text-sm font-semibold">{f.title}</h3>
                 <p className={`text-[13px] ${c.textSub} mt-1.5 leading-relaxed`}>{f.desc}</p>
               </div>
@@ -285,25 +300,82 @@ export default function Index() {
         </div>
       </Fade>
 
-      {/* ── SOCIAL PROOF ── */}
+      {/* ── HOW IT WORKS ── */}
+      <Fade className="px-6 pb-24">
+        <div className="max-w-5xl mx-auto">
+          <p className={`text-xs uppercase tracking-[0.2em] ${c.primary} text-center mb-3`}>How It Works</p>
+          <h2 className="text-3xl sm:text-4xl font-bold text-center tracking-tight">Three steps. Ten minutes. Done forever.</h2>
+          <div className="mt-12 grid gap-6 lg:grid-cols-3">
+            {STEPS.map((s, i) => (
+              <div key={s.num} className="relative">
+                {i < STEPS.length - 1 && (
+                  <div className="hidden lg:block absolute top-10 left-full w-6 z-10">
+                    <ArrowRight className={`h-4 w-4 ${c.textFaint}`} />
+                  </div>
+                )}
+                <div className={`rounded-2xl border ${c.cardBorder} ${c.card} p-6 h-full transition-all duration-300 ${c.cardHover}`}>
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 dark:bg-indigo-500 text-white text-xs font-bold">{s.num}</span>
+                    <s.icon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                  </div>
+                  <h3 className="text-sm font-semibold">{s.title}</h3>
+                  <p className={`text-[13px] ${c.textSub} mt-1.5 leading-relaxed`}>{s.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Fade>
+
+      {/* ── PROOF STRIP ── */}
+      <Fade className="px-6 pb-24">
+        <div className={`max-w-4xl mx-auto rounded-2xl border ${c.cardBorder} ${c.card} py-8 px-6`}>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-8">
+            {PROOF_STATS.map(s => (
+              <div key={s.label} className="text-center">
+                <p className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-purple-500 dark:from-indigo-400 dark:to-purple-300 bg-clip-text text-transparent">{s.value}</p>
+                <p className={`text-xs ${c.textSub} mt-1 uppercase tracking-wider`}>{s.label}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 flex justify-center gap-2 text-lg">{FLAGS.map((f, i) => <span key={i} className="opacity-50">{f}</span>)}</div>
+          <p className={`text-xs ${c.textFaint} mt-2 text-center`}>From Kosovo to Dubai to London — choosing AI over agencies.</p>
+        </div>
+      </Fade>
+
+      {/* ── PRICING CTA ── */}
       <Fade className="px-6 pb-24 text-center">
-        <p className="text-5xl sm:text-6xl font-bold tracking-tight">247+</p>
-        <p className={`text-sm ${c.textSub} mt-2`}>businesses registered for early access</p>
-        <div className="mt-4 flex justify-center gap-2 text-lg">{FLAGS.map((f, i) => <span key={i} className="opacity-50">{f}</span>)}</div>
-        <p className={`text-xs ${c.textFaint} mt-3`}>From Kosovo to Dubai to London — choosing AI over agencies.</p>
+        <p className={`text-xs uppercase tracking-[0.2em] ${c.primary} mb-3`}>Pricing</p>
+        <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Start free, upgrade as you grow.</h2>
+        <p className={`text-sm ${c.textSub} mt-3 max-w-md mx-auto`}>
+          No credit card required. Try every feature free for 7 days, then pick the plan that fits your business.
+        </p>
+        <Link to="/pricing"
+          className={`mt-8 inline-flex items-center gap-2 rounded-xl ${c.primaryBg} px-8 py-3.5 text-sm font-semibold text-white ${c.primaryBgHover} transition-all`}>
+          View Plans & Pricing <ArrowRight className="h-4 w-4" />
+        </Link>
       </Fade>
 
       {/* ── FINAL CTA ── */}
       <Fade className="px-6 pb-24">
-        <div className={`max-w-2xl mx-auto text-center rounded-3xl border ${c.cardBorder} ${c.card} p-10 sm:p-14`}>
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Stop paying agencies.<br />Start using AI.</h2>
-          <p className={`text-sm ${c.textSub} mt-3 max-w-md mx-auto`}>
-            For €39/month, maroa.ai does everything a €2,000/month marketing agency does — automatically.
+        <div className="max-w-3xl mx-auto text-center rounded-3xl border border-indigo-500/20 dark:border-indigo-400/20 bg-gradient-to-b from-indigo-50/50 to-transparent dark:from-indigo-500/[0.04] dark:to-transparent p-10 sm:p-16">
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
+            Ready to put your marketing<br />on autopilot?
+          </h2>
+          <p className={`text-sm ${c.textSub} mt-4 max-w-lg mx-auto`}>
+            Join 247+ businesses that replaced their marketing agency with AI. Setup takes 10 minutes. Results start on day one.
           </p>
-          <button onClick={scrollToForm}
-            className={`mt-8 inline-flex items-center gap-2 rounded-xl ${c.primaryBg} px-8 py-3.5 text-sm font-semibold text-white ${c.primaryBgHover} transition-all`}>
-            Get Early Access <ArrowRight className="h-4 w-4" />
-          </button>
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button onClick={scrollToForm}
+              className={`inline-flex items-center gap-2 rounded-xl ${c.primaryBg} px-8 py-3.5 text-sm font-semibold text-white ${c.primaryBgHover} transition-all`}>
+              Start Free Trial <ArrowRight className="h-4 w-4" />
+            </button>
+            <Link to="/pricing"
+              className={`inline-flex items-center gap-2 rounded-xl border ${c.cardBorder} px-6 py-3.5 text-sm font-medium ${c.text} ${c.cardHover} transition-all`}>
+              Book a Demo
+            </Link>
+          </div>
+          <p className={`text-xs ${c.textFaint} mt-4`}>No credit card · 7-day free trial · Cancel anytime</p>
         </div>
       </Fade>
 
