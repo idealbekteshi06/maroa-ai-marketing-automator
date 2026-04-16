@@ -100,7 +100,7 @@ export default function SignUp() {
         .eq("user_id", userId)
         .maybeSingle();
 
-      apiFireAndForget("/webhook/maroa-signup-2026", {
+      apiFireAndForget("/webhook/new-user-signup", {
         user_id: userId, email: form.email, first_name: form.firstName,
         last_name: form.lastName, business_name: form.businessName,
         industry: form.industry, location: form.location, plan: "free",
@@ -108,8 +108,8 @@ export default function SignUp() {
 
       // Trigger instant content generation
       if (newBiz?.id) {
-        apiFireAndForget("/webhook/maroa-content-2026", {
-          user_id: userId, // server expects user_id — this is auth.user.id = businesses.id
+        apiFireAndForget("/webhook/instant-content", {
+          user_id: userId,
           business_id: newBiz.id,
           email: form.email,
         });
