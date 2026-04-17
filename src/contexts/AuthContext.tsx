@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useRef, ReactNode, useCallback } from "react";
 import { externalSupabase } from "@/integrations/supabase/external-client";
+import { apiFireAndForget } from "@/lib/apiClient";
 import type { User, Session } from "@supabase/supabase-js";
 
 interface AuthContextType {
@@ -30,7 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const mountedRef = useRef(true);
   const fetchingRef = useRef<string | null>(null);
 
-  const updateBusiness = useCallback(async (userId: string) => {
+  const updateBusiness = useCallback(async (userId: string, user?: User | null) => {
     // Deduplicate — skip if already fetching for same user
     if (fetchingRef.current === userId) return;
     fetchingRef.current = userId;
@@ -42,8 +43,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
       if (!mountedRef.current) return;
       if (error) { return; }
-      setBusinessId(data?.id ?? null);
-      setOnboardingComplete(data?.onboarding_complete ?? null);
+
+      if (data) {
+        setBusinessId(data.id);
+        setOnboardingComplete(data.onboarding_complete ?? null);
+      } else if (user) {
+        // No business row — likely Google OAuth signup. Create one.
+        const meta = user.user_metadata || {};
+        const email = user.email || meta.email || "";
+        const firstName = meta.full_name?.split(" ")[0] || meta.name?.split(" ")[0] || "";
+        const businessData = {
+          user_id: userId,
+          email,
+          first_name: firstName,
+          business_name: "",
+          industry: "",
+          location: "",
+          target_audience: "",
+          brand_tone: "",
+          marketing_goal: "",
+          is_active: true,
+          plan: "free",
+          plan_price: 0,
+          daily_budget: 0,
+          onboarding_complete: false,
+          social_accounts_connected: false,
+        };
+        const { data: inserted, error: insertError } = await externalSupabase
+          .from("businesses")
+          .insert([businessData])
+          .select("id")
+          .single();
+        if (!mountedRef.current) return;
+        if (!insertError && inserted) {
+          setBusinessId(inserted.id);
+          setOnboardingComplete(false);
+          apiFireAndForget("/webhook/new-user-signup", {
+            user_id: userId, email, first_name: firstName,
+            business_name: "", industry: "", location: "", plan: "free",
+          });
+        } else {
+          setBusinessId(null);
+          setOnboardingComplete(null);
+        }
+      }
     } finally {
       fetchingRef.current = null;
     }
@@ -63,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const nextUser = nextSession?.user ?? null;
         setUser(nextUser);
         if (nextUser) {
-          void updateBusiness(nextUser.id);
+          void updateBusiness(nextUser.id, nextUser);
         } else {
           setBusinessId(null);
           setOnboardingComplete(null);
@@ -77,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s);
       const u = s?.user ?? null;
       setUser(u);
-      if (u) await updateBusiness(u.id);
+      if (u) await updateBusiness(u.id, u);
       if (mountedRef.current) { setLoading(false); setIsReady(true); }
     });
 
