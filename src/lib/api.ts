@@ -25,12 +25,6 @@ function fire(path: string, body: Record<string, unknown>): void {
 export const newUserSignup = (data: Record<string, unknown>) =>
   post("/webhook/new-user-signup", data);
 
-export const signupWebhook = (data: Record<string, unknown>) =>
-  fire("/webhook/maroa-signup-2026", data);
-
-export const instantContent = (data: Record<string, unknown>) =>
-  fire("/webhook/maroa-content-2026", data);
-
 // ─── Onboarding / Account ────────────────────────────────────
 export const accountConnected = (data: Record<string, unknown>) =>
   post("/webhook/account-connected", data);

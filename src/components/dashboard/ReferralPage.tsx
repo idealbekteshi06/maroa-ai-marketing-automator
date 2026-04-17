@@ -54,7 +54,7 @@ export default function ReferralPage() {
 
   // Fallback referral code from user ID if backend doesn't return one
   const code = referralCode || user?.id?.substring(0, 8) || "xxxxxxxx";
-  const referralLink = `https://maroa-ai-marketing-automator.vercel.app/signup?ref=${code}`;
+  const referralLink = `https://maroa.ai/signup?ref=${code}`;
 
   const copyLink = async () => {
     await navigator.clipboard.writeText(referralLink);

@@ -165,6 +165,8 @@ export default function DashboardOverview() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
+  // TODO: Connect to /api/performance/summary/:userId for server-aggregated metrics.
+  // Current: reads Supabase tables directly; empty states render when a user has no rows yet.
   const fetchData = useCallback(async () => {
     if (!isReady || (!businessId && !user?.id)) { setLoading(false); return; }
     setLoading(true); setError(null);
