@@ -10,7 +10,7 @@ import PendingApprovals from "@/components/PendingApprovals";
 import Sparkline from "@/components/Sparkline";
 import AIBrainStatus from "@/components/AIBrainStatus";
 import ProfileScore from "@/components/dashboard/ProfileScore";
-import { apiPost } from "@/lib/apiClient";
+import { apiGet, apiPost } from "@/lib/apiClient";
 import { ERROR_MESSAGES } from "@/lib/errorMessages";
 import type { BusinessProfile } from "@/types";
 
@@ -164,9 +164,8 @@ export default function DashboardOverview() {
   const [snapshotSpark, setSnapshotSpark] = useState<{ reach: number[] }>({ reach: [] });
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [serverReach, setServerReach] = useState<number | null>(null);
 
-  // TODO: Connect to /api/performance/summary/:userId for server-aggregated metrics.
-  // Current: reads Supabase tables directly; empty states render when a user has no rows yet.
   const fetchData = useCallback(async () => {
     if (!isReady || (!businessId && !user?.id)) { setLoading(false); return; }
     setLoading(true); setError(null);
@@ -215,6 +214,27 @@ export default function DashboardOverview() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Server-aggregated metrics; falls back to Supabase data above if the API fails.
+  useEffect(() => {
+    if (!businessId) return;
+    const ctrl = new AbortController();
+    apiGet<{ summary?: Record<string, unknown> }>(`/api/performance/summary/${businessId}`, ctrl.signal)
+      .then((data) => {
+        const s = data?.summary;
+        if (!s) return;
+        const reach = (s.total_reach ?? s.reach) as number | undefined;
+        const published = (s.posts_published ?? s.published) as number | undefined;
+        const leads = (s.active_leads ?? s.leads) as number | undefined;
+        const actions = (s.ai_actions_today ?? s.actions_today) as number | undefined;
+        if (typeof published === "number") setPublishedCount(published);
+        if (typeof leads === "number") setLeadCount(leads);
+        if (typeof actions === "number") setTodayActions(actions);
+        if (typeof reach === "number") setServerReach(reach);
+      })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, [businessId]);
+
   // Live activity feed
   useEffect(() => {
     if (!businessId || !isReady) return;
@@ -227,7 +247,7 @@ export default function DashboardOverview() {
     return () => { externalSupabase.removeChannel(channel); };
   }, [businessId, isReady]);
 
-  const totalReach = stats.reduce((sum, s) => sum + (s.total_reach || 0), 0) || (businessData?.total_reach ?? 0);
+  const totalReach = serverReach ?? (stats.reduce((sum, s) => sum + (s.total_reach || 0), 0) || (businessData?.total_reach ?? 0));
   const reachSpark = snapshotSpark.reach.length >= 2 ? snapshotSpark.reach : stats.slice(-7).map(s => s.total_reach || 0);
 
   // AI Brain decisions
