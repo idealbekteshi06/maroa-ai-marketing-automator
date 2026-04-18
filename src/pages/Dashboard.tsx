@@ -97,6 +97,7 @@ const CompetitorIntelligence = lazy(() => import("@/pages/CompetitorIntelligence
 const CustomerInsights = lazy(() => import("@/pages/CustomerInsights"));
 const LaunchOrchestrator = lazy(() => import("@/pages/LaunchOrchestrator"));
 const BudgetROI = lazy(() => import("@/pages/BudgetROI"));
+const ProfileEnhancement = lazy(() => import("@/pages/ProfileEnhancement"));
 
 /* ── v2 Navigation (REFACTOR_BRIEF_V2 section 2.1) ────────────
  * 7 primary items per Miller's 7±2 law. Workflows expand into 4 categories
@@ -225,6 +226,7 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   "customer-insights": { title: "Customer Insights", subtitle: "AI-analyzed behavior and segments" },
   "launch-orchestrator": { title: "Launch Orchestrator", subtitle: "Coordinate product and campaign launches" },
   "budget-roi": { title: "Budget & ROI", subtitle: "Marketing spend allocation and returns" },
+  "profile-enhancement": { title: "Improve your AI", subtitle: "Complete your profile for better results" },
 };
 
 /* FIX 1: Name capitalization */
@@ -344,6 +346,7 @@ export default function Dashboard() {
         case "customer-insights": return <CustomerInsights />;
         case "launch-orchestrator": return <LaunchOrchestrator />;
         case "budget-roi": return <BudgetROI />;
+        case "profile-enhancement": return <ProfileEnhancement />;
         default: return <DashboardOverview />;
       }
     })();
@@ -451,6 +454,10 @@ export default function Dashboard() {
       </div>
 
       <div className="mt-3 border-t border-sidebar-border pt-2">
+        <NavItemButton
+          item={{ key: "profile-enhancement", label: "Improve your AI", icon: Sparkles }}
+          onItemClick={onItemClick}
+        />
         <NavItemButton
           item={{ key: "settings", label: "Settings", icon: Settings }}
           onItemClick={onItemClick}

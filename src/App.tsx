@@ -25,6 +25,7 @@ const Access = lazy(() => import("./pages/Access"));
 const DeleteData = lazy(() => import("./pages/DeleteData"));
 const SocialCallback = lazy(() => import("./pages/SocialCallback"));
 const Compare = lazy(() => import("./pages/Compare"));
+const OnboardingLegacy = lazy(() => import("./pages/OnboardingLegacy"));
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,7 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/onboarding" element={<ProtectedRoute allowIncompleteOnboarding><Onboarding /></ProtectedRoute>} />
+              <Route path="/onboarding-legacy" element={<ProtectedRoute allowIncompleteOnboarding><OnboardingLegacy /></ProtectedRoute>} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
