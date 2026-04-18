@@ -7,10 +7,10 @@ import { lazy, Suspense } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import Landing from "./pages/Landing";
+import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
-const Waitlist = lazy(() => import("./pages/Index"));
+const Landing = lazy(() => import("./pages/Landing"));
 
 const SignUp = lazy(() => import("./pages/SignUp"));
 const Login = lazy(() => import("./pages/Login"));
@@ -45,8 +45,8 @@ const App = () => (
         <BrowserRouter>
           <Suspense fallback={<Loading />}>
             <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/waitlist" element={<Waitlist />} />
+              <Route path="/" element={<Index />} />
+              <Route path="/waitlist" element={<Landing />} />
               <Route path="/signup" element={<SignUp />} />
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
