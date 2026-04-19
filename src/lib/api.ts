@@ -1,19 +1,14 @@
-import { apiPost as corePost, apiFireAndForget, getApiBase } from "./apiClient";
+import { apiPost as corePost, apiGet as coreGet, apiFireAndForget, getApiBase } from "./apiClient";
 
 async function post<T = unknown>(path: string, body: Record<string, unknown>): Promise<T> {
   return corePost<T>(path, body);
 }
 
 async function get<T = unknown>(path: string, params?: Record<string, string>): Promise<T> {
-  const base = getApiBase();
-  const url = new URL(`${base}${path}`);
-  if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  const res = await fetch(url.toString());
-  if (!res.ok) {
-    const text = await res.text().catch(() => res.statusText);
-    throw new Error(text || `API error ${res.status}`);
-  }
-  return res.json();
+  const qs = params
+    ? "?" + new URLSearchParams(params).toString()
+    : "";
+  return coreGet<T>(`${path}${qs}`);
 }
 
 /** Fire-and-forget POST — logs but never throws */
