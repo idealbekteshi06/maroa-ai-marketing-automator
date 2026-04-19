@@ -155,115 +155,103 @@ export default function AiBrain() {
     setStreaming(true);
 
     try {
-      const { assistantMessageId, streamUrl } = await wf15SendMessage({
-        businessId,
-        conversationId: convId!,
-        content,
-      });
-
-      const assistantMsg: LocalMessage = {
-        id: assistantMessageId,
-        role: "assistant",
-        content: "",
-        reasoning: "",
-        toolCalls: [],
-        createdAt: new Date().toISOString(),
-        isStreaming: true,
-      };
-      setMessages((prev) => [...prev, assistantMsg]);
-
       const { data: sessionData } = await externalSupabase.auth.getSession();
       const jwt = sessionData?.session?.access_token ?? "";
-      const baseAbsoluteUrl = streamUrl.startsWith("http")
-        ? streamUrl
-        : `${getApiBase()}${streamUrl}`;
-      const separator = baseAbsoluteUrl.includes("?") ? "&" : "?";
-      const absoluteUrl = jwt ? `${baseAbsoluteUrl}${separator}token=${encodeURIComponent(jwt)}` : baseAbsoluteUrl;
-      const es = new EventSource(absoluteUrl);
-      abortStreamRef.current = es;
+
+      const response = await fetch(`${getApiBase()}/webhook/wf15-send-message`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}),
+        },
+        body: JSON.stringify({
+          businessId,
+          conversationId: convId!,
+          content,
+          attachmentIds: [],
+        }),
+      });
+
+      if (!response.ok || !response.body) throw new Error("Stream failed");
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let assistantMessageId: string | null = null;
 
       const updateAssistant = (fn: (m: LocalMessage) => LocalMessage) => {
         setMessages((prev) =>
-          prev.map((m) => (m.id === assistantMessageId ? fn(m) : m)),
+          prev.map((m) =>
+            m.id === assistantMessageId ? fn(m) : m,
+          ),
         );
       };
 
-      es.addEventListener("token", (ev: MessageEvent) => {
-        const { delta } = JSON.parse(ev.data) as { delta: string };
-        updateAssistant((m) => ({ ...m, content: m.content + delta }));
-      });
-      es.addEventListener("reasoning", (ev: MessageEvent) => {
-        const { delta } = JSON.parse(ev.data) as { delta: string };
-        updateAssistant((m) => ({ ...m, reasoning: (m.reasoning ?? "") + delta }));
-      });
-      es.addEventListener("tool_call", (ev: MessageEvent) => {
-        const { toolCall } = JSON.parse(ev.data) as { toolCall: NonNullable<BrainMessageDto["toolCalls"]>[number] };
-        updateAssistant((m) => ({
-          ...m,
-          toolCalls: [...(m.toolCalls ?? []), toolCall],
-        }));
-      });
-      es.addEventListener("tool_update", (ev: MessageEvent) => {
-        const u = JSON.parse(ev.data) as {
-          id: string;
-          progress?: { percent: number; note: string };
-          status?: LocalMessage["toolCalls"] extends infer T ? (T extends Array<infer U> ? U["status"] : never) : never;
-        };
-        updateAssistant((m) => ({
-          ...m,
-          toolCalls: m.toolCalls?.map((t) =>
-            t.id === u.id
-              ? { ...t, progress: u.progress ?? t.progress, status: (u.status as typeof t.status) ?? t.status }
-              : t,
-          ),
-        }));
-      });
-      es.addEventListener("tool_result", (ev: MessageEvent) => {
-        const r = JSON.parse(ev.data) as {
-          id: string;
-          result?: unknown;
-          status?: string;
-        };
-        updateAssistant((m) => ({
-          ...m,
-          toolCalls: m.toolCalls?.map((t) =>
-            t.id === r.id
-              ? { ...t, result: r.result, status: (r.status as typeof t.status) ?? t.status }
-              : t,
-          ),
-        }));
-      });
-      es.addEventListener("done", (ev: MessageEvent) => {
-        const d = JSON.parse(ev.data) as {
-          messageId: string;
-          modelUsed: "haiku" | "sonnet" | "opus";
-          costUsd: number;
-        };
-        updateAssistant((m) => ({
-          ...m,
-          modelUsed: d.modelUsed,
-          costUsd: d.costUsd,
-          isStreaming: false,
-        }));
-        es.close();
-        abortStreamRef.current = null;
-        setStreaming(false);
-      });
-      es.addEventListener("error", (ev: MessageEvent) => {
-        let errorMsg = "Stream error";
-        try {
-          if (ev.data) {
-            errorMsg = (JSON.parse(ev.data) as { message?: string }).message ?? errorMsg;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const events = buffer.split("\n\n");
+        buffer = events.pop() ?? "";
+
+        for (const event of events) {
+          if (!event.trim()) continue;
+
+          let eventType = "data";
+          let dataLine = "";
+          for (const line of event.split("\n")) {
+            if (line.startsWith("event:")) eventType = line.slice(6).trim();
+            else if (line.startsWith("data:")) dataLine = line.slice(5).trim();
           }
-        } catch {
-          // EventSource passes empty error events on disconnect
+
+          if (!dataLine) continue;
+          if (dataLine === "[DONE]") {
+            // Stream complete
+            if (assistantMessageId) {
+              updateAssistant((m) => ({ ...m, isStreaming: false }));
+            }
+            setStreaming(false);
+            continue;
+          }
+
+          try {
+            const parsed = JSON.parse(dataLine);
+
+            if (eventType === "meta" && parsed.assistantMessageId) {
+              assistantMessageId = parsed.assistantMessageId;
+              const assistantMsg: LocalMessage = {
+                id: assistantMessageId!,
+                role: "assistant",
+                content: "",
+                reasoning: "",
+                toolCalls: [],
+                createdAt: new Date().toISOString(),
+                isStreaming: true,
+              };
+              setMessages((prev) => [...prev, assistantMsg]);
+            } else if (eventType === "error") {
+              toast.error(parsed.message ?? "Stream error");
+              if (assistantMessageId) {
+                updateAssistant((m) => ({ ...m, isStreaming: false }));
+              }
+              setStreaming(false);
+            } else if (parsed.text) {
+              if (assistantMessageId) {
+                updateAssistant((m) => ({
+                  ...m,
+                  content: m.content + parsed.text,
+                }));
+              }
+            }
+          } catch {
+            /* ignore malformed SSE data */
+          }
         }
-        toast.error(errorMsg);
-        updateAssistant((m) => ({ ...m, isStreaming: false }));
-        es.close();
-        abortStreamRef.current = null;
-        setStreaming(false);
-      });
+      }
+
+      setStreaming(false);
     } catch (e) {
       toast.error((e as Error).message || "Failed to send message");
       setStreaming(false);
