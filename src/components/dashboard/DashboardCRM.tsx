@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 import {
   Users, Search as SearchIcon, Loader2, Plus, MessageSquare, Bot,
 } from "lucide-react";
@@ -71,28 +70,24 @@ export default function DashboardCRM() {
   const fetchContacts = useCallback(async () => {
     if (!businessId) return;
     try {
-      const res = await api.getContacts({
-        business_id: businessId,
-        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
-      });
+      const res = await api.getContacts({ business_id: businessId });
       setContacts(((res as { contacts?: Contact[]; data?: Contact[] })?.contacts ?? (res as { contacts?: Contact[]; data?: Contact[] })?.data ?? (Array.isArray(res) ? (res as Contact[]) : [])) as Contact[]);
-    } catch {
-      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
+    } catch (err) {
+      console.error("[CRM] Failed to load contacts:", err);
+      // Don't toast on data-fetch — contacts table may simply be empty
     }
-  }, [businessId, user?.id]);
+  }, [businessId]);
 
   const fetchPipeline = useCallback(async () => {
     if (!businessId) return;
     try {
-      const res = await api.getPipeline({
-        business_id: businessId,
-        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
-      });
+      const res = await api.getPipeline({ business_id: businessId });
       setPipeline(((res as { deals?: Deal[]; data?: Deal[] })?.deals ?? (res as { deals?: Deal[]; data?: Deal[] })?.data ?? (Array.isArray(res) ? (res as Deal[]) : [])) as Deal[]);
-    } catch {
-      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
+    } catch (err) {
+      console.error("[CRM] Failed to load pipeline:", err);
+      // Don't toast on data-fetch — pipeline may simply be empty
     }
-  }, [businessId, user?.id]);
+  }, [businessId]);
 
   useEffect(() => {
     if (!businessId || !isReady) { setLoading(false); return; }
@@ -159,12 +154,12 @@ export default function DashboardCRM() {
         user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
         name: addName, email: addEmail, phone: addPhone,
       });
-      toast.success(SUCCESS_MESSAGES.GENERATED);
+      toast.success("Contact added");
       setAddOpen(false);
       setAddName(""); setAddEmail(""); setAddPhone("");
       await fetchContacts();
     } catch {
-      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
+      toast.error("Couldn't add contact — please try again");
     } finally {
       setAddSaving(false);
     }
@@ -179,11 +174,11 @@ export default function DashboardCRM() {
         user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
         contact_id: logContactId, activity_type: "note", note: logNote,
       });
-      toast.success(SUCCESS_MESSAGES.GENERATED);
+      toast.success("Activity logged");
       setLogOpen(false);
       setLogNote(""); setLogContactId("");
     } catch {
-      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
+      toast.error("Couldn't save note — please try again");
     } finally {
       setLogSaving(false);
     }
