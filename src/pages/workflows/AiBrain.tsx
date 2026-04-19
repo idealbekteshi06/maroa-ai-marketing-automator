@@ -73,7 +73,7 @@ export default function AiBrain() {
   const [streaming, setStreaming] = useState(false);
   const [showDecisionLog, setShowDecisionLog] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const abortStreamRef = useRef<EventSource | null>(null);
+  const userScrolledUpRef = useRef(false);
 
   const conversationsQuery = useQuery({
     queryKey: ["wf15", "conversations", businessId],
@@ -99,9 +99,27 @@ export default function AiBrain() {
     }
   }, [conversationQuery.data]);
 
+  // Scroll to bottom on new messages and during streaming
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length]);
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg?.isStreaming && !userScrolledUpRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: "auto", block: "end" });
+    } else if (!userScrolledUpRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
+
+  // Track if user scrolled up (don't fight them during streaming)
+  useEffect(() => {
+    const container = bottomRef.current?.parentElement;
+    if (!container) return;
+    const handler = () => {
+      const atBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+      userScrolledUpRef.current = !atBottom;
+    };
+    container.addEventListener("scroll", handler);
+    return () => container.removeEventListener("scroll", handler);
+  }, []);
 
   const createConv = useMutation({
     mutationFn: () => wf15CreateConversation({ businessId: businessId! }),
@@ -259,8 +277,6 @@ export default function AiBrain() {
   }, [input, businessId, conversationId]);
 
   const stopStream = useCallback(() => {
-    abortStreamRef.current?.close();
-    abortStreamRef.current = null;
     setStreaming(false);
     setMessages((prev) =>
       prev.map((m) => (m.isStreaming ? { ...m, isStreaming: false } : m)),
@@ -427,9 +443,13 @@ function MessageBubble({
               : "bg-muted/40 text-foreground"
           }`}
         >
-          {message.content || (message.isStreaming && <span className="text-muted-foreground">thinking…</span>)}
-          {!isUser && message.content && (
-            <ReactMarkdownSafe content={message.content} />
+          {!message.content && message.isStreaming && (
+            <span className="text-muted-foreground">thinking…</span>
+          )}
+          {message.content && (
+            isUser ? message.content
+            : message.isStreaming ? <div className="whitespace-pre-wrap">{message.content}</div>
+            : <ReactMarkdownSafe content={message.content} />
           )}
         </div>
 
