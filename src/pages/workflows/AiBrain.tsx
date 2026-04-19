@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useAuth } from "@/contexts/AuthContext";
+import { externalSupabase } from "@/integrations/supabase/external-client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -171,9 +172,13 @@ export default function AiBrain() {
       };
       setMessages((prev) => [...prev, assistantMsg]);
 
-      const absoluteUrl = streamUrl.startsWith("http")
+      const { data: sessionData } = await externalSupabase.auth.getSession();
+      const jwt = sessionData?.session?.access_token ?? "";
+      const baseAbsoluteUrl = streamUrl.startsWith("http")
         ? streamUrl
         : `${getApiBase()}${streamUrl}`;
+      const separator = baseAbsoluteUrl.includes("?") ? "&" : "?";
+      const absoluteUrl = jwt ? `${baseAbsoluteUrl}${separator}token=${encodeURIComponent(jwt)}` : baseAbsoluteUrl;
       const es = new EventSource(absoluteUrl);
       abortStreamRef.current = es;
 
