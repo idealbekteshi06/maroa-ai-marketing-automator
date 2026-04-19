@@ -57,7 +57,7 @@ export function Footer() {
                 <li><Link to="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy Policy</Link></li>
                 <li><Link to="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms of Service</Link></li>
                 <li><Link to="/refund" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Refund Policy</Link></li>
-                <li><Link to="/delete-data" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Data Deletion</Link></li>
+                <li><Link to="/data-deletion" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Data Deletion</Link></li>
               </ul>
             </div>
           </div>

@@ -386,7 +386,7 @@ export default function Index() {
           <div className={`flex gap-5 text-xs ${c.textFaint}`}>
             <Link to="/terms" className={`hover:${c.textSub} transition-colors`}>Terms</Link>
             <Link to="/privacy" className={`hover:${c.textSub} transition-colors`}>Privacy</Link>
-            <Link to="/refund" className={`hover:${c.textSub} transition-colors`}>Refund</Link>
+            <Link to="/data-deletion" className={`hover:${c.textSub} transition-colors`}>Data Deletion</Link>
           </div>
         </div>
         <div className="mt-6 text-center">

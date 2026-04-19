@@ -12,8 +12,9 @@ export default function LandingFooter() {
         <div className="flex gap-6">
           <Link to="/privacy" className="text-[#94A3B8] transition-colors hover:text-white">Privacy</Link>
           <Link to="/terms" className="text-[#94A3B8] transition-colors hover:text-white">Terms</Link>
-          <a href="mailto:hello@maroa.ai" className="text-[#94A3B8] transition-colors hover:text-white">Contact</a>
-          <span>© 2026 Maroa</span>
+          <Link to="/data-deletion" className="text-[#94A3B8] transition-colors hover:text-white">Data Deletion</Link>
+          <a href="mailto:info@maroa.ai" className="text-[#94A3B8] transition-colors hover:text-white">Contact</a>
+          <span>&copy; 2026 Maroa</span>
         </div>
       </div>
     </footer>
