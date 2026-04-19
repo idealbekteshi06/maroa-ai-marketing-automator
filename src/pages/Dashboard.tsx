@@ -47,7 +47,8 @@ function LogoDot() {
 }
 
 /* ── Lazy-loaded tab components ── */
-const DashboardOverview = lazy(() => import("@/components/dashboard/DashboardOverview"));
+const DashboardOverview = lazy(() => import("@/components/dashboard/DashboardOverviewLegacy"));
+const HomeView = lazy(() => import("@/components/dashboard/home/Home"));
 const DashboardContent = lazy(() => import("@/components/dashboard/DashboardContent"));
 const DashboardAds = lazy(() => import("@/components/dashboard/DashboardAds"));
 const DashboardSocial = lazy(() => import("@/components/dashboard/DashboardSocial"));
@@ -283,7 +284,7 @@ export default function Dashboard() {
   const renderPage = () => {
     const page = (() => {
       switch (active) {
-        case "overview": return <DashboardOverview />;
+        case "overview": return <HomeView onNavigate={handleNavigate} />;
         case "content": return <DashboardContent />;
         case "campaigns": return <DashboardAds />;
         case "social": return <DashboardSocial oauthCode={oauthCode} />;
