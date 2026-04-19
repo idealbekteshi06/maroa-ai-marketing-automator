@@ -99,10 +99,18 @@ export default function AiBrain() {
     }
   }, [conversationQuery.data]);
 
+  // Scroll to bottom only when loading an existing conversation
+  useEffect(() => {
+    if (conversationQuery.data?.messages?.length) {
+      bottomRef.current?.scrollIntoView({ behavior: "auto" });
+    }
+  }, [conversationId]);
+
   // Auto-scroll only when streaming content overflows the viewport
   useEffect(() => {
     const lastMsg = messages[messages.length - 1];
     if (!lastMsg?.isStreaming) return;
+    if (lastMsg?.role === 'user') return; // user just sent, let top-anchor scroll take priority
     if (userScrolledUpRef.current) return;
 
     const container = bottomRef.current?.parentElement;
@@ -174,12 +182,16 @@ export default function AiBrain() {
       createdAt: now,
     };
     setMessages((prev) => [...prev, userMsg]);
-    // Scroll the user's new message to the top of the viewport
-    setTimeout(() => {
-      const userMsgEl = document.getElementById(`msg-${userMsg.id}`);
-      userMsgEl?.scrollIntoView({ behavior: "auto", block: "start" });
-      userScrolledUpRef.current = false; // reset so streaming can auto-follow
-    }, 50);
+    // Wait for React to render the new user message, then scroll it to top
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const userMsgEl = document.getElementById(`msg-${userMsg.id}`);
+        if (userMsgEl) {
+          userMsgEl.scrollIntoView({ behavior: "auto", block: "start" });
+          userScrolledUpRef.current = false;
+        }
+      });
+    });
     const content = input;
     setInput("");
     setStreaming(true);
