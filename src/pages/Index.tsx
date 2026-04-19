@@ -79,12 +79,12 @@ const c = {
   text: "text-[#0a0a0a] dark:text-white",
   textSub: "text-[#6b7280] dark:text-[#9ca3af]",
   textFaint: "text-[#9ca3af] dark:text-[#555]",
-  primary: "text-indigo-600 dark:text-indigo-400",
-  primaryBg: "bg-indigo-600 dark:bg-indigo-500",
-  primaryBgHover: "hover:bg-indigo-700 dark:hover:bg-indigo-400",
+  primary: "text-blue-600 dark:text-blue-400",
+  primaryBg: "bg-blue-600 dark:bg-blue-500",
+  primaryBgHover: "hover:bg-blue-700 dark:hover:bg-blue-400",
   inputBg: "bg-[#f0f0f2] dark:bg-white/[0.03]",
   inputBorder: "border-[#ddd] dark:border-white/[0.06]",
-  inputFocus: "focus:border-indigo-400 dark:focus:border-white/20",
+  inputFocus: "focus:border-blue-400 dark:focus:border-white/20",
 };
 
 export default function Index() {
@@ -121,7 +121,7 @@ export default function Index() {
     finally { setSubmitting(false); }
   };
 
-  const inputCls = `w-full rounded-xl border ${c.inputBorder} ${c.inputBg} px-4 py-3 text-sm ${c.text} placeholder:${c.textFaint} ${c.inputFocus} focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all`;
+  const inputCls = `w-full rounded-xl border ${c.inputBorder} ${c.inputBg} px-4 py-3 text-sm ${c.text} placeholder:${c.textFaint} ${c.inputFocus} focus:outline-none focus:ring-1 focus:ring-blue-500/20 transition-all`;
 
   return (
     <div className={`min-h-screen ${c.bg} ${c.text} transition-colors duration-300`}>
@@ -133,7 +133,7 @@ export default function Index() {
         </Link>
         <div className="flex items-center gap-3">
           <button onClick={() => setIsDark(!isDark)} className={`rounded-full p-2 ${c.card} ${c.cardBorder} border transition-colors`} aria-label="Toggle theme">
-            {isDark ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-indigo-500" />}
+            {isDark ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-blue-500" />}
           </button>
           <Link to="/access" className={`text-sm ${c.textSub} hover:${c.text} transition-colors`}>Sign in</Link>
         </div>
@@ -191,13 +191,13 @@ export default function Index() {
               <div key={p.key}
                 className={`relative group rounded-2xl border p-6 sm:p-7 transition-all duration-300 ${
                   p.popular
-                    ? `border-indigo-500/40 dark:border-indigo-400/40 ${c.card} shadow-[0_0_40px_-12px_rgba(99,102,241,0.25)] dark:shadow-[0_0_40px_-12px_rgba(129,140,248,0.2)]`
+                    ? `border-blue-500/40 dark:border-blue-400/40 ${c.card} shadow-[0_0_40px_-12px_rgba(59,130,246,0.25)] dark:shadow-[0_0_40px_-12px_rgba(96,165,250,0.2)]`
                     : `${c.cardBorder} ${c.card} ${c.cardHover}`
                 }`}
                 style={p.popular ? { transform: "scale(1.03)" } : undefined}
               >
                 {p.popular && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-indigo-600 dark:bg-indigo-500 px-4 py-1 text-[10px] font-semibold text-white uppercase tracking-wider">
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 dark:bg-blue-500 px-4 py-1 text-[10px] font-semibold text-white uppercase tracking-wider">
                     Most Popular
                   </span>
                 )}
@@ -216,7 +216,7 @@ export default function Index() {
                 <ul className="mt-5 space-y-2.5">
                   {p.features.map(f => (
                     <li key={f} className={`flex items-start gap-2.5 text-[13px] ${c.textSub}`}>
-                      <Check className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400 shrink-0 mt-0.5" />{f}
+                      <Check className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400 shrink-0 mt-0.5" />{f}
                     </li>
                   ))}
                 </ul>
@@ -289,8 +289,8 @@ export default function Index() {
           <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map(f => (
               <div key={f.title} className={`group rounded-2xl border ${c.cardBorder} ${c.card} p-6 ${c.cardHover} transition-all duration-300`}>
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600/10 dark:bg-indigo-400/10 mb-4 group-hover:scale-110 transition-transform">
-                  <f.icon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600/10 dark:bg-blue-400/10 mb-4 group-hover:scale-110 transition-transform">
+                  <f.icon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <h3 className="text-sm font-semibold">{f.title}</h3>
                 <p className={`text-[13px] ${c.textSub} mt-1.5 leading-relaxed`}>{f.desc}</p>
@@ -315,8 +315,8 @@ export default function Index() {
                 )}
                 <div className={`rounded-2xl border ${c.cardBorder} ${c.card} p-6 h-full transition-all duration-300 ${c.cardHover}`}>
                   <div className="flex items-center gap-3 mb-4">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 dark:bg-indigo-500 text-white text-xs font-bold">{s.num}</span>
-                    <s.icon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 dark:bg-blue-500 text-white text-xs font-bold">{s.num}</span>
+                    <s.icon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   </div>
                   <h3 className="text-sm font-semibold">{s.title}</h3>
                   <p className={`text-[13px] ${c.textSub} mt-1.5 leading-relaxed`}>{s.desc}</p>
@@ -333,7 +333,7 @@ export default function Index() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-8">
             {PROOF_STATS.map(s => (
               <div key={s.label} className="text-center">
-                <p className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-purple-500 dark:from-indigo-400 dark:to-purple-300 bg-clip-text text-transparent">{s.value}</p>
+                <p className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-blue-500 dark:from-blue-400 dark:to-blue-300 bg-clip-text text-transparent">{s.value}</p>
                 <p className={`text-xs ${c.textSub} mt-1 uppercase tracking-wider`}>{s.label}</p>
               </div>
             ))}
@@ -358,7 +358,7 @@ export default function Index() {
 
       {/* ── FINAL CTA ── */}
       <Fade className="px-6 pb-24">
-        <div className="max-w-3xl mx-auto text-center rounded-3xl border border-indigo-500/20 dark:border-indigo-400/20 bg-gradient-to-b from-indigo-50/50 to-transparent dark:from-indigo-500/[0.04] dark:to-transparent p-10 sm:p-16">
+        <div className="max-w-3xl mx-auto text-center rounded-3xl border border-blue-500/20 dark:border-blue-400/20 bg-gradient-to-b from-blue-50/50 to-transparent dark:from-blue-500/[0.04] dark:to-transparent p-10 sm:p-16">
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
             Ready to put your marketing<br />on autopilot?
           </h2>
