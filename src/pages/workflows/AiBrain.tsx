@@ -99,13 +99,19 @@ export default function AiBrain() {
     }
   }, [conversationQuery.data]);
 
-  // Scroll to bottom on new messages and during streaming
+  // Auto-scroll only when streaming content overflows the viewport
   useEffect(() => {
     const lastMsg = messages[messages.length - 1];
-    if (lastMsg?.isStreaming && !userScrolledUpRef.current) {
+    if (!lastMsg?.isStreaming) return;
+    if (userScrolledUpRef.current) return;
+
+    const container = bottomRef.current?.parentElement;
+    if (!container) return;
+
+    // Only scroll if streaming content has overflowed the viewport
+    const overflow = container.scrollHeight - container.scrollTop - container.clientHeight;
+    if (overflow > 100) {
       bottomRef.current?.scrollIntoView({ behavior: "auto", block: "end" });
-    } else if (!userScrolledUpRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
 
@@ -168,6 +174,12 @@ export default function AiBrain() {
       createdAt: now,
     };
     setMessages((prev) => [...prev, userMsg]);
+    // Scroll the user's new message to the top of the viewport
+    setTimeout(() => {
+      const userMsgEl = document.getElementById(`msg-${userMsg.id}`);
+      userMsgEl?.scrollIntoView({ behavior: "auto", block: "start" });
+      userScrolledUpRef.current = false; // reset so streaming can auto-follow
+    }, 50);
     const content = input;
     setInput("");
     setStreaming(true);
@@ -427,7 +439,7 @@ function MessageBubble({
   const [showReasoning, setShowReasoning] = useState(false);
   const isUser = message.role === "user";
   return (
-    <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}>
+    <div id={`msg-${message.id}`} className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}>
       <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
         {isUser ? (
           <span className="text-xs font-medium">you</span>
