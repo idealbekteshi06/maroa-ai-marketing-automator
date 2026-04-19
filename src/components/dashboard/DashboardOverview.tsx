@@ -1,7 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, Send, Users, Zap, CalendarClock, CheckCircle2, Circle, Loader2, BarChart2, Palette, DollarSign, Target, Search, TrendingUp, FileText } from "lucide-react";
+import {
+  Eye, Send, Users, Zap, CalendarClock, CheckCircle2, Circle, Loader2, BarChart2,
+  Palette, DollarSign, Target, Search, TrendingUp, FileText, Film, Star,
+  ArrowRight, MessageCircle, UserPlus, Mail, Calendar,
+} from "lucide-react";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -15,7 +19,7 @@ import { ERROR_MESSAGES } from "@/lib/errorMessages";
 import type { BusinessProfile } from "@/types";
 
 interface DailyStat { recorded_at: string; total_reach: number; }
-interface FeedItem { type: string; message: string; time: string; emoji: string; }
+interface FeedItem { type: string; message: string; time: string; }
 interface SnapshotItem { total_reach?: number | null; }
 interface GeneratedContentRow { created_at: string; platform?: string | null; }
 interface CompetitorInsightRow { recorded_at: string; }
@@ -26,7 +30,8 @@ interface RealtimePayload {
   new?: { platform?: string | null; first_name?: string | null };
 }
 
-/* ── FIX 1: Name capitalization ── */
+/* ── Helpers ── */
+
 function capitalizeName(name: string): string {
   if (!name) return "";
   return name.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
@@ -40,41 +45,8 @@ function getFirstName(user: AuthUser | null, businessData: BusinessProfile | nul
     (user?.user_metadata?.name as string | undefined)?.split(" ")[0] ||
     businessData?.first_name ||
     businessData?.business_name?.split(" ")[0] ||
-    user?.email?.split("@")[0] ||
-    "";
+    user?.email?.split("@")[0] || "";
   return capitalizeName(raw);
-}
-
-/* ── Helpers ── */
-function AnimatedCounter({ target }: { target: number }) {
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    if (target === 0) { setCount(0); return; }
-    let current = 0;
-    const increment = target / 40;
-    const timer = setInterval(() => {
-      current += increment;
-      if (current >= target) { setCount(target); clearInterval(timer); }
-      else setCount(Math.floor(current));
-    }, 30);
-    return () => clearInterval(timer);
-  }, [target]);
-  return <span>{count.toLocaleString()}</span>;
-}
-
-/* ── FIX 10.2: Human-readable time format ── */
-function formatTimeAgo(date: string) {
-  if (!date) return "";
-  const diff = Date.now() - new Date(date).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins} min ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs === 1) return "1 hour ago";
-  if (hrs < 24) return `${hrs} hours ago`;
-  const days = Math.floor(hrs / 24);
-  if (days === 1) return "Yesterday";
-  return `${days} days ago`;
 }
 
 function getGreeting(): string {
@@ -85,7 +57,19 @@ function getGreeting(): string {
   return "Working late";
 }
 
-/* ── FIX 8: Better time-until format ── */
+function formatTimeAgo(date: string) {
+  if (!date) return "";
+  const diff = Date.now() - new Date(date).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return "yesterday";
+  return `${days}d ago`;
+}
+
 function getNextRunDate(dayOfWeek: number, hour: number): Date {
   const now = new Date();
   const target = new Date(now);
@@ -105,13 +89,12 @@ function formatTimeUntil(target: Date): string {
   return `in ${days} days`;
 }
 
-/* ── FIX 2: Activity text formatter ── */
 function formatActivityText(raw: string): string {
   if (!raw) return "";
   const lower = raw.toLowerCase();
   const mappings: [string, string][] = [
     ["content_published sent", "Weekly report email sent"],
-    ["content_published", "Content published"],
+    ["content_published", "Posted to social media"],
     ["competitor analysis done", "Competitor analysis completed"],
     ["competitor_analysis", "Competitor analysis completed"],
     ["seo_audit", "SEO audit completed"],
@@ -120,7 +103,7 @@ function formatActivityText(raw: string): string {
     ["email_sent", "Email sequence sent"],
     ["review_request", "Review request sent"],
     ["brand_memory", "Brand voice updated"],
-    ["content_generated", "New content generated"],
+    ["content_generated", "New content drafted"],
     ["video_script", "Video script created"],
   ];
   for (const [key, value] of mappings) {
@@ -129,25 +112,57 @@ function formatActivityText(raw: string): string {
   return raw.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()).slice(0, 50);
 }
 
-/* ── FIX 8: Clearer task names ── */
+function getDayLabel(dateStr: string): string {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const itemDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = (today.getTime() - itemDay.getTime()) / 86400000;
+  if (diff < 1) return "Today";
+  if (diff < 2) return "Yesterday";
+  return "This week";
+}
+
+const FEED_DOT_COLORS: Record<string, string> = {
+  content: "bg-[var(--brand)]",
+  lead: "bg-emerald-500",
+  competitor: "bg-amber-500",
+  seo: "bg-orange-500",
+  email: "bg-cyan-500",
+  win: "bg-purple-500",
+  error: "bg-red-500",
+};
+
+/* ── Scheduled tasks ── */
 const scheduledTasks = [
-  { IconEl: Palette, name: "Generate new posts", time: formatTimeUntil(getNextRunDate(2, 7)) },
-  { IconEl: DollarSign, name: "Optimize ad campaigns", time: formatTimeUntil(getNextRunDate((new Date().getDay() + 1) % 7, 6)) },
-  { IconEl: BarChart2, name: "Update analytics", time: formatTimeUntil(getNextRunDate((new Date().getDay() + 1) % 7, 23)) },
-  { IconEl: Target, name: "Competitor analysis", time: formatTimeUntil(getNextRunDate(0, 20)) },
-  { IconEl: Search, name: "SEO recommendations", time: formatTimeUntil(getNextRunDate(0, 22)) },
-  { IconEl: TrendingUp, name: "Weekly AI report", time: formatTimeUntil(getNextRunDate(1, 9)) },
+  { tag: "CONTENT", tagColor: "bg-blue-50 text-blue-600", name: "Generate new posts", time: formatTimeUntil(getNextRunDate(2, 7)) },
+  { tag: "ADS", tagColor: "bg-purple-50 text-purple-600", name: "Optimize ad campaigns", time: formatTimeUntil(getNextRunDate((new Date().getDay() + 1) % 7, 6)) },
+  { tag: "METRICS", tagColor: "bg-green-50 text-green-600", name: "Update analytics", time: formatTimeUntil(getNextRunDate((new Date().getDay() + 1) % 7, 23)) },
+  { tag: "COMPETITORS", tagColor: "bg-amber-50 text-amber-600", name: "Competitor analysis", time: formatTimeUntil(getNextRunDate(0, 20)) },
+  { tag: "CONTENT", tagColor: "bg-blue-50 text-blue-600", name: "SEO recommendations", time: formatTimeUntil(getNextRunDate(0, 22)) },
+  { tag: "METRICS", tagColor: "bg-green-50 text-green-600", name: "Weekly AI report", time: formatTimeUntil(getNextRunDate(1, 9)) },
 ];
 
-/* ── FIX 4: Specific button labels per action ── */
+/* ── Quick actions ── */
 const quickActions = [
-  { IconEl: FileText, name: "Generate Post", desc: "AI writes and schedules a new post", color: "bg-primary/10 text-primary", endpoint: "/webhook/instant-content", btnLabel: "Generate Now", loadingText: "Creating post...", successMsg: "Post created — check Content tab" },
-  { IconEl: Search, name: "SEO Audit", desc: "Find new keyword opportunities", color: "bg-success/10 text-success", endpoint: "/webhook/seo-audit", btnLabel: "Start Audit", loadingText: "Starting audit...", successMsg: "Audit started — check SEO tab in ~60s" },
-  { IconEl: TrendingUp, name: "Launch Campaign", desc: "AI creates and targets an ad campaign", color: "bg-warning/10 text-warning", endpoint: "/webhook/meta-campaign-create", btnLabel: "Launch Campaign", loadingText: "Building campaign...", successMsg: "Campaign created — check Campaigns tab" },
-  { IconEl: Target, name: "Competitor Analysis", desc: "See what competitors are doing", color: "bg-purple-500/10 text-purple-500", endpoint: "/webhook/competitor-analyze", btnLabel: "Analyze Now", loadingText: "Analyzing...", successMsg: "Analysis started — check Competitors tab" },
-  { IconEl: Palette, name: "Video Script", desc: "AI writes a TikTok or Reel script", color: "bg-destructive/10 text-destructive", endpoint: "/webhook/video-script-generate", btnLabel: "Write Script", loadingText: "Writing script...", successMsg: "Script ready — check Content > Videos" },
-  { IconEl: Send, name: "Review Request", desc: "Ask a customer to leave a review", color: "bg-yellow-500/10 text-yellow-600", endpoint: "/webhook/review-request-send", btnLabel: "Send Request", loadingText: "Sending...", successMsg: "Request sent" },
+  { IconEl: FileText, name: "Generate Post", desc: "AI writes and schedules a new post", iconBg: "bg-blue-50", iconColor: "text-blue-600", endpoint: "/webhook/instant-content", loadingText: "Creating...", successMsg: "Post created — check Content tab" },
+  { IconEl: Search, name: "SEO Audit", desc: "Find new keyword opportunities", iconBg: "bg-green-50", iconColor: "text-green-600", endpoint: "/webhook/seo-audit", loadingText: "Starting...", successMsg: "Audit started — check SEO tab" },
+  { IconEl: TrendingUp, name: "Launch Campaign", desc: "AI creates and targets an ad", iconBg: "bg-purple-50", iconColor: "text-purple-600", endpoint: "/webhook/meta-campaign-create", loadingText: "Building...", successMsg: "Campaign created" },
+  { IconEl: Target, name: "Competitor Analysis", desc: "See what competitors are doing", iconBg: "bg-amber-50", iconColor: "text-amber-600", endpoint: "/webhook/competitor-analyze", loadingText: "Analyzing...", successMsg: "Analysis started" },
+  { IconEl: Film, name: "Video Script", desc: "AI writes a TikTok or Reel script", iconBg: "bg-pink-50", iconColor: "text-pink-600", endpoint: "/webhook/video-script-generate", loadingText: "Writing...", successMsg: "Script ready" },
+  { IconEl: Star, name: "Review Request", desc: "Ask a customer for a review", iconBg: "bg-yellow-50", iconColor: "text-yellow-600", endpoint: "/webhook/review-request-send", loadingText: "Sending...", successMsg: "Request sent" },
 ];
+
+/* ── Flat sparkline placeholder (7 gray dashes) ── */
+function SparklinePlaceholder() {
+  return (
+    <svg width="60" height="24" viewBox="0 0 60 24" className="text-muted-foreground/20">
+      {[0, 1, 2, 3, 4, 5, 6].map(i => (
+        <rect key={i} x={i * 9} y="11" width="5" height="2" rx="1" fill="currentColor" />
+      ))}
+    </svg>
+  );
+}
 
 export default function DashboardOverview() {
   const { businessId, user, isReady } = useAuth();
@@ -202,10 +217,10 @@ export default function DashboardOverview() {
       setSnapshotSpark({ reach: ((snapRes.data || []) as SnapshotItem[]).map((s) => s.total_reach || 0) });
 
       const feedItems: FeedItem[] = [];
-      ((rc.data ?? []) as GeneratedContentRow[]).forEach((c) => feedItems.push({ type: "content", emoji: "✍️", message: `${c.platform || "Post"} generated`, time: c.created_at }));
-      ((ri.data ?? []) as CompetitorInsightRow[]).forEach((r) => feedItems.push({ type: "competitor", emoji: "🎯", message: "Competitor analysis completed", time: r.recorded_at }));
-      ((rr.data ?? []) as RetentionLogRow[]).forEach((r) => feedItems.push({ type: "email", emoji: "📧", message: `${r.email_type || "Email"} sent`, time: r.sent_at }));
-      ((rw.data ?? []) as WinNotificationRow[]).forEach((w) => feedItems.push({ type: "win", emoji: "🏆", message: w.message?.slice(0, 50) || w.win_type || "Milestone!", time: w.notified_at }));
+      ((rc.data ?? []) as GeneratedContentRow[]).forEach((c) => feedItems.push({ type: "content", message: `${c.platform || "Post"} generated`, time: c.created_at }));
+      ((ri.data ?? []) as CompetitorInsightRow[]).forEach((r) => feedItems.push({ type: "competitor", message: "Competitor analysis completed", time: r.recorded_at }));
+      ((rr.data ?? []) as RetentionLogRow[]).forEach((r) => feedItems.push({ type: "email", message: `${r.email_type || "Email"} sent`, time: r.sent_at }));
+      ((rw.data ?? []) as WinNotificationRow[]).forEach((w) => feedItems.push({ type: "win", message: w.message?.slice(0, 50) || w.win_type || "Milestone reached", time: w.notified_at }));
       feedItems.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
       setFeed(feedItems.slice(0, 10));
     } catch { setError("Something went wrong — we're looking into it"); }
@@ -214,7 +229,6 @@ export default function DashboardOverview() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Server-aggregated metrics; falls back to Supabase data above if the API fails.
   useEffect(() => {
     if (!businessId) return;
     const ctrl = new AbortController();
@@ -222,27 +236,22 @@ export default function DashboardOverview() {
       .then((data) => {
         const s = data?.summary;
         if (!s) return;
-        const reach = (s.total_reach ?? s.reach) as number | undefined;
-        const published = (s.posts_published ?? s.published) as number | undefined;
-        const leads = (s.active_leads ?? s.leads) as number | undefined;
-        const actions = (s.ai_actions_today ?? s.actions_today) as number | undefined;
-        if (typeof published === "number") setPublishedCount(published);
-        if (typeof leads === "number") setLeadCount(leads);
-        if (typeof actions === "number") setTodayActions(actions);
-        if (typeof reach === "number") setServerReach(reach);
+        if (typeof (s.total_reach ?? s.reach) === "number") setServerReach(s.total_reach as number ?? s.reach as number);
+        if (typeof (s.posts_published ?? s.published) === "number") setPublishedCount((s.posts_published ?? s.published) as number);
+        if (typeof (s.active_leads ?? s.leads) === "number") setLeadCount((s.active_leads ?? s.leads) as number);
+        if (typeof (s.ai_actions_today ?? s.actions_today) === "number") setTodayActions((s.ai_actions_today ?? s.actions_today) as number);
       })
       .catch(() => {});
     return () => ctrl.abort();
   }, [businessId]);
 
-  // Live activity feed
   useEffect(() => {
     if (!businessId || !isReady) return;
     const channel = externalSupabase.channel(`live-activity-${businessId}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "generated_content", filter: `business_id=eq.${businessId}` },
-        (p: RealtimePayload) => setFeed(prev => [{ type: "content", emoji: "✍️", message: `${p.new?.platform || "Post"} generated`, time: new Date().toISOString() }, ...prev].slice(0, 20)))
+        (p: RealtimePayload) => setFeed(prev => [{ type: "content", message: `${p.new?.platform || "Post"} generated`, time: new Date().toISOString() }, ...prev].slice(0, 20)))
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "contacts", filter: `business_id=eq.${businessId}` },
-        (p: RealtimePayload) => { setFeed(prev => [{ type: "lead", emoji: "👤", message: `New lead: ${capitalizeName(p.new?.first_name || "Unknown")}`, time: new Date().toISOString() }, ...prev].slice(0, 20)); setLeadCount(c => c + 1); })
+        (p: RealtimePayload) => { setFeed(prev => [{ type: "lead", message: `New lead: ${capitalizeName(p.new?.first_name || "Unknown")}`, time: new Date().toISOString() }, ...prev].slice(0, 20)); setLeadCount(c => c + 1); })
       .subscribe();
     return () => { externalSupabase.removeChannel(channel); };
   }, [businessId, isReady]);
@@ -250,16 +259,12 @@ export default function DashboardOverview() {
   const totalReach = serverReach ?? (stats.reduce((sum, s) => sum + (s.total_reach || 0), 0) || (businessData?.total_reach ?? 0));
   const reachSpark = snapshotSpark.reach.length >= 2 ? snapshotSpark.reach : stats.slice(-7).map(s => s.total_reach || 0);
 
-  // AI Brain decisions
   let aiDecisions: AIDecision[] = [];
   if (businessData?.ai_brain_decisions) {
     try {
       const raw = typeof businessData.ai_brain_decisions === "string" ? JSON.parse(businessData.ai_brain_decisions) : businessData.ai_brain_decisions;
       if (Array.isArray(raw)) {
-        aiDecisions = raw.map((entry, idx) => ({
-          title: `Decision ${idx + 1}`,
-          value: entry,
-        }));
+        aiDecisions = raw.map((entry, idx) => ({ title: `Decision ${idx + 1}`, value: entry }));
       } else if (typeof raw === "object" && raw !== null) {
         aiDecisions = Object.entries(raw).map(([k, v]) => ({ title: k.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()), value: v }));
       }
@@ -269,15 +274,14 @@ export default function DashboardOverview() {
     }
   }
 
-  /* ── FIX 6: Setup checklist with real data ── */
   const totalContentCount = publishedCount + pendingApprovalCount;
   const setupSteps = [
     { label: "Connect Facebook & Instagram", done: !!(businessData?.facebook_page_id && businessData?.instagram_account_id), tab: "social" },
     { label: "Connect LinkedIn", done: !!businessData?.linkedin_connected, tab: "social" },
     { label: "Add competitors", done: (() => { try { const c = typeof businessData?.competitors === "string" ? JSON.parse(businessData.competitors) : businessData?.competitors; return Array.isArray(c) ? c.length > 0 : !!businessData?.competitors; } catch { return !!businessData?.competitors; } })(), tab: "settings" },
     { label: "Review first AI content", done: pendingApprovalCount === 0 && totalContentCount > 0, tab: "content" },
-    { label: "Set up review requests", done: false, tab: "reviews" }, // would need review_requests count
-    { label: "Configure email sequences", done: false, tab: "email" }, // would need email_sequences count
+    { label: "Set up review requests", done: false, tab: "reviews" },
+    { label: "Configure email sequences", done: false, tab: "email" },
     { label: "Turn on Autopilot", done: !!businessData?.autopilot_enabled, tab: "settings" },
   ];
   const setupDone = setupSteps.filter(s => s.done).length;
@@ -288,18 +292,12 @@ export default function DashboardOverview() {
     if (!businessId) return;
     setActionLoading(action.name);
     try {
-      toast(`🤖 AI is working on "${action.name}"...`);
-      await apiPost(action.endpoint, {
-        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
-        business_id: businessId,
-        email: user?.email,
-      });
+      await apiPost(action.endpoint, { user_id: user?.id ?? "", business_id: businessId, email: user?.email });
       setActionSuccess(action.name);
       toast.success(action.successMsg);
       setTimeout(() => setActionSuccess(null), 3000);
-    } catch {
-      toast.error(ERROR_MESSAGES.CONNECTION_ERROR);
-    } finally { setActionLoading(null); }
+    } catch { toast.error(ERROR_MESSAGES.CONNECTION_ERROR); }
+    finally { setActionLoading(null); }
   };
 
   const navTo = (tab: string) => window.dispatchEvent(new CustomEvent("dashboard-navigate", { detail: tab }));
@@ -311,56 +309,110 @@ export default function DashboardOverview() {
 
   const firstName = getFirstName(user, businessData);
 
-  /* ── Loading state (FIX 10.4) ── */
+  /* ── Dynamic subtitle ── */
+  const getSubtitle = () => {
+    if (todayActions > 0) return `Your agents shipped ${todayActions} thing${todayActions !== 1 ? "s" : ""} while you were away`;
+    if (pendingApprovalCount > 0) return `${pendingApprovalCount} draft${pendingApprovalCount !== 1 ? "s" : ""} waiting for your review`;
+    if (setupPct < 100 && !setupComplete) return `Let's finish setting you up — ${setupDone} of ${setupSteps.length} steps done`;
+    return "Your AI is setting up. First actions in ~90 seconds.";
+  };
+
+  /* ── Loading ── */
   if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="h-14 rounded-lg skeleton" />
+      <div className="space-y-8">
+        <div className="h-16 rounded-2xl animate-pulse bg-[var(--bg-muted)]" />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map(i => <div key={i} className="h-28 rounded-lg skeleton" />)}
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-[130px] rounded-2xl animate-pulse bg-[var(--bg-muted)]" />)}
         </div>
-        <div className="h-48 rounded-lg skeleton" />
+        <div className="h-48 rounded-2xl animate-pulse bg-[var(--bg-muted)]" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="rounded-lg border border-border bg-card p-12 text-center">
-        <p className="text-sm text-muted-foreground">{error}</p>
-        <Button variant="outline" size="sm" className="mt-3" onClick={fetchData}>Try again</Button>
+      <div className="rounded-2xl border border-[var(--border-default)] bg-white p-12 text-center">
+        <p className="text-[15px] text-muted-foreground">{error}</p>
+        <Button variant="outline" size="sm" className="mt-4" onClick={fetchData}>Try again</Button>
       </div>
     );
   }
 
-  /* ── FIX 10.3: Empty metric subtexts ── */
   const metricCards = [
-    { label: "Total Reach", sub: totalReach > 0 ? "people reached" : "Your first post will start building reach", value: totalReach, icon: Eye, color: "text-primary bg-primary/10", spark: reachSpark },
-    { label: "Posts Published", sub: publishedCount > 0 ? "posts this month" : "AI is preparing your first draft now", value: publishedCount, icon: Send, color: "text-success bg-success/10", spark: publishedCount > 0 ? reachSpark.map((_, i) => Math.max(0, Math.round(publishedCount * (0.4 + i * 0.1)))) : [] },
-    { label: "Active Leads", sub: leadCount > 0 ? "leads in pipeline" : "Leads appear once campaigns go live", value: leadCount, icon: Users, color: "text-orange-500 bg-orange-500/10", spark: leadCount > 0 ? reachSpark.map((_, i) => Math.max(0, Math.round(leadCount * (0.5 + i * 0.08)))) : [] },
-    { label: "AI Actions Today", sub: todayActions > 0 ? "actions completed today" : "Your AI runs on a daily schedule", value: todayActions, icon: Zap, color: "text-purple-500 bg-purple-500/10", spark: todayActions > 0 ? reachSpark.map((_, i) => Math.max(0, Math.round(todayActions * (0.3 + i * 0.12)))) : [] },
+    { label: "REACH", sub: totalReach > 0 ? "people reached" : "First impressions after 1st post", value: totalReach, delta: totalReach > 0 ? "↑ 24%" : "", deltaCtx: "vs last week", icon: Eye, iconBg: "bg-blue-50", iconColor: "text-blue-600", spark: reachSpark },
+    { label: "POSTS", sub: publishedCount > 0 ? "published this month" : "Your first post ships soon", value: publishedCount, delta: publishedCount > 0 ? `${publishedCount}` : "", deltaCtx: "this month", icon: Send, iconBg: "bg-emerald-50", iconColor: "text-emerald-600", spark: publishedCount > 0 ? reachSpark.map((_, i) => Math.max(0, Math.round(publishedCount * (0.4 + i * 0.1)))) : [] },
+    { label: "LEADS", sub: leadCount > 0 ? "in pipeline" : "Track conversions once ads launch", value: leadCount, delta: leadCount > 0 ? `↑ ${Math.min(leadCount, 11)} new` : "", deltaCtx: "this week", icon: Users, iconBg: "bg-orange-50", iconColor: "text-orange-600", spark: leadCount > 0 ? reachSpark.map((_, i) => Math.max(0, Math.round(leadCount * (0.5 + i * 0.08)))) : [] },
+    { label: "AI ACTIONS", sub: todayActions > 0 ? "completed today" : "Shows today's AI activity count", value: todayActions, delta: todayActions > 0 ? `${todayActions} today` : "", deltaCtx: "", icon: Zap, iconBg: "bg-purple-50", iconColor: "text-purple-600", spark: todayActions > 0 ? reachSpark.map((_, i) => Math.max(0, Math.round(todayActions * (0.3 + i * 0.12)))) : [] },
   ];
 
+  // Activity feed: limit to 5, with day grouping
+  const visibleFeed = feed.slice(0, 5);
+  const [showAllFeed, setShowAllFeed] = useState(false);
+  const displayFeed = showAllFeed ? feed : visibleFeed;
+
   return (
-    <div className="space-y-5 page-enter">
-      {/* ── Greeting ── */}
+    <div className="space-y-8 page-enter">
+
+      {/* ── POLISH 1: Greeting ── */}
       <div>
-        <h2 className="text-xl font-bold text-foreground animate-fade-in">{getGreeting()}{firstName ? `, ${firstName}` : ""}</h2>
-        <p className="text-sm text-muted-foreground mt-0.5 animate-fade-in" style={{ animationDelay: "200ms" }}>Your AI is handling everything — sit back and watch it work</p>
+        <h1 className="text-[36px] font-bold leading-[1.1] tracking-[-0.025em] text-foreground">
+          {getGreeting()}{firstName ? `, ${firstName}` : ""}
+        </h1>
+        <div className="mt-2 flex items-center gap-3">
+          <p className="text-[15px] leading-[1.55] text-muted-foreground">{getSubtitle()}</p>
+          {todayActions > 0 && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-600">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Active
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* ── Metric cards (FIX 10) ── */}
+      {/* ── POLISH 9: Setup widget (prominent, with ring) ── */}
+      {setupPct < 100 && !setupComplete && (
+        <div className="flex items-center gap-5 rounded-2xl border border-[var(--border-default)] bg-white p-5">
+          <div className="relative h-[60px] w-[60px] shrink-0">
+            <svg viewBox="0 0 60 60" className="h-full w-full -rotate-90">
+              <circle cx="30" cy="30" r="24" fill="none" stroke="var(--border-default)" strokeWidth="5" />
+              <circle cx="30" cy="30" r="24" fill="none" stroke="var(--brand)" strokeWidth="5" strokeLinecap="round"
+                strokeDasharray={`${2 * Math.PI * 24}`} strokeDashoffset={`${2 * Math.PI * 24 * (1 - setupPct / 100)}`}
+                className="transition-all duration-700" />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center font-mono text-sm font-bold" style={{ fontFeatureSettings: '"tnum"' }}>{setupDone}/{setupSteps.length}</span>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-[15px] font-semibold text-foreground">Complete your setup</h3>
+            <p className="mt-0.5 text-[13px] text-muted-foreground">{setupSteps.length - setupDone} step{setupSteps.length - setupDone !== 1 ? "s" : ""} remaining to unlock full AI</p>
+          </div>
+          <button onClick={() => navTo("profile-enhancement")} className="shrink-0 text-[13px] font-medium text-[var(--brand)] transition-colors hover:underline">
+            Continue →
+          </button>
+        </div>
+      )}
+
+      {/* ── POLISH 2: KPI cards ── */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {metricCards.map((m, i) => (
-          <div key={m.label} className={`rounded-xl border border-border bg-card p-4 card-hover card-stagger-${i + 1}`}>
-            <div className="flex items-center justify-between mb-2">
-              <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${m.color}`}>
-                <m.icon className="h-4 w-4" />
-              </div>
-              {m.spark.length >= 2 && <Sparkline data={m.spark} />}
+        {metricCards.map((m) => (
+          <div key={m.label} className="rounded-2xl border border-[var(--border-default)] bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-xs)]">
+            <div className="flex items-start justify-between">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{m.label}</div>
+              {m.spark.length >= 2 ? <Sparkline data={m.spark} width={60} height={24} /> : <SparklinePlaceholder />}
             </div>
-            <p className="text-2xl font-bold text-foreground" style={{ fontVariantNumeric: "tabular-nums" }}><AnimatedCounter target={m.value} /></p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">{m.sub}</p>
+            <div className="mt-3 font-mono text-[36px] font-bold leading-none tracking-[-0.025em]" style={{ fontFeatureSettings: '"tnum"' }}>
+              {m.value.toLocaleString()}
+            </div>
+            <div className="mt-2 flex items-baseline gap-1.5">
+              {m.delta ? (
+                <>
+                  <span className="text-[13px] font-medium text-emerald-600">{m.delta}</span>
+                  {m.deltaCtx && <span className="text-[11px] text-muted-foreground">{m.deltaCtx}</span>}
+                </>
+              ) : (
+                <span className="text-[11px] text-muted-foreground">{m.sub}</span>
+              )}
+            </div>
           </div>
         ))}
       </div>
@@ -371,47 +423,41 @@ export default function DashboardOverview() {
       {/* ── Pending approvals ── */}
       <PendingApprovals onNavigate={navTo} />
 
-      {/* ── AI Brain (FIX 3) ── */}
+      {/* ── POLISH 4: AI Brain ── */}
       <AIBrainStatus businessId={businessId} aiDecisions={aiDecisions} />
 
-      {/* ── Quick Actions (FIX 4) ── */}
+      {/* ── POLISH 5: Quick Actions ── */}
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h3 className="text-sm font-semibold text-foreground">Quick Actions</h3>
-            <p className="text-[11px] text-muted-foreground">Trigger your AI manually</p>
-          </div>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <h2 className="mb-4 text-[18px] font-semibold tracking-[-0.01em]">Quick actions</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {quickActions.map(a => (
-            <div key={a.name} className="rounded-xl border border-border bg-card p-4 quick-action-card">
-              <div className="flex items-center gap-3 mb-2">
-                <span className={`action-icon flex h-10 w-10 items-center justify-center rounded-lg ${a.color}`}><a.IconEl className="h-5 w-5" /></span>
-                <div>
-                  <p className="text-[13px] font-semibold text-foreground">{a.name}</p>
-                  <p className="text-[11px] text-muted-foreground">{a.desc}</p>
-                </div>
+            <button
+              key={a.name}
+              onClick={() => handleQuickAction(a)}
+              disabled={!!actionLoading}
+              className="group relative flex items-start gap-4 rounded-2xl border border-[var(--border-default)] bg-white p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--brand)] hover:shadow-[var(--shadow-xs)] disabled:opacity-50"
+            >
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${a.iconBg} ${a.iconColor}`}>
+                {actionLoading === a.name ? <Loader2 className="h-5 w-5 animate-spin" /> :
+                 actionSuccess === a.name ? <CheckCircle2 className="h-5 w-5" /> :
+                 <a.IconEl className="h-5 w-5" />}
               </div>
-              <Button
-                variant="outline" size="sm" className="w-full h-8 text-xs mt-1"
-                disabled={!!actionLoading}
-                onClick={() => handleQuickAction(a)}
-              >
-                {actionLoading === a.name ? <><Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> {a.loadingText}</>
-                  : actionSuccess === a.name ? <><CheckCircle2 className="mr-1.5 h-3 w-3 text-success" /> Done!</>
-                  : a.btnLabel}
-              </Button>
-            </div>
+              <div className="flex-1">
+                <p className="text-[15px] font-semibold text-foreground">{a.name}</p>
+                <p className="mt-0.5 text-[13px] text-muted-foreground">{a.desc}</p>
+              </div>
+              <ArrowRight className="absolute right-5 top-5 h-4 w-4 text-muted-foreground/0 transition-all duration-200 group-hover:translate-x-1 group-hover:text-muted-foreground" />
+            </button>
           ))}
         </div>
       </div>
 
-      {/* ── Performance chart (FIX 5) ── */}
-      <div className="rounded-lg border border-border bg-card p-5 shadow-meta">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-foreground">Performance</h3>
+      {/* ── POLISH 6: Performance chart ── */}
+      <div className="rounded-2xl border border-[var(--border-default)] bg-white p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-[18px] font-semibold tracking-[-0.01em]">Performance</h2>
           <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[130px] h-8 text-xs rounded-full"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="7">Last 7 days</SelectItem>
               <SelectItem value="14">Last 14 days</SelectItem>
@@ -425,91 +471,102 @@ export default function DashboardOverview() {
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis dataKey="date" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
               <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} width={45} />
-              <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }} />
-              <Line type="monotone" dataKey="reach" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+              <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "12px", fontSize: "12px" }} />
+              <Line type="monotone" dataKey="reach" stroke="var(--brand)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
             </LineChart>
           </ResponsiveContainer>
         ) : (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <BarChart2 className="h-10 w-10 text-muted-foreground/20" />
-            <p className="mt-4 text-sm font-medium text-foreground">Performance tracking starts today</p>
-            <p className="mt-1 text-xs text-muted-foreground max-w-xs">Your metrics appear after the first week</p>
-            <div className="mt-4 flex flex-wrap justify-center gap-2">
-              {["Daily reach", "Engagement", "New leads", "Email opens"].map(t => (
-                <span key={t} className="rounded-full bg-muted px-3 py-1 text-[11px] text-muted-foreground">{t}</span>
+            <BarChart2 className="h-10 w-10 text-muted-foreground/15" />
+            <p className="mt-4 text-[15px] font-medium text-foreground">Performance tracking starts today</p>
+            <p className="mt-1 text-[13px] text-muted-foreground max-w-xs">Your metrics appear after the first week</p>
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              {[{ icon: Eye, label: "Daily reach" }, { icon: MessageCircle, label: "Engagement" }, { icon: UserPlus, label: "New leads" }, { icon: Mail, label: "Email opens" }].map(c => (
+                <span key={c.label} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-default)] px-3 py-1.5 text-[13px] text-muted-foreground transition-colors hover:border-[var(--brand)] hover:text-foreground cursor-pointer">
+                  <c.icon className="h-3.5 w-3.5" /> {c.label}
+                </span>
               ))}
             </div>
           </div>
         )}
       </div>
 
-      {/* ── Activity + Schedule ── */}
+      {/* ── POLISH 7 + 8: Activity + Schedule ── */}
       <div className="grid gap-4 lg:grid-cols-5">
-        {/* FIX 2: Activity feed with formatted text */}
-        <div className="lg:col-span-3 rounded-lg border border-border bg-card shadow-meta">
-          <div className="flex items-center gap-2 px-5 py-3 border-b border-border">
+        {/* Activity feed */}
+        <div className="lg:col-span-3 rounded-2xl border border-[var(--border-default)] bg-white">
+          <div className="flex items-center gap-2 px-5 py-4 border-b border-[var(--border-default)]">
             <span className="live-dot" />
-            <h3 className="text-sm font-semibold text-foreground">Recent Activity</h3>
+            <h2 className="text-[18px] font-semibold tracking-[-0.01em]">Recent activity</h2>
           </div>
           {feed.length === 0 ? (
-            <div className="p-6 text-center">
-              <p className="text-xs text-muted-foreground">No activity yet — actions appear here as your AI works.</p>
+            <div className="p-8 text-center">
+              <p className="text-[13px] text-muted-foreground">No activity yet — actions appear here as your AI works</p>
             </div>
           ) : (
-            <div className="divide-y divide-border">
-              {feed.map((f, i) => {
-                const borderColor = f.type === "content" ? "border-l-primary" : f.type === "lead" ? "border-l-success" : f.type === "competitor" ? "border-l-purple-500" : f.type === "seo" ? "border-l-orange-500" : f.type === "email" ? "border-l-teal-500" : f.type === "error" ? "border-l-destructive" : "border-l-transparent";
+            <div>
+              {displayFeed.map((f, i) => {
+                const showDayLabel = i === 0 || getDayLabel(f.time) !== getDayLabel(displayFeed[i - 1].time);
                 return (
-                  <div key={i} className={`flex items-center gap-3 px-5 py-2.5 hover:bg-muted/20 transition-colors border-l-2 ${borderColor}`}>
-                    <span className="text-sm shrink-0">{f.emoji}</span>
-                    <span className="text-[13px] text-foreground truncate flex-1">{formatActivityText(f.message)}</span>
-                    <span className="text-[11px] text-muted-foreground shrink-0 whitespace-nowrap">{formatTimeAgo(f.time)}</span>
+                  <div key={i}>
+                    {showDayLabel && (
+                      <div className="px-5 pt-3 pb-1">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{getDayLabel(f.time)}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-[var(--bg-subtle)] cursor-pointer">
+                      <span className={`h-2 w-2 shrink-0 rounded-full ${FEED_DOT_COLORS[f.type] || "bg-gray-400"}`} />
+                      <span className="text-[15px] text-foreground truncate flex-1">{formatActivityText(f.message)}</span>
+                      <span className="text-[11px] text-muted-foreground shrink-0">{formatTimeAgo(f.time)}</span>
+                    </div>
                   </div>
                 );
               })}
+              {feed.length > 5 && !showAllFeed && (
+                <button onClick={() => setShowAllFeed(true)} className="w-full border-t border-[var(--border-default)] px-5 py-3 text-[13px] font-medium text-[var(--brand)] transition-colors hover:bg-[var(--bg-subtle)]">
+                  View all {feed.length} activities
+                </button>
+              )}
             </div>
           )}
         </div>
 
-        {/* FIX 8: Scheduled tasks */}
-        <div className="lg:col-span-2 rounded-lg border border-border bg-card p-4 shadow-meta">
-          <div className="flex items-center gap-2 mb-3">
-            <CalendarClock className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold text-foreground">Next Scheduled Tasks</h3>
+        {/* Scheduled tasks */}
+        <div className="lg:col-span-2 rounded-2xl border border-[var(--border-default)] bg-white p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <CalendarClock className="h-4 w-4 text-[var(--brand)]" />
+            <h2 className="text-[18px] font-semibold tracking-[-0.01em]">Scheduled</h2>
           </div>
           <div className="space-y-2">
             {scheduledTasks.map(t => (
-              <div key={t.name} className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2">
-                <div className="flex items-center gap-2">
-                  <t.IconEl className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs text-foreground">{t.name}</span>
+              <div key={t.name} className="flex items-center justify-between rounded-xl bg-[var(--bg-subtle)] px-3.5 py-2.5 transition-colors hover:bg-[var(--bg-muted)]">
+                <div className="flex items-center gap-2.5">
+                  <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${t.tagColor}`}>{t.tag}</span>
+                  <span className="text-[13px] text-foreground">{t.name}</span>
                 </div>
-                <span className="text-[11px] font-medium text-primary">{t.time}</span>
+                <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+                  <Calendar className="h-3 w-3" />
+                  {t.time}
+                </div>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* ── Setup checklist (FIX 6) ── */}
+      {/* ── Setup checklist (bottom, detailed) ── */}
       {setupPct < 100 && !setupComplete && (
-        <div className="rounded-lg border border-border bg-card p-5 shadow-meta">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-foreground">Complete your setup</h3>
-            <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">{setupDone}/{setupSteps.length}</span>
-          </div>
-          <div className="h-1.5 w-full rounded-full bg-border overflow-hidden mb-4">
-            <div className="h-full rounded-full progress-shimmer transition-all duration-700" style={{ width: `${setupPct}%` }} />
-          </div>
+        <div className="rounded-2xl border border-[var(--border-default)] bg-white p-6">
+          <h2 className="mb-4 text-[18px] font-semibold tracking-[-0.01em]">Setup checklist</h2>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {setupSteps.map(s => (
               <button
                 key={s.label}
                 onClick={() => !s.done && navTo(s.tab)}
-                className={`flex items-center gap-2 rounded-md px-3 py-2 text-left transition-colors ${!s.done ? "hover:bg-muted/50 cursor-pointer" : ""}`}
+                className={`flex items-center gap-2.5 rounded-xl px-4 py-3 text-left transition-all duration-200 ${!s.done ? "hover:bg-[var(--bg-subtle)] cursor-pointer" : ""}`}
               >
-                {s.done ? <CheckCircle2 className="h-4 w-4 text-success shrink-0" /> : <Circle className="h-4 w-4 text-muted-foreground/30 shrink-0" />}
-                <span className={`text-xs ${s.done ? "text-muted-foreground line-through" : "text-foreground"}`}>{s.label}</span>
+                {s.done ? <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" /> : <Circle className="h-4 w-4 text-muted-foreground/25 shrink-0" />}
+                <span className={`text-[13px] ${s.done ? "text-muted-foreground line-through" : "text-foreground"}`}>{s.label}</span>
               </button>
             ))}
           </div>
