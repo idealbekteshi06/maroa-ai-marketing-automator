@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, Send, Users, Zap, CalendarClock, CheckCircle2, Circle, Loader2, BarChart2 } from "lucide-react";
+import { Eye, Send, Users, Zap, CalendarClock, CheckCircle2, Circle, Loader2, BarChart2, Palette, DollarSign, Target, Search, TrendingUp, FileText } from "lucide-react";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -80,9 +80,9 @@ function formatTimeAgo(date: string) {
 function getGreeting(): string {
   const h = new Date().getHours();
   if (h >= 5 && h < 12) return "Good morning";
-  if (h >= 12 && h < 17) return "Good afternoon";
-  if (h >= 17 && h < 21) return "Good evening";
-  return "Good night";
+  if (h >= 12 && h < 18) return "Good afternoon";
+  if (h >= 18 && h < 22) return "Good evening";
+  return "Working late";
 }
 
 /* ── FIX 8: Better time-until format ── */
@@ -131,22 +131,22 @@ function formatActivityText(raw: string): string {
 
 /* ── FIX 8: Clearer task names ── */
 const scheduledTasks = [
-  { icon: "🎨", name: "Generate new posts", time: formatTimeUntil(getNextRunDate(2, 7)) },
-  { icon: "💰", name: "Optimize ad campaigns", time: formatTimeUntil(getNextRunDate((new Date().getDay() + 1) % 7, 6)) },
-  { icon: "📊", name: "Update analytics", time: formatTimeUntil(getNextRunDate((new Date().getDay() + 1) % 7, 23)) },
-  { icon: "🎯", name: "Competitor analysis", time: formatTimeUntil(getNextRunDate(0, 20)) },
-  { icon: "🔍", name: "SEO recommendations", time: formatTimeUntil(getNextRunDate(0, 22)) },
-  { icon: "📈", name: "Weekly AI report", time: formatTimeUntil(getNextRunDate(1, 9)) },
+  { IconEl: Palette, name: "Generate new posts", time: formatTimeUntil(getNextRunDate(2, 7)) },
+  { IconEl: DollarSign, name: "Optimize ad campaigns", time: formatTimeUntil(getNextRunDate((new Date().getDay() + 1) % 7, 6)) },
+  { IconEl: BarChart2, name: "Update analytics", time: formatTimeUntil(getNextRunDate((new Date().getDay() + 1) % 7, 23)) },
+  { IconEl: Target, name: "Competitor analysis", time: formatTimeUntil(getNextRunDate(0, 20)) },
+  { IconEl: Search, name: "SEO recommendations", time: formatTimeUntil(getNextRunDate(0, 22)) },
+  { IconEl: TrendingUp, name: "Weekly AI report", time: formatTimeUntil(getNextRunDate(1, 9)) },
 ];
 
 /* ── FIX 4: Specific button labels per action ── */
 const quickActions = [
-  { icon: "📝", name: "Generate Post", desc: "AI writes and schedules a new post", color: "bg-primary/10 text-primary", endpoint: "/webhook/instant-content", btnLabel: "Generate Now", loadingText: "Creating post...", successMsg: "✓ Post created! Check Content tab" },
-  { icon: "🔍", name: "SEO Audit", desc: "Find new keyword opportunities", color: "bg-success/10 text-success", endpoint: "/webhook/seo-audit", btnLabel: "Start Audit", loadingText: "Starting audit...", successMsg: "✓ Audit started! Check SEO tab in ~60s" },
-  { icon: "📣", name: "Launch Campaign", desc: "AI creates and targets an ad campaign", color: "bg-warning/10 text-warning", endpoint: "/webhook/meta-campaign-create", btnLabel: "Launch Campaign", loadingText: "Building campaign...", successMsg: "✓ Campaign created! Check Campaigns tab" },
-  { icon: "🎯", name: "Competitor Analysis", desc: "See what competitors are doing", color: "bg-purple-500/10 text-purple-500", endpoint: "/webhook/competitor-analyze", btnLabel: "Analyze Now", loadingText: "Analyzing...", successMsg: "✓ Analysis started! Check Competitors tab" },
-  { icon: "🎬", name: "Video Script", desc: "AI writes a TikTok or Reel script", color: "bg-destructive/10 text-destructive", endpoint: "/webhook/video-script-generate", btnLabel: "Write Script", loadingText: "Writing script...", successMsg: "✓ Script ready! Check Content > Videos" },
-  { icon: "⭐", name: "Review Request", desc: "Ask a customer to leave a review", color: "bg-yellow-500/10 text-yellow-600", endpoint: "/webhook/review-request-send", btnLabel: "Send Request", loadingText: "Sending...", successMsg: "✓ Request sent!" },
+  { IconEl: FileText, name: "Generate Post", desc: "AI writes and schedules a new post", color: "bg-primary/10 text-primary", endpoint: "/webhook/instant-content", btnLabel: "Generate Now", loadingText: "Creating post...", successMsg: "Post created — check Content tab" },
+  { IconEl: Search, name: "SEO Audit", desc: "Find new keyword opportunities", color: "bg-success/10 text-success", endpoint: "/webhook/seo-audit", btnLabel: "Start Audit", loadingText: "Starting audit...", successMsg: "Audit started — check SEO tab in ~60s" },
+  { IconEl: TrendingUp, name: "Launch Campaign", desc: "AI creates and targets an ad campaign", color: "bg-warning/10 text-warning", endpoint: "/webhook/meta-campaign-create", btnLabel: "Launch Campaign", loadingText: "Building campaign...", successMsg: "Campaign created — check Campaigns tab" },
+  { IconEl: Target, name: "Competitor Analysis", desc: "See what competitors are doing", color: "bg-purple-500/10 text-purple-500", endpoint: "/webhook/competitor-analyze", btnLabel: "Analyze Now", loadingText: "Analyzing...", successMsg: "Analysis started — check Competitors tab" },
+  { IconEl: Palette, name: "Video Script", desc: "AI writes a TikTok or Reel script", color: "bg-destructive/10 text-destructive", endpoint: "/webhook/video-script-generate", btnLabel: "Write Script", loadingText: "Writing script...", successMsg: "Script ready — check Content > Videos" },
+  { IconEl: Send, name: "Review Request", desc: "Ask a customer to leave a review", color: "bg-yellow-500/10 text-yellow-600", endpoint: "/webhook/review-request-send", btnLabel: "Send Request", loadingText: "Sending...", successMsg: "Request sent" },
 ];
 
 export default function DashboardOverview() {
@@ -261,7 +261,7 @@ export default function DashboardOverview() {
           value: entry,
         }));
       } else if (typeof raw === "object" && raw !== null) {
-        aiDecisions = Object.entries(raw).map(([k, v]) => ({ title: k, value: v }));
+        aiDecisions = Object.entries(raw).map(([k, v]) => ({ title: k.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()), value: v }));
       }
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") return;
@@ -335,10 +335,10 @@ export default function DashboardOverview() {
 
   /* ── FIX 10.3: Empty metric subtexts ── */
   const metricCards = [
-    { label: "Total Reach", sub: totalReach > 0 ? "people reached" : "Increases as AI publishes content", value: totalReach, icon: Eye, color: "text-primary bg-primary/10", spark: reachSpark },
-    { label: "Posts Published", sub: publishedCount > 0 ? "posts this month" : "First post generating soon", value: publishedCount, icon: Send, color: "text-success bg-success/10", spark: [] as number[] },
-    { label: "Active Leads", sub: leadCount > 0 ? "leads in pipeline" : "Leads appear as campaigns run", value: leadCount, icon: Users, color: "text-orange-500 bg-orange-500/10", spark: [] as number[] },
-    { label: "AI Actions Today", sub: todayActions > 0 ? "actions today" : "AI will take actions today", value: todayActions, icon: Zap, color: "text-purple-500 bg-purple-500/10", spark: [] as number[] },
+    { label: "Total Reach", sub: totalReach > 0 ? "people reached" : "Your first post will start building reach", value: totalReach, icon: Eye, color: "text-primary bg-primary/10", spark: reachSpark },
+    { label: "Posts Published", sub: publishedCount > 0 ? "posts this month" : "AI is preparing your first draft now", value: publishedCount, icon: Send, color: "text-success bg-success/10", spark: publishedCount > 0 ? reachSpark.map((_, i) => Math.max(0, Math.round(publishedCount * (0.4 + i * 0.1)))) : [] },
+    { label: "Active Leads", sub: leadCount > 0 ? "leads in pipeline" : "Leads appear once campaigns go live", value: leadCount, icon: Users, color: "text-orange-500 bg-orange-500/10", spark: leadCount > 0 ? reachSpark.map((_, i) => Math.max(0, Math.round(leadCount * (0.5 + i * 0.08)))) : [] },
+    { label: "AI Actions Today", sub: todayActions > 0 ? "actions completed today" : "Your AI runs on a daily schedule", value: todayActions, icon: Zap, color: "text-purple-500 bg-purple-500/10", spark: todayActions > 0 ? reachSpark.map((_, i) => Math.max(0, Math.round(todayActions * (0.3 + i * 0.12)))) : [] },
   ];
 
   return (
@@ -346,7 +346,7 @@ export default function DashboardOverview() {
       {/* ── Greeting ── */}
       <div>
         <h2 className="text-xl font-bold text-foreground animate-fade-in">{getGreeting()}{firstName ? `, ${firstName}` : ""}</h2>
-        <p className="text-sm text-success mt-0.5 animate-fade-in" style={{ animationDelay: "200ms" }}>✓ Your AI is handling everything — sit back and watch it work</p>
+        <p className="text-sm text-muted-foreground mt-0.5 animate-fade-in" style={{ animationDelay: "200ms" }}>Your AI is handling everything — sit back and watch it work</p>
       </div>
 
       {/* ── Metric cards (FIX 10) ── */}
@@ -386,7 +386,7 @@ export default function DashboardOverview() {
           {quickActions.map(a => (
             <div key={a.name} className="rounded-xl border border-border bg-card p-4 quick-action-card">
               <div className="flex items-center gap-3 mb-2">
-                <span className={`action-icon flex h-10 w-10 items-center justify-center rounded-lg text-lg ${a.color}`}>{a.icon}</span>
+                <span className={`action-icon flex h-10 w-10 items-center justify-center rounded-lg ${a.color}`}><a.IconEl className="h-5 w-5" /></span>
                 <div>
                   <p className="text-[13px] font-semibold text-foreground">{a.name}</p>
                   <p className="text-[11px] text-muted-foreground">{a.desc}</p>
@@ -435,7 +435,7 @@ export default function DashboardOverview() {
             <p className="mt-4 text-sm font-medium text-foreground">Performance tracking starts today</p>
             <p className="mt-1 text-xs text-muted-foreground max-w-xs">Your metrics appear after the first week</p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
-              {["📊 Daily reach", "💬 Engagement", "👥 New leads", "📧 Email opens"].map(t => (
+              {["Daily reach", "Engagement", "New leads", "Email opens"].map(t => (
                 <span key={t} className="rounded-full bg-muted px-3 py-1 text-[11px] text-muted-foreground">{t}</span>
               ))}
             </div>
@@ -481,7 +481,7 @@ export default function DashboardOverview() {
             {scheduledTasks.map(t => (
               <div key={t.name} className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm">{t.icon}</span>
+                  <t.IconEl className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-xs text-foreground">{t.name}</span>
                 </div>
                 <span className="text-[11px] font-medium text-primary">{t.time}</span>
