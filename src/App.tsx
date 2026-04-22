@@ -24,6 +24,7 @@ const Refund = lazy(() => import("./pages/Refund"));
 const Access = lazy(() => import("./pages/Access"));
 const DeleteData = lazy(() => import("./pages/DeleteData"));
 const DataDeletion = lazy(() => import("./pages/DataDeletion"));
+const DataDeletionStatus = lazy(() => import("./pages/DataDeletionStatus"));
 const SocialCallback = lazy(() => import("./pages/SocialCallback"));
 const Compare = lazy(() => import("./pages/Compare"));
 const OnboardingLegacy = lazy(() => import("./pages/OnboardingLegacy"));
@@ -61,6 +62,7 @@ const App = () => (
               <Route path="/access" element={<Access />} />
               <Route path="/delete-data" element={<DeleteData />} />
               <Route path="/data-deletion" element={<DataDeletion />} />
+              <Route path="/data-deletion-status" element={<DataDeletionStatus />} />
               <Route path="/social-callback" element={<SocialCallback />} />
               <Route path="/compare" element={<Compare />} />
               <Route path="*" element={<NotFound />} />
