@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import LiveAgentActivityFeed, { type AgentStep } from "@/components/LiveAgentActivityFeed";
 import { toast } from "sonner";
 import { generateContentNow } from "@/lib/apiClient";
+import { events as analytics } from "@/lib/analytics";
 
 const STORAGE_KEY = "maroa-welcome-shown";
 const PHASE2_KEY = "maroa-welcome-phase2-shown";
@@ -98,6 +99,7 @@ export default function WelcomeModal() {
     localStorage.setItem(PHASE2_KEY, "true");
     setShow(false);
     if (showPayoff) {
+      analytics.welcomeFlowCompleted();
       const userId = user?.id;
       const email = user?.email;
       const bizId = businessId || userId;

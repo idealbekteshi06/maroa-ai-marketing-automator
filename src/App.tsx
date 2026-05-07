@@ -7,6 +7,7 @@ import { lazy, Suspense } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import AnalyticsRouteListener from "@/components/AnalyticsRouteListener";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
@@ -43,6 +44,7 @@ const App = () => (
         <BrowserRouter
           future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
         >
+          <AnalyticsRouteListener />
           <Suspense fallback={<Loading />}>
             <Routes>
               <Route path="/" element={<Index />} />

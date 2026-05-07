@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { X } from "lucide-react";
 import { ERROR_MESSAGES } from "@/lib/errorMessages";
 import { toast } from "sonner";
 import { getApiBase } from "@/lib/apiClient";
+import { useCronHealth } from "@/hooks/useCronHealth";
 
 interface AIStatusBarProps {
   businessId: string | null;
@@ -23,37 +24,66 @@ const EVENT_MESSAGES: Record<string, string> = {
   competitor_alert: "🎯 Competitor alert",
 };
 
-const IDLE_MESSAGES = [
+const FALLBACK_IDLE_MESSAGES = [
   "● AI is monitoring your business 24/7",
-  "● Content generation running — posts scheduled",
-  "● Lead scoring active — contacts tracked",
-  "● Competitor monitoring — weekly scan active",
-  "● Email sequences processing automatically",
-  "● SEO monitoring — next audit Sunday",
 ];
+
+function relativeAge(hours: number | null): string {
+  if (hours === null || hours === undefined) return "just now";
+  if (hours < 1) return "moments ago";
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.round(hours / 24)}d ago`;
+}
 
 type StatusState = "idle" | "working" | "success" | "error";
 
 export default function AIStatusBar({ businessId }: AIStatusBarProps) {
+  const cronHealth = useCronHealth(businessId);
   const [status, setStatus] = useState<StatusState>("idle");
-  const [message, setMessage] = useState(IDLE_MESSAGES[0]);
+  const [message, setMessage] = useState(FALLBACK_IDLE_MESSAGES[0]);
   const [visible, setVisible] = useState(true);
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
   const msgIdx = useRef(0);
 
+  // Build the rotating idle messages from real cron-health timestamps when
+  // available; otherwise fall back to a single generic line.
+  const idleMessages = useMemo<string[]>(() => {
+    const data = cronHealth.data;
+    if (!data) return FALLBACK_IDLE_MESSAGES;
+    const entries: { label: string; healthy: boolean; age: number | null; lastRun: string | null }[] = [
+      { label: "Content engine", healthy: data.content_generation.healthy, age: data.content_generation.age_hours, lastRun: data.content_generation.last_run_at },
+      { label: "Lead scoring", healthy: data.lead_scoring.healthy, age: data.lead_scoring.age_hours, lastRun: data.lead_scoring.last_run_at },
+      { label: "Competitor monitoring", healthy: data.competitor_monitor.healthy, age: data.competitor_monitor.age_hours, lastRun: data.competitor_monitor.last_run_at },
+      { label: "Performance tracker", healthy: data.analytics_snapshot.healthy, age: data.analytics_snapshot.age_hours, lastRun: data.analytics_snapshot.last_run_at },
+      { label: "Retention emails", healthy: data.retention_emails.healthy, age: data.retention_emails.age_hours, lastRun: data.retention_emails.last_run_at },
+      { label: "Win notifications", healthy: data.win_notifications.healthy, age: data.win_notifications.age_hours, lastRun: data.win_notifications.last_run_at },
+    ];
+    const messages = entries
+      .filter((e) => e.lastRun)
+      .map((e) => `● ${e.label} — last run ${relativeAge(e.age)}`);
+    return messages.length > 0 ? messages : FALLBACK_IDLE_MESSAGES;
+  }, [cronHealth.data]);
+
+  // Reset to first idle message when the cron-health source changes.
+  useEffect(() => {
+    msgIdx.current = 0;
+    setMessage(idleMessages[0]);
+  }, [idleMessages]);
+
   // Cycle idle messages with fade
   useEffect(() => {
     if (status !== "idle") return;
+    if (idleMessages.length <= 1) return;
     const cycle = setInterval(() => {
       setVisible(false);
       setTimeout(() => {
-        msgIdx.current = (msgIdx.current + 1) % IDLE_MESSAGES.length;
-        setMessage(IDLE_MESSAGES[msgIdx.current]);
+        msgIdx.current = (msgIdx.current + 1) % idleMessages.length;
+        setMessage(idleMessages[msgIdx.current]);
         setVisible(true);
       }, 400);
     }, 8000);
     return () => clearInterval(cycle);
-  }, [status]);
+  }, [status, idleMessages]);
 
   // SSE connection
   useEffect(() => {
@@ -76,7 +106,7 @@ export default function AIStatusBar({ businessId }: AIStatusBarProps) {
           clearTimeout(timerRef.current);
           timerRef.current = setTimeout(() => {
             setStatus("idle");
-            setMessage(IDLE_MESSAGES[0]);
+            setMessage(idleMessages[0]);
           }, 5000);
         } catch (err: unknown) {
           if (err instanceof Error && err.name === "AbortError") return;
@@ -91,7 +121,7 @@ export default function AIStatusBar({ businessId }: AIStatusBarProps) {
     return () => { es?.close(); clearTimeout(timerRef.current); };
   }, [businessId]);
 
-  const dismiss = () => { setStatus("idle"); setMessage(IDLE_MESSAGES[0]); };
+  const dismiss = () => { setStatus("idle"); setMessage(idleMessages[0]); };
 
   const bgColor = status === "idle" ? "rgba(48,209,88,0.06)" : status === "success" ? "rgba(48,209,88,0.12)" : status === "working" ? "rgba(10,132,255,0.08)" : "rgba(220,38,38,0.08)";
   const textColor = status === "idle" ? "#30D158" : status === "success" ? "#30D158" : status === "working" ? "#0A84FF" : "#DC2626";

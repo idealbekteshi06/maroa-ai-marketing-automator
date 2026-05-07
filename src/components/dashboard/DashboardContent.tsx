@@ -10,6 +10,7 @@ import PostPreviewModal from "@/components/dashboard/PostPreviewModal";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 import { apiFireAndForget, generateContentNow } from "@/lib/apiClient";
 import QualityGateChip, { type QualityGateVerdict } from "@/components/QualityGateChip";
+import { events as analytics } from "@/lib/analytics";
 
 function scoreToQualityVerdict(score: number | null | undefined): QualityGateVerdict | null {
   if (score === null || score === undefined || Number.isNaN(score)) return null;
@@ -127,12 +128,14 @@ export default function DashboardContent() {
     try {
       const row = await generateContentNow(businessId, user.id, user.email ?? "");
       clearInterval(progressInterval);
+      analytics.contentGenerated(row?.content_theme, row?.quality_score);
       toast.success(row?.content_theme ? `Done — theme: ${row.content_theme}` : SUCCESS_MESSAGES.GENERATED);
       await fetchContent();
     } catch (err) {
       clearInterval(progressInterval);
       const msg = err instanceof Error ? err.message : ERROR_MESSAGES.GENERATION_FAILED;
       const isOnboardingGap = /BUSINESS_NOT_FOUND|finish onboarding/i.test(msg);
+      analytics.errorOccurred("content_generation", msg);
       toast.error(isOnboardingGap ? "Finish onboarding first" : "Couldn't generate content", {
         description: isOnboardingGap
           ? "Open Settings → Business Profile and fill in your industry, target audience, and brand voice."
@@ -145,6 +148,7 @@ export default function DashboardContent() {
   const handleApprove = async (id: string) => {
     const { error } = await externalSupabase.from("generated_content").update({ status: "approved" }).eq("id", id);
     if (error) { toast.error(ERROR_MESSAGES.GENERATION_FAILED); return; }
+    analytics.contentApproved(id);
     toast.success(SUCCESS_MESSAGES.GENERATED);
     apiFireAndForget("/webhook/content-approved", {
       user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id

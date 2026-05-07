@@ -131,6 +131,35 @@ export interface BrandVoiceDto {
   derived_from: string | null;
 }
 
+export interface CronHealthSlot {
+  last_run_at: string | null;
+  healthy: boolean;
+  age_hours: number | null;
+}
+
+export interface CronHealthDto {
+  generated_at: string;
+  content_generation: CronHealthSlot;
+  competitor_monitor: CronHealthSlot;
+  analytics_snapshot: CronHealthSlot;
+  lead_scoring: CronHealthSlot;
+  retention_emails: CronHealthSlot;
+  win_notifications: CronHealthSlot;
+}
+
+export async function getCronHealth(
+  businessId: string,
+  signal?: AbortSignal,
+): Promise<CronHealthDto | null> {
+  const auth = await getAuthHeaders();
+  const res = await fetch(
+    `${API_BASE}/api/cron-health/${encodeURIComponent(businessId)}`,
+    { headers: { ...auth }, signal },
+  );
+  if (!res.ok) return null;
+  return (await res.json()) as CronHealthDto;
+}
+
 export async function getBrandVoice(
   businessId: string,
   signal?: AbortSignal

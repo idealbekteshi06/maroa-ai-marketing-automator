@@ -12,6 +12,7 @@ import { Check, ExternalLink, User, CreditCard, Bell, Zap, Palette, Link2, Calen
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 import { apiPost, postCheckout, getBrandVoice, buildBrandVoice, type BrandVoiceDto } from "@/lib/apiClient";
 import BrandVoiceCard from "@/components/BrandVoiceCard";
+import { events as analytics } from "@/lib/analytics";
 
 /* ── Tabs ── */
 const tabs = [
@@ -129,10 +130,14 @@ export default function DashboardSettings() {
   const handleUpgrade = async (planKey: PlanKey) => {
     if (planKey === "free" || !user?.id) return;
     setCheckoutLoading(planKey);
+    analytics.subscriptionUpgradeStarted(planKey);
     try {
       const result = await postCheckout(user.id, planKey);
       if (result.checkout_url) window.location.href = result.checkout_url;
-    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : ERROR_MESSAGES.SAVE_FAILED); }
+    } catch (err: unknown) {
+      analytics.errorOccurred("checkout", err instanceof Error ? err.message : String(err));
+      toast.error(err instanceof Error ? err.message : ERROR_MESSAGES.SAVE_FAILED);
+    }
     setCheckoutLoading(null);
   };
 
@@ -148,6 +153,7 @@ export default function DashboardSettings() {
   const handleBrandTrain = async () => {
     if (!businessId || !user?.id) return;
     setBrandTraining(true);
+    analytics.brandVoiceRebuilt();
     toast("🧠 Rebuilding your brand voice...");
     try {
       const v = await buildBrandVoice(businessId);

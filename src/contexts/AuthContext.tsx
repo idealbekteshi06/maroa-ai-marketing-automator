@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useRef, ReactNode, useCallback } from "react";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { apiFireAndForget } from "@/lib/apiClient";
+import { identify, reset, setPersonProperties } from "@/lib/analytics";
 import type { User, Session } from "@supabase/supabase-js";
 
 interface AuthContextType {
@@ -47,6 +48,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data) {
         setBusinessId(data.id);
         setOnboardingComplete(data.onboarding_complete ?? null);
+        setPersonProperties({
+          businessId: data.id,
+          onboardingComplete: data.onboarding_complete ?? false,
+        });
       } else if (user) {
         // No business row — likely Google OAuth signup. Create one.
         const meta = user.user_metadata || {};
@@ -107,6 +112,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(nextUser);
         if (nextUser) {
           void updateBusiness(nextUser.id, nextUser);
+          identify(nextUser.id, {
+            email: nextUser.email ?? null,
+            firstName: (nextUser.user_metadata?.first_name as string) ?? null,
+          });
         } else {
           setBusinessId(null);
           setOnboardingComplete(null);
@@ -120,7 +129,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s);
       const u = s?.user ?? null;
       setUser(u);
-      if (u) await updateBusiness(u.id, u);
+      if (u) {
+        await updateBusiness(u.id, u);
+        identify(u.id, {
+          email: u.email ?? null,
+          firstName: (u.user_metadata?.first_name as string) ?? null,
+        });
+      }
       if (mountedRef.current) { setLoading(false); setIsReady(true); }
     });
 
@@ -130,6 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     await externalSupabase.auth.signOut();
     setUser(null); setSession(null); setBusinessId(null); setOnboardingComplete(null);
+    reset();
   }, []);
 
   return (

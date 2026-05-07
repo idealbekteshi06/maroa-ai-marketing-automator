@@ -9,6 +9,7 @@ import { Slider } from "@/components/ui/slider";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 import { apiFireAndForget } from "@/lib/apiClient";
 import DecisionNarrative, { type DecisionVerdict, type DecisionEvidence } from "@/components/DecisionNarrative";
+import { events as analytics } from "@/lib/analytics";
 import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
 } from "@/components/ui/table";
@@ -106,6 +107,7 @@ export default function DashboardAds() {
     try {
       const { data: biz } = await externalSupabase.from("businesses").select("business_name, email, daily_budget, target_audience, industry, location").eq("id", businessId).maybeSingle();
       toast("🤖 AI is building your campaigns...");
+      analytics.campaignLaunched(biz?.industry || "general", budgetValue[0] / 30);
       apiFireAndForget("/webhook/create-campaigns", {
         user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
         business_id: businessId,

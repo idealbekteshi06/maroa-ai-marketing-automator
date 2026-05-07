@@ -8,6 +8,7 @@ import { externalSupabase } from "@/integrations/supabase/external-client";
 import { apiFireAndForget } from "@/lib/apiClient";
 import { toast } from "sonner";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { events as analytics } from "@/lib/analytics";
 
 const AUTH_TIMEOUT_MS = 20_000;
 
@@ -49,6 +50,7 @@ export default function SignUp() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    analytics.signupStarted("email");
 
     try {
       const { data: authData, error: authError } = await withTimeout(
@@ -104,9 +106,11 @@ export default function SignUp() {
         last_name: form.lastName, plan: "free",
       });
 
+      analytics.signupCompleted("email", userId);
       toast.success("Account created — let's set up your business.");
       navigate("/onboarding");
     } catch (error) {
+      analytics.errorOccurred("signup", error instanceof Error ? error.message : String(error));
       toast.error(toAuthErrorMessage(error));
     } finally {
       setLoading(false);
@@ -115,6 +119,7 @@ export default function SignUp() {
 
   const handleGoogleSignUp = async () => {
     setGoogleLoading(true);
+    analytics.signupStarted("google");
     try {
       const { error } = await externalSupabase.auth.signInWithOAuth({
         provider: "google",

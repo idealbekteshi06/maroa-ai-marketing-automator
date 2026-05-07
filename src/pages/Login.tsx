@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { events as analytics } from "@/lib/analytics";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -98,6 +99,7 @@ export default function Login() {
 
       if (bizError) throw bizError;
 
+      analytics.loginCompleted("email", sessionUser.id);
       toast.success(SUCCESS_MESSAGES.SIGNED_IN);
       if (biz?.onboarding_complete === false) {
         navigate("/onboarding", { replace: true });
@@ -105,6 +107,7 @@ export default function Login() {
       }
       navigate("/dashboard", { replace: true });
     } catch (error) {
+      analytics.errorOccurred("login", error instanceof Error ? error.message : String(error));
       toast.error(toAuthErrorMessage(error));
     } finally {
       setLoading(false);
@@ -113,6 +116,7 @@ export default function Login() {
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
+    analytics.signupStarted("google");
     try {
       const { error } = await externalSupabase.auth.signInWithOAuth({
         provider: "google",

@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { apiFireAndForget } from "@/lib/apiClient";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { events as analytics } from "@/lib/analytics";
 
 import OnboardingShell from "@/components/onboarding/OnboardingShell";
 import QuestionCard from "@/components/onboarding/QuestionCard";
@@ -164,6 +165,7 @@ export default function Onboarding() {
   const handleNext = async () => {
     if (!validate()) return;
     await saveBlock();
+    analytics.onboardingBlockCompleted(block + 1, TOTAL_BLOCKS);
     if (block < TOTAL_BLOCKS - 1) {
       setBlock((b) => b + 1);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -226,6 +228,7 @@ export default function Onboarding() {
     }
     await refreshBusiness();
     localStorage.removeItem(STORAGE_KEY);
+    analytics.onboardingCompleted(TOTAL_BLOCKS);
   };
 
   // Legacy prompt modal
