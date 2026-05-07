@@ -1,4 +1,5 @@
 import { LineChart, Line, BarChart, Bar, AreaChart, Area, ResponsiveContainer } from "recharts";
+import { useCountUp, formatCountValue } from "@/hooks/useCountUp";
 
 export interface KPICardProps {
   label: string;
@@ -9,22 +10,38 @@ export interface KPICardProps {
   sparklineData: number[];
   sparklineType?: "line" | "area" | "bar";
   emptyHelper?: string;
+  /** When provided, the value is animated via useCountUp; `value` is used as a fallback string. */
+  numericValue?: number;
+  /** Render-time prefix (e.g. currency symbol). */
+  valuePrefix?: string;
+  /** Render-time suffix (e.g. "%"). */
+  valueSuffix?: string;
+  /** Decimal places for the animated number. */
+  valueDecimals?: number;
 }
 
 const TREND_COLOR = { up: "text-[var(--success,#22C55E)]", down: "text-red-500", neutral: "text-muted-foreground" };
 
-export default function KPICard({ label, value, delta, deltaContext, trend, sparklineData, sparklineType = "line", emptyHelper }: KPICardProps) {
+export default function KPICard({
+  label, value, delta, deltaContext, trend, sparklineData, sparklineType = "line", emptyHelper,
+  numericValue, valuePrefix, valueSuffix, valueDecimals = 0,
+}: KPICardProps) {
   const chartData = sparklineData.map((v, i) => ({ i, v }));
   const color = trend === "down" ? "#EF4444" : "var(--brand)";
-  const isEmpty = value === "0" || value === "€0";
+  const animated = useCountUp(numericValue ?? 0, { enabled: typeof numericValue === "number" });
+  const renderedValue =
+    typeof numericValue === "number"
+      ? `${valuePrefix ?? ""}${formatCountValue(animated, valueDecimals)}${valueSuffix ?? ""}`
+      : value;
+  const isEmpty = renderedValue === "0" || renderedValue === "€0" || renderedValue === "$0";
 
   return (
     <div className="group rounded-2xl border border-[var(--border-default)] bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-xs)]">
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{label}</div>
-          <div className="mt-2 font-mono text-[36px] font-bold leading-none tracking-[-0.025em]" style={{ fontFeatureSettings: '"tnum"' }}>
-            {value}
+          <div className="mt-2 font-mono text-[36px] font-bold leading-none tracking-[-0.025em] tabular-nums" style={{ fontFeatureSettings: '"tnum"' }}>
+            {renderedValue}
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
             <span className={`text-[13px] font-medium ${TREND_COLOR[trend]}`}>{delta}</span>

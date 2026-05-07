@@ -10,7 +10,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Check, ExternalLink, User, CreditCard, Bell, Zap, Palette, Link2, CalendarClock, Loader2, Trash2, Shield } from "lucide-react";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
-import { apiPost, postCheckout, getBrandDna, postBuildBrandDna } from "@/lib/apiClient";
+import { apiPost, postCheckout, getBrandVoice, buildBrandVoice, type BrandVoiceDto } from "@/lib/apiClient";
+import BrandVoiceCard from "@/components/BrandVoiceCard";
 
 /* ── Tabs ── */
 const tabs = [
@@ -78,7 +79,7 @@ export default function DashboardSettings() {
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [brandTraining, setBrandTraining] = useState(false);
   const [brandDnaLoading, setBrandDnaLoading] = useState(false);
-  const [brandDnaPreview, setBrandDnaPreview] = useState<string | null>(null);
+  const [brandVoice, setBrandVoice] = useState<BrandVoiceDto | null>(null);
 
   useEffect(() => {
     if (!businessId || !isReady) return;
@@ -151,28 +152,24 @@ export default function DashboardSettings() {
   const handleBrandTrain = async () => {
     if (!businessId || !user?.id) return;
     setBrandTraining(true);
-    toast("🧠 Training brand voice...");
+    toast("🧠 Rebuilding your brand voice...");
     try {
-      await postBuildBrandDna(businessId, user.id);
+      const v = await buildBrandVoice(businessId);
+      setBrandVoice(v);
       toast.success(SUCCESS_MESSAGES.GENERATED);
-      const d = await getBrandDna(businessId);
-      setBrandDnaPreview(typeof d === "object" && d !== null ? JSON.stringify(d, null, 2) : String(d));
     } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
     setBrandTraining(false);
   };
 
   useEffect(() => {
     if (activeTab !== "Brand" || !businessId || !isReady) return;
-    let cancelled = false;
+    const ctrl = new AbortController();
     setBrandDnaLoading(true);
-    getBrandDna(businessId)
-      .then((d) => {
-        if (cancelled) return;
-        setBrandDnaPreview(typeof d === "object" && d !== null ? JSON.stringify(d, null, 2) : String(d));
-      })
-      .catch(() => { if (!cancelled) setBrandDnaPreview(null); })
-      .finally(() => { if (!cancelled) setBrandDnaLoading(false); });
-    return () => { cancelled = true; };
+    getBrandVoice(businessId, ctrl.signal)
+      .then((v) => setBrandVoice(v))
+      .catch(() => setBrandVoice(null))
+      .finally(() => setBrandDnaLoading(false));
+    return () => ctrl.abort();
   }, [activeTab, businessId, isReady]);
 
   return (
@@ -307,22 +304,15 @@ export default function DashboardSettings() {
                 ))}
               </div>
             </div>
-            {brandDnaLoading && (
-              <p className="text-xs text-muted-foreground flex items-center gap-2"><Loader2 className="h-3 w-3 animate-spin" /> Loading brand intelligence...</p>
-            )}
-            {brandDnaPreview && !brandDnaLoading && (
-              <div className="rounded-xl border border-border bg-card p-3 max-h-48 overflow-auto">
-                <pre className="text-[10px] text-foreground whitespace-pre-wrap font-mono leading-relaxed">{brandDnaPreview}</pre>
-              </div>
-            )}
-            <div className="rounded-xl border border-border bg-card p-5">
-              <p className="text-xs text-muted-foreground">Content analyzed: 0 pieces</p>
-              <p className="text-xs text-muted-foreground">Last trained: Not trained yet</p>
-            </div>
+            <BrandVoiceCard
+              voice={brandVoice}
+              loading={brandDnaLoading}
+              onRefresh={handleBrandTrain}
+            />
             <Button className="w-full" onClick={handleBrandTrain} disabled={brandTraining || brandDnaLoading}>
-              {brandTraining ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Rebuilding...</> : "Rebuild brand intelligence"}
+              {brandTraining ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Rebuilding...</> : brandVoice ? "Rebuild brand intelligence" : "Train your brand voice"}
             </Button>
-            <p className="text-[11px] text-muted-foreground text-center">Takes about 30 seconds</p>
+            <p className="text-[11px] text-muted-foreground text-center">Takes about 30 seconds. Re-runs against your latest reviews + content.</p>
           </div>
         )}
 

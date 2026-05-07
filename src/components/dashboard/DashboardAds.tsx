@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Slider } from "@/components/ui/slider";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 import { apiFireAndForget } from "@/lib/apiClient";
+import DecisionNarrative, { type DecisionVerdict, type DecisionEvidence } from "@/components/DecisionNarrative";
 import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
 } from "@/components/ui/table";
@@ -15,9 +16,32 @@ import {
 interface Campaign {
   id: string; campaign_name: string | null; business_name: string; meta_campaign_id: string | null;
   status: string; daily_budget: number; objective: string | null;
-  last_decision: string | null; last_optimized_at: string | null;
+  last_decision: string | null; last_decision_reason?: string | null; last_optimized_at: string | null;
 }
 interface PerfLog { spend: number; ctr: number; roas: number; clicks: number; impressions: number; reach: number; conversions: number; }
+
+function mapToVerdict(d: string | null | undefined): DecisionVerdict {
+  if (!d) return "info";
+  const normalized = d.toLowerCase().replace(/[_-]/g, "");
+  if (normalized.startsWith("scale")) return "scale";
+  if (normalized === "keep" || normalized === "continue") return "keep";
+  if (normalized === "pause" || normalized === "paused") return "pause";
+  if (normalized === "kill" || normalized === "stop") return "kill";
+  if (normalized === "refreshcreative" || normalized === "refresh") return "warn";
+  if (normalized === "optimize" || normalized === "optimise") return "info";
+  return "info";
+}
+
+function buildDecisionHeadline(verdict: DecisionVerdict, name: string): string {
+  switch (verdict) {
+    case "scale": return `Scaling ${name} budget`;
+    case "keep": return `Keeping ${name} as-is — performance is steady`;
+    case "pause": return `Pausing ${name} until performance recovers`;
+    case "kill": return `Stopping ${name} — sustained underperformance`;
+    case "warn": return `Refreshing ${name}'s creative — fatigue detected`;
+    default: return `Optimizing ${name}`;
+  }
+}
 
 const safeNum = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 
@@ -50,7 +74,7 @@ export default function DashboardAds() {
     if (!businessId || !isReady) { setLoading(false); return; }
     (async () => {
       setLoading(true);
-      const { data: camps } = await externalSupabase.from("ad_campaigns").select("*").eq("business_id", businessId).order("last_optimized_at", { ascending: false });
+      const { data: camps } = await externalSupabase.from("ad_campaigns").select("id, campaign_name, business_name, meta_campaign_id, status, daily_budget, objective, last_decision, last_decision_reason, last_optimized_at").eq("business_id", businessId).order("last_optimized_at", { ascending: false });
       const list = (camps ?? []) as Campaign[];
       const withPerf = await Promise.all(list.map(async c => {
         const { data: perf } = await externalSupabase.from("ad_performance_logs").select("spend, ctr, roas, clicks, impressions, reach, conversions").eq("campaign_id", c.id).order("logged_at", { ascending: false }).limit(1).maybeSingle();
@@ -63,6 +87,14 @@ export default function DashboardAds() {
 
   const activeCampaigns = campaigns.filter(c => c.status === "active");
   const activeCount = activeCampaigns.length;
+
+  // Latest AI decision across all campaigns (prefer the most recently optimized one with a decision).
+  const latestDecisionCampaign = (() => {
+    const candidates = campaigns
+      .filter(c => c.last_decision && c.last_optimized_at)
+      .sort((a, b) => new Date(b.last_optimized_at!).getTime() - new Date(a.last_optimized_at!).getTime());
+    return candidates[0] || null;
+  })();
   const activeBudget = activeCampaigns.reduce((s, c) => s + safeNum(c.daily_budget), 0);
   const activeWithRoas = activeCampaigns.filter(c => c.perf && safeNum(c.perf.roas) > 0);
   const avgRoas = activeWithRoas.length > 0 ? activeWithRoas.reduce((s, c) => s + safeNum(c.perf!.roas), 0) / activeWithRoas.length : 0;
@@ -117,6 +149,36 @@ export default function DashboardAds() {
           {avgRoas === 0 && <p className="text-[11px] text-muted-foreground">No data yet</p>}
         </div>
       </div>
+
+      {/* Latest AI decision narrative */}
+      {latestDecisionCampaign && (() => {
+        const verdict = mapToVerdict(latestDecisionCampaign.last_decision);
+        const name = latestDecisionCampaign.campaign_name || `Campaign ${latestDecisionCampaign.objective || ""}`.trim();
+        const perf = latestDecisionCampaign.perf;
+        const evidence: DecisionEvidence[] = [];
+        if (perf) {
+          if (perf.roas != null) evidence.push({ label: "ROAS", value: `${perf.roas.toFixed(1)}x`, trend: perf.roas >= 2 ? "up" : "down" });
+          if (perf.ctr != null) evidence.push({ label: "CTR", value: `${perf.ctr.toFixed(2)}%`, trend: perf.ctr >= 1 ? "up" : "down" });
+          if (perf.spend != null) evidence.push({ label: "Spend (last)", value: `$${Math.round(perf.spend).toLocaleString()}` });
+        }
+        if (latestDecisionCampaign.daily_budget) {
+          evidence.push({ label: "Daily budget", value: `$${latestDecisionCampaign.daily_budget}` });
+        }
+        return (
+          <DecisionNarrative
+            verdict={verdict}
+            headline={buildDecisionHeadline(verdict, name)}
+            summary={
+              latestDecisionCampaign.last_decision_reason ||
+              "Maroa optimized this campaign based on the most recent performance window. Open it to see the full reasoning."
+            }
+            evidence={evidence}
+            source="Ad Optimizer"
+            confidence={verdict === "scale" || verdict === "kill" ? 85 : verdict === "pause" ? 70 : 65}
+            defaultExpanded={false}
+          />
+        );
+      })()}
 
       {/* Action button */}
       <Button size="sm" className="h-9 text-xs" onClick={() => setCreateOpen(true)} disabled={creating}>

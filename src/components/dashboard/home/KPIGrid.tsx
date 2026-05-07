@@ -23,6 +23,7 @@ export default function KPIGrid(p: KPIGridProps) {
       <KPICard
         label="Reach · 7d"
         value={p.reach.toLocaleString()}
+        numericValue={p.reach}
         delta={p.reachDelta || "—"}
         deltaContext="vs last week"
         trend={p.reach > 0 ? "up" : "neutral"}
@@ -33,6 +34,7 @@ export default function KPIGrid(p: KPIGridProps) {
       <KPICard
         label="Leads"
         value={p.leads.toLocaleString()}
+        numericValue={p.leads}
         delta={p.leadsDelta || "—"}
         deltaContext="this week"
         trend={p.leads > 0 ? "up" : "neutral"}
@@ -43,6 +45,8 @@ export default function KPIGrid(p: KPIGridProps) {
       <KPICard
         label="Ad spend"
         value={`€${p.adSpend.toLocaleString()}`}
+        numericValue={p.adSpend}
+        valuePrefix="€"
         delta={p.adSpendDelta || "—"}
         deltaContext="daily budget"
         trend={p.adSpend > 0 ? "up" : "neutral"}
@@ -53,6 +57,8 @@ export default function KPIGrid(p: KPIGridProps) {
       <KPICard
         label="Revenue · 30d"
         value={`€${p.revenue.toLocaleString()}`}
+        numericValue={p.revenue}
+        valuePrefix="€"
         delta={p.revenueDelta || "—"}
         deltaContext="vs last month"
         trend={p.revenue > 0 ? "up" : "neutral"}

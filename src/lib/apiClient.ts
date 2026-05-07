@@ -107,6 +107,46 @@ export async function getBrandDna(businessId: string): Promise<unknown> {
   return res.json();
 }
 
+/**
+ * GET /api/business/:businessId/brand-voice
+ * Returns the typed brand voice anchor used by the BrandVoiceCard component.
+ */
+export interface BrandVoiceDto {
+  tone: string;
+  do_use: string[];
+  do_not_use: string[];
+  customer_phrases: string[];
+  updated_at: string | null;
+  confidence: number | null;
+  derived_from: string | null;
+}
+
+export async function getBrandVoice(
+  businessId: string,
+  signal?: AbortSignal
+): Promise<BrandVoiceDto | null> {
+  const auth = await getAuthHeaders();
+  const res = await fetch(
+    `${API_BASE}/api/business/${encodeURIComponent(businessId)}/brand-voice`,
+    { headers: { ...auth }, signal }
+  );
+  if (!res.ok) return null;
+  const json = (await res.json()) as { voice: BrandVoiceDto | null };
+  return json?.voice ?? null;
+}
+
+export async function buildBrandVoice(businessId: string): Promise<BrandVoiceDto | null> {
+  const auth = await getAuthHeaders();
+  const res = await fetch(`${API_BASE}/webhook/build-brand-voice`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...auth },
+    body: JSON.stringify({ business_id: businessId }),
+  });
+  if (!res.ok) throw new Error(`API error ${res.status}: build-brand-voice`);
+  const json = (await res.json()) as { ok: boolean; voice: BrandVoiceDto | null };
+  return json?.voice ?? null;
+}
+
 export async function postProductUpload(
   businessId: string,
   plan: string,

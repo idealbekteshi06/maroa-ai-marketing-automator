@@ -9,6 +9,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import PostPreviewModal from "@/components/dashboard/PostPreviewModal";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 import { apiFireAndForget } from "@/lib/apiClient";
+import QualityGateChip, { type QualityGateVerdict } from "@/components/QualityGateChip";
+
+function scoreToQualityVerdict(score: number | null | undefined): QualityGateVerdict | null {
+  if (score === null || score === undefined || Number.isNaN(score)) return null;
+  if (score >= 80) return "ship";
+  if (score >= 60) return "retry";
+  return "reject";
+}
 
 interface ContentItem {
   id: string; instagram_caption: string | null; instagram_caption_2: string | null;
@@ -228,15 +236,18 @@ export default function DashboardContent() {
                     </div>
                   </PopoverTrigger>
                   {items && items.length > 0 && (
-                    <PopoverContent className="w-72 p-3">{items.map(c => (
-                      <div key={c.id} className="mb-2 last:mb-0 rounded-lg bg-muted p-2 cursor-pointer hover:bg-accent transition-colors" onClick={() => setPreviewItem(c)}>
-                        <p className="text-xs text-foreground truncate">{c.instagram_caption?.slice(0, 60) || c.facebook_post?.slice(0, 60) || "Content"}</p>
-                        <div className="mt-1 flex flex-wrap items-center gap-1">
-                          <span className={`inline-block rounded px-2 py-0.5 text-[9px] font-medium ${getStatus(c.status).bg} ${getStatus(c.status).text}`}>{getStatus(c.status).label}</span>
-                          {c.content_score != null && <span className="text-[9px] text-muted-foreground">Score {Number(c.content_score).toFixed(0)}</span>}
+                    <PopoverContent className="w-72 p-3">{items.map(c => {
+                      const verdict = scoreToQualityVerdict(c.content_score);
+                      return (
+                        <div key={c.id} className="mb-2 last:mb-0 rounded-lg bg-muted p-2 cursor-pointer hover:bg-accent transition-colors" onClick={() => setPreviewItem(c)}>
+                          <p className="text-xs text-foreground truncate">{c.instagram_caption?.slice(0, 60) || c.facebook_post?.slice(0, 60) || "Content"}</p>
+                          <div className="mt-1 flex flex-wrap items-center gap-1">
+                            <span className={`inline-block rounded px-2 py-0.5 text-[9px] font-medium ${getStatus(c.status).bg} ${getStatus(c.status).text}`}>{getStatus(c.status).label}</span>
+                            {verdict && <QualityGateChip verdict={verdict} score={c.content_score ?? undefined} size="sm" hideScore />}
+                          </div>
                         </div>
-                      </div>
-                    ))}</PopoverContent>
+                      );
+                    })}</PopoverContent>
                   )}
                 </Popover>
               );
@@ -277,10 +288,14 @@ export default function DashboardContent() {
                 {/* Card body */}
                 <div className="p-3">
                   <p className="text-[13px] text-foreground line-clamp-2 leading-relaxed">{caption || "Content"}</p>
-                  <p className="text-[11px] text-muted-foreground mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                    <span>{timeAgo(c.created_at)}</span>
-                    {c.content_score != null && <span className="text-muted-foreground/90">Score {Number(c.content_score).toFixed(0)}</span>}
-                  </p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] text-muted-foreground">{timeAgo(c.created_at)}</span>
+                    {(() => {
+                      const verdict = scoreToQualityVerdict(c.content_score);
+                      if (!verdict) return null;
+                      return <QualityGateChip verdict={verdict} score={c.content_score ?? undefined} hideScore={false} />;
+                    })()}
+                  </div>
                 </div>
 
                 {/* Hover action row — desktop only, hidden on mobile to avoid blocking card tap */}
