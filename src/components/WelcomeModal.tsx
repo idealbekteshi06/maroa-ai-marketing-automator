@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { X, Clock, Calendar, BarChart3, Sparkles, ArrowRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import LiveAgentActivityFeed, { type AgentStep } from "@/components/LiveAgentActivityFeed";
+import { toast } from "sonner";
 
 const STORAGE_KEY = "maroa-welcome-shown";
 const PHASE2_KEY = "maroa-welcome-phase2-shown";
@@ -91,11 +92,25 @@ export default function WelcomeModal() {
     if (!shown) setShow(true);
   }, []);
 
-  const dismiss = () => {
+  const dismiss = (showPayoff = false) => {
     localStorage.setItem(STORAGE_KEY, "true");
     localStorage.setItem(PHASE2_KEY, "true");
     setShow(false);
+    if (showPayoff) {
+      toast.success("Your AI marketing team is on it.", {
+        description: "First content arrives within 24 hours — we'll email you the moment it's ready for review.",
+        duration: 6000,
+      });
+      setTimeout(() => {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("welcome");
+        window.history.replaceState({}, "", url.toString());
+      }, 100);
+    }
   };
+
+  const dismissSilent = () => dismiss(false);
+  const dismissWithPayoff = () => dismiss(true);
 
   const meta = useMemo<BusinessLikeMeta>(() => {
     const md = (user?.user_metadata || {}) as Record<string, unknown>;
@@ -130,13 +145,13 @@ export default function WelcomeModal() {
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-foreground/40 backdrop-blur-md"
-        onClick={phase === "intro" ? dismiss : undefined}
+        onClick={phase === "intro" ? dismissSilent : undefined}
       />
 
       {phase === "intro" && (
         <div className="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl animate-in zoom-in-95 fade-in duration-300">
           <button
-            onClick={dismiss}
+            onClick={dismissSilent}
             className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
             aria-label="Close"
           >
@@ -191,7 +206,7 @@ export default function WelcomeModal() {
             <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
           </Button>
           <button
-            onClick={dismiss}
+            onClick={dismissSilent}
             className="mt-2 block w-full text-center text-xs text-muted-foreground hover:text-foreground"
           >
             Skip — take me straight to the dashboard
@@ -202,7 +217,7 @@ export default function WelcomeModal() {
       {phase === "live" && (
         <div className="relative w-full max-w-lg animate-in zoom-in-95 fade-in duration-300">
           <button
-            onClick={dismiss}
+            onClick={dismissSilent}
             className="absolute -right-2 -top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm hover:text-foreground"
             aria-label="Close"
           >
@@ -211,7 +226,7 @@ export default function WelcomeModal() {
           <LiveAgentActivityFeed
             steps={steps}
             ctaLabel="Show me what my AI built"
-            onComplete={dismiss}
+            onComplete={dismissWithPayoff}
           />
         </div>
       )}
