@@ -79,6 +79,14 @@ export default function WelcomeModal() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const force = params.get("welcome") === "force";
+    if (force) {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(PHASE2_KEY);
+      setShow(true);
+      return;
+    }
     const shown = localStorage.getItem(STORAGE_KEY);
     if (!shown) setShow(true);
   }, []);
