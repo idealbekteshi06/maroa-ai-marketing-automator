@@ -135,6 +135,44 @@ export async function getBrandVoice(
   return json?.voice ?? null;
 }
 
+export interface GeneratedContentRow {
+  id?: string;
+  content_theme?: string;
+  instagram_caption?: string;
+  facebook_post?: string;
+  image_url?: string;
+  quality_score?: number;
+}
+
+/**
+ * Synchronous content generation — awaits the full backend flow and returns
+ * the actual generated row, or throws with a real error message.
+ */
+export async function generateContentNow(
+  businessId: string,
+  userId: string,
+  email?: string,
+  signal?: AbortSignal
+): Promise<GeneratedContentRow> {
+  const auth = await getAuthHeaders();
+  const res = await fetch(`${API_BASE}/api/content/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...auth },
+    body: JSON.stringify({ business_id: businessId, user_id: userId, email: email ?? "" }),
+    signal,
+  });
+  const json = (await res.json().catch(() => ({}))) as {
+    ok?: boolean;
+    content?: GeneratedContentRow;
+    error?: { code?: string; message?: string };
+  };
+  if (!res.ok || !json?.ok) {
+    const msg = json?.error?.message || `API error ${res.status}: /api/content/generate`;
+    throw new Error(msg);
+  }
+  return json.content ?? {};
+}
+
 export async function buildBrandVoice(businessId: string): Promise<BrandVoiceDto | null> {
   const auth = await getAuthHeaders();
   const res = await fetch(`${API_BASE}/webhook/build-brand-voice`, {

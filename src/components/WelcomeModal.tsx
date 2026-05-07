@@ -4,7 +4,7 @@ import { X, Clock, Calendar, BarChart3, Sparkles, ArrowRight } from "lucide-reac
 import { useAuth } from "@/contexts/AuthContext";
 import LiveAgentActivityFeed, { type AgentStep } from "@/components/LiveAgentActivityFeed";
 import { toast } from "sonner";
-import { apiFireAndForget } from "@/lib/apiClient";
+import { generateContentNow } from "@/lib/apiClient";
 
 const STORAGE_KEY = "maroa-welcome-shown";
 const PHASE2_KEY = "maroa-welcome-phase2-shown";
@@ -102,21 +102,45 @@ export default function WelcomeModal() {
       const email = user?.email;
       const bizId = businessId || userId;
       if (bizId && userId) {
-        apiFireAndForget("/webhook/instant-content", {
-          user_id: userId,
-          business_id: bizId,
-          email: email ?? "",
+        const tId = toast.loading("Writing your first post…", {
+          description: "Drafting captions + image. Usually 30–90 seconds.",
         });
-        toast("Your AI marketing team is on it.", {
-          description: "Drafting your first post in the background — takes about 1–2 minutes. You'll see it land in the Content tab automatically (no refresh needed).",
-          duration: 8000,
-          action: {
-            label: "Open Content",
-            onClick: () => {
-              window.dispatchEvent(new CustomEvent("dashboard-navigate", { detail: "content" }));
-            },
-          },
-        });
+        generateContentNow(bizId, userId, email)
+          .then((row) => {
+            toast.dismiss(tId);
+            toast.success("Your first post is ready for review.", {
+              description:
+                row?.content_theme
+                  ? `Theme: ${row.content_theme}. Open Content to approve, edit, or schedule.`
+                  : "Open Content to approve, edit, or schedule.",
+              duration: 10000,
+              action: {
+                label: "Open Content",
+                onClick: () => {
+                  window.dispatchEvent(new CustomEvent("dashboard-navigate", { detail: "content" }));
+                },
+              },
+            });
+          })
+          .catch((err: Error) => {
+            toast.dismiss(tId);
+            const msg = err?.message || "Generation failed.";
+            const isOnboardingGap = /BUSINESS_NOT_FOUND|finish onboarding/i.test(msg);
+            toast.error(isOnboardingGap ? "Finish onboarding first." : "Couldn't generate content.", {
+              description: isOnboardingGap
+                ? "We need your business profile filled in. Open Settings → Business Profile to complete it."
+                : msg,
+              duration: 12000,
+              action: isOnboardingGap
+                ? {
+                    label: "Open Settings",
+                    onClick: () => {
+                      window.dispatchEvent(new CustomEvent("dashboard-navigate", { detail: "settings" }));
+                    },
+                  }
+                : undefined,
+            });
+          });
       } else {
         toast.info("Finish onboarding first.", {
           description: "We need your business name + industry to write content in your voice. Open Settings to complete it.",

@@ -8,7 +8,7 @@ import { FileText, Search as SearchIcon, Calendar, LayoutGrid, ChevronLeft, Chev
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import PostPreviewModal from "@/components/dashboard/PostPreviewModal";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
-import { apiFireAndForget } from "@/lib/apiClient";
+import { apiFireAndForget, generateContentNow } from "@/lib/apiClient";
 import QualityGateChip, { type QualityGateVerdict } from "@/components/QualityGateChip";
 
 function scoreToQualityVerdict(score: number | null | undefined): QualityGateVerdict | null {
@@ -117,21 +117,28 @@ export default function DashboardContent() {
   }, [businessId, isReady]);
 
   const handleGenerateNow = async () => {
-    if (!businessId) return;
+    if (!businessId || !user?.id) return;
     setGenerating(true); setGenMessage("AI is writing your post...");
-    toast("🤖 AI is creating content...");
+    const progressInterval = (() => {
+      const msgs = ["Crafting captions...", "Generating image...", "Voice-polishing...", "Almost done..."];
+      let i = 0;
+      return setInterval(() => { setGenMessage(msgs[i % msgs.length]); i += 1; }, 8000);
+    })();
     try {
-      apiFireAndForget("/webhook/instant-content", {
-        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
-        business_id: businessId,
-        email: user?.email ?? "",
-      });
-      const msgs = ["Crafting captions...", "Generating image...", "Optimizing for platforms...", "Almost done..."];
-      for (const msg of msgs) { await new Promise(r => setTimeout(r, 5000)); setGenMessage(msg); }
-      await new Promise(r => setTimeout(r, 5000));
-      toast.success(SUCCESS_MESSAGES.GENERATED);
+      const row = await generateContentNow(businessId, user.id, user.email ?? "");
+      clearInterval(progressInterval);
+      toast.success(row?.content_theme ? `Done — theme: ${row.content_theme}` : SUCCESS_MESSAGES.GENERATED);
       await fetchContent();
-    } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
+    } catch (err) {
+      clearInterval(progressInterval);
+      const msg = err instanceof Error ? err.message : ERROR_MESSAGES.GENERATION_FAILED;
+      const isOnboardingGap = /BUSINESS_NOT_FOUND|finish onboarding/i.test(msg);
+      toast.error(isOnboardingGap ? "Finish onboarding first" : "Couldn't generate content", {
+        description: isOnboardingGap
+          ? "Open Settings → Business Profile and fill in your industry, target audience, and brand voice."
+          : msg,
+      });
+    }
     finally { setGenerating(false); setGenMessage(""); }
   };
 
