@@ -10,8 +10,6 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
-const Landing = lazy(() => import("./pages/Landing"));
-
 const SignUp = lazy(() => import("./pages/SignUp"));
 const Login = lazy(() => import("./pages/Login"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
@@ -21,7 +19,6 @@ const Pricing = lazy(() => import("./pages/Pricing"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Refund = lazy(() => import("./pages/Refund"));
-const DeleteData = lazy(() => import("./pages/DeleteData"));
 const DataDeletion = lazy(() => import("./pages/DataDeletion"));
 const DataDeletionStatus = lazy(() => import("./pages/DataDeletionStatus"));
 const SocialCallback = lazy(() => import("./pages/SocialCallback"));
@@ -43,11 +40,12 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+        <BrowserRouter
+          future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+        >
           <Suspense fallback={<Loading />}>
             <Routes>
               <Route path="/" element={<Index />} />
-              <Route path="/waitlist" element={<Landing />} />
               <Route path="/signup" element={<SignUp />} />
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
@@ -57,8 +55,8 @@ const App = () => (
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/refund" element={<Refund />} />
-              <Route path="/delete-data" element={<DeleteData />} />
               <Route path="/data-deletion" element={<DataDeletion />} />
+              <Route path="/delete-data" element={<DataDeletion />} />
               <Route path="/data-deletion-status" element={<DataDeletionStatus />} />
               <Route path="/social-callback" element={<SocialCallback />} />
               <Route path="/compare" element={<Compare />} />

@@ -9,7 +9,7 @@ import { apiFireAndForget } from "@/lib/apiClient";
 import { toast } from "sonner";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
-const AUTH_TIMEOUT_MS = 10_000;
+const AUTH_TIMEOUT_MS = 20_000;
 
 const withTimeout = <T,>(promise: PromiseLike<T>, message: string): Promise<T> =>
   Promise.race<T>([

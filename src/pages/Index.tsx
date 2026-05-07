@@ -5,6 +5,7 @@ import { apiPost } from "@/lib/apiClient";
 import { Loader2, Check, Target, BarChart3, Zap, ArrowRight, Sun, Moon, Sparkles, Search, MessageCircle, Mail, Link2, Cpu } from "lucide-react";
 import { PLANS } from "@/lib/constants/plans";
 import { INDUSTRIES } from "@/lib/constants/industries";
+import FlagStrip from "@/components/FlagStrip";
 
 const COUNTRIES = ["Kosovo", "Albania", "USA", "UK", "Germany", "UAE", "Turkey", "Italy", "France", "Other"];
 
@@ -70,8 +71,6 @@ const c = {
   inputBorder: "border-[#ddd] dark:border-white/[0.06]",
   inputFocus: "focus:border-blue-400 dark:focus:border-white/20",
 };
-
-const FLAGS = ["🇽🇰", "🇦🇱", "🇬🇧", "🇩🇪", "🇦🇪", "🇺🇸", "🇫🇷", "🇮🇹"];
 
 const BIZ_TYPES = INDUSTRIES.slice(0, 12) as readonly string[];
 
@@ -168,9 +167,7 @@ export default function Index() {
           </div>
           <p className={`text-xs ${c.textFaint} mt-4`}>7-day free trial · No credit card required · Cancel anytime</p>
 
-          <div className="mt-10 flex justify-center gap-2 text-lg" aria-label="Available in 22 countries">
-            {FLAGS.map((f, i) => <span key={i} className="opacity-60">{f}</span>)}
-          </div>
+          <FlagStrip className="mt-10" ariaLabel="Available in 22 countries" />
         </div>
       </section>
 
@@ -285,7 +282,7 @@ export default function Index() {
               </div>
             ))}
           </div>
-          <div className="mt-6 flex justify-center gap-2 text-lg" aria-hidden>{FLAGS.map((f, i) => <span key={i} className="opacity-50">{f}</span>)}</div>
+          <FlagStrip className="mt-6" opacity={0.5} ariaLabel="" />
           <p className={`text-xs ${c.textFaint} mt-2 text-center`}>From Kosovo to Dubai to London — choosing AI over agencies.</p>
         </div>
       </Fade>
@@ -360,9 +357,12 @@ export default function Index() {
 
       {/* ── FOOTER ── */}
       <footer className={`border-t ${c.cardBorder} px-6 py-8`}>
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <span className={`text-xs ${c.textFaint}`}>© {new Date().getFullYear()} maroa.ai</span>
-          <div className={`flex gap-5 text-xs ${c.textFaint}`}>
+        <div className="max-w-5xl mx-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className={`text-xs ${c.textFaint} text-center sm:text-left`}>
+            <p>© {new Date().getFullYear()} maroa.ai · All rights reserved.</p>
+            <p className="mt-1 opacity-80">Maroa AI · Prishtina, Kosovo · <a href="mailto:hello@maroa.ai" className={`hover:${c.textSub} transition-colors`}>hello@maroa.ai</a></p>
+          </div>
+          <div className={`flex flex-wrap justify-center gap-x-5 gap-y-1 text-xs ${c.textFaint}`}>
             <Link to="/terms" className={`hover:${c.textSub} transition-colors`}>Terms</Link>
             <Link to="/privacy" className={`hover:${c.textSub} transition-colors`}>Privacy</Link>
             <Link to="/refund" className={`hover:${c.textSub} transition-colors`}>Refund</Link>

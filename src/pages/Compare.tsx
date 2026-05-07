@@ -4,6 +4,7 @@ import { Navbar } from "@/components/landing/Navbar";
 import { Footer } from "@/components/landing/Footer";
 import { Button } from "@/components/ui/button";
 import { Check, X } from "lucide-react";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 const tools = ["maroa.ai", "Marketing Agency", "Hootsuite", "Buffer", "Jasper"];
 
@@ -33,6 +34,7 @@ function CellValue({ val }: { val: boolean | string }) {
 }
 
 export default function Compare() {
+  useDocumentTitle("How Maroa compares");
   useEffect(() => {
     document.title = "maroa.ai vs Marketing Agency vs Hootsuite vs Buffer | Compare";
     const meta = document.querySelector('meta[name="description"]');

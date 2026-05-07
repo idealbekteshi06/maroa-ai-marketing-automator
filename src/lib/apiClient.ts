@@ -56,7 +56,17 @@ export function apiFireAndForget(
       headers: { "Content-Type": "application/json", ...auth },
       body: JSON.stringify(body),
       keepalive: true,
-    }).catch(() => {});
+    })
+      .then(async (res) => {
+        if (res.ok) return;
+        // Surface non-2xx fire-and-forget responses for ops visibility.
+        // We don't await — just leave a console.warn that Sentry/PostHog can scrape.
+        console.warn("[apiFireAndForget]", path, "non-OK response", res.status);
+      })
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : String(err);
+        console.warn("[apiFireAndForget]", path, "failed:", message);
+      });
   });
 }
 

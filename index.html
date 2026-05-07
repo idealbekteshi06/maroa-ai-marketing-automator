@@ -29,14 +29,46 @@
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "maroa.ai",
-      "applicationCategory": "BusinessApplication",
-      "operatingSystem": "Web",
-      "offers": [
-        {"@type": "Offer", "price": "0", "priceCurrency": "USD", "name": "Free"},
-        {"@type": "Offer", "price": "49", "priceCurrency": "USD", "name": "Growth"},
-        {"@type": "Offer", "price": "99", "priceCurrency": "USD", "name": "Agency"}
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://maroa.ai#org",
+          "name": "maroa.ai",
+          "url": "https://maroa.ai",
+          "logo": "https://maroa.ai/logo.png",
+          "sameAs": [
+            "https://www.linkedin.com/company/maroa-ai",
+            "https://twitter.com/maroa_ai"
+          ],
+          "contactPoint": [{
+            "@type": "ContactPoint",
+            "email": "hello@maroa.ai",
+            "contactType": "customer support",
+            "areaServed": ["XK","AL","DE","AE","US","GB","FR","IT"],
+            "availableLanguage": ["en","sq","sr","mk","de","ar"]
+          }]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://maroa.ai#site",
+          "url": "https://maroa.ai",
+          "name": "maroa.ai",
+          "publisher": { "@id": "https://maroa.ai#org" },
+          "inLanguage": "en"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "maroa.ai",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "publisher": { "@id": "https://maroa.ai#org" },
+          "offers": [
+            {"@type": "Offer", "price": "0",  "priceCurrency": "EUR", "name": "Free"},
+            {"@type": "Offer", "price": "19", "priceCurrency": "EUR", "name": "Starter"},
+            {"@type": "Offer", "price": "39", "priceCurrency": "EUR", "name": "Growth"},
+            {"@type": "Offer", "price": "69", "priceCurrency": "EUR", "name": "Agency"}
+          ]
+        }
       ]
     }
     </script>

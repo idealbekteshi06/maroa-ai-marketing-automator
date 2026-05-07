@@ -27,27 +27,12 @@ import WelcomeModal from "@/components/WelcomeModal";
 import Heartbeat from "@/components/Heartbeat";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 
-/* Animated logo dot — uses React state, not CSS */
+/* Animated logo dot — pure CSS keyframes, no React reconciliation. */
 function LogoDot() {
-  const [scale, setScale] = useState(1);
-  const [growing, setGrowing] = useState(true);
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setScale(s => {
-        if (growing && s >= 1.4) { setGrowing(false); return 1.4; }
-        if (!growing && s <= 1) { setGrowing(true); return 1; }
-        return growing ? s + 0.015 : s - 0.015;
-      });
-    }, 30);
-    return () => clearInterval(timer);
-  }, [growing]);
-  return (
-    <span style={{ color: "#0A84FF", display: "inline-block", transform: `scale(${scale})`, textShadow: `0 0 ${(scale - 1) * 20}px rgba(10,132,255,${(scale - 1) * 2})` }}>.</span>
-  );
+  return <span className="logo-dot">.</span>;
 }
 
 /* ── Lazy-loaded tab components ── */
-const DashboardOverview = lazy(() => import("@/components/dashboard/DashboardOverview"));
 const HomeOverview = lazy(() => import("@/components/dashboard/home/Home"));
 const DashboardContent = lazy(() => import("@/components/dashboard/DashboardContent"));
 const DashboardAds = lazy(() => import("@/components/dashboard/DashboardAds"));
@@ -348,7 +333,7 @@ export default function Dashboard() {
         case "launch-orchestrator": return <LaunchOrchestrator />;
         case "budget-roi": return <BudgetROI />;
         case "profile-enhancement": return <ProfileEnhancement />;
-        default: return <DashboardOverview />;
+        default: return <HomeOverview onNavigate={setActive} />;
       }
     })();
     return <Suspense fallback={<TabSpinner />}>{page}</Suspense>;

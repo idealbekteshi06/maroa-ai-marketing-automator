@@ -5,6 +5,7 @@ import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { apiFireAndForget } from "@/lib/apiClient";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 import OnboardingShell from "@/components/onboarding/OnboardingShell";
 import QuestionCard from "@/components/onboarding/QuestionCard";
@@ -80,6 +81,7 @@ const EMPTY_FORM: FormData = {
 };
 
 export default function Onboarding() {
+  useDocumentTitle("Set up your business");
   const navigate = useNavigate();
   const { user, businessId, refreshBusiness } = useAuth();
 
