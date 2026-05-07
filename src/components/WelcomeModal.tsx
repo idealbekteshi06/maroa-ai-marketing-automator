@@ -76,7 +76,7 @@ function buildSteps(meta: BusinessLikeMeta): AgentStep[] {
 }
 
 export default function WelcomeModal() {
-  const { user } = useAuth();
+  const { user, businessId } = useAuth();
   const [phase, setPhase] = useState<Phase>("intro");
   const [show, setShow] = useState(false);
 
@@ -100,21 +100,15 @@ export default function WelcomeModal() {
     if (showPayoff) {
       const userId = user?.id;
       const email = user?.email;
-      if (userId) {
+      const bizId = businessId || userId;
+      if (bizId && userId) {
         apiFireAndForget("/webhook/instant-content", {
           user_id: userId,
-          business_id: userId,
+          business_id: bizId,
           email: email ?? "",
         });
-      }
-      const tId = toast.loading("Writing your first content now…", {
-        description: "Drafting captions + image — usually ~25 seconds. You'll see it in the Content tab.",
-        duration: 30000,
-      });
-      setTimeout(() => {
-        toast.dismiss(tId);
-        toast.success("Your first content is ready for review.", {
-          description: "Open the Content tab to approve, edit, or schedule it.",
+        toast("Your AI marketing team is on it.", {
+          description: "Drafting your first post in the background — takes about 1–2 minutes. You'll see it land in the Content tab automatically (no refresh needed).",
           duration: 8000,
           action: {
             label: "Open Content",
@@ -123,7 +117,12 @@ export default function WelcomeModal() {
             },
           },
         });
-      }, 28000);
+      } else {
+        toast.info("Finish onboarding first.", {
+          description: "We need your business name + industry to write content in your voice. Open Settings to complete it.",
+          duration: 6000,
+        });
+      }
       setTimeout(() => {
         const url = new URL(window.location.href);
         url.searchParams.delete("welcome");
