@@ -4,6 +4,7 @@ import { X, Clock, Calendar, BarChart3, Sparkles, ArrowRight } from "lucide-reac
 import { useAuth } from "@/contexts/AuthContext";
 import LiveAgentActivityFeed, { type AgentStep } from "@/components/LiveAgentActivityFeed";
 import { toast } from "sonner";
+import { apiFireAndForget } from "@/lib/apiClient";
 
 const STORAGE_KEY = "maroa-welcome-shown";
 const PHASE2_KEY = "maroa-welcome-phase2-shown";
@@ -97,10 +98,32 @@ export default function WelcomeModal() {
     localStorage.setItem(PHASE2_KEY, "true");
     setShow(false);
     if (showPayoff) {
-      toast.success("Your AI marketing team is on it.", {
-        description: "First content arrives within 24 hours — we'll email you the moment it's ready for review.",
-        duration: 6000,
+      const userId = user?.id;
+      const email = user?.email;
+      if (userId) {
+        apiFireAndForget("/webhook/instant-content", {
+          user_id: userId,
+          business_id: userId,
+          email: email ?? "",
+        });
+      }
+      const tId = toast.loading("Writing your first content now…", {
+        description: "Drafting captions + image — usually ~25 seconds. You'll see it in the Content tab.",
+        duration: 30000,
       });
+      setTimeout(() => {
+        toast.dismiss(tId);
+        toast.success("Your first content is ready for review.", {
+          description: "Open the Content tab to approve, edit, or schedule it.",
+          duration: 8000,
+          action: {
+            label: "Open Content",
+            onClick: () => {
+              window.dispatchEvent(new CustomEvent("dashboard-navigate", { detail: "content" }));
+            },
+          },
+        });
+      }, 28000);
       setTimeout(() => {
         const url = new URL(window.location.href);
         url.searchParams.delete("welcome");
