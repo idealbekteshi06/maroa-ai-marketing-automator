@@ -24,17 +24,13 @@ const tabs = [
   { key: "Account", label: "Account", icon: Shield },
 ];
 
-const PLANS = {
-  free: { name: "Free", price: 0, features: ["3 posts/week", "1 platform", "Basic analytics"] },
-  starter: { name: "Starter", price: 29, features: ["20 images/mo", "1 platform (Instagram)", "Content calendar", "Email support"] },
-  growth: { name: "Growth", price: 59, popular: true, features: ["60 images/mo", "Kling + Sora videos", "3 platforms", "Analytics", "Competitor tracking", "CRM & leads"] },
-  agency: { name: "Agency", price: 99, features: ["120 images/mo", "All platforms", "3 brands", "White-label", "Priority support"] },
-} as const;
-type PlanKey = keyof typeof PLANS;
+import { PLAN_BY_KEY, PLANS as CANONICAL_PLANS, type PlanKey } from "@/lib/constants/plans";
+import { INDUSTRIES, MARKETING_GOALS, BRAND_TONES } from "@/lib/constants/industries";
 
-const industries = ["Restaurant", "Café & Coffee", "Bakery", "Bar & Nightlife", "Fitness & Gym", "Beauty & Salon", "Spa & Wellness", "Retail & Shop", "Fashion", "Jewelry", "Real Estate", "Construction", "IT & Software", "Marketing Agency", "Consulting", "Education", "Healthcare", "Legal", "Automotive", "Photography", "Other"];
-const toneOptions = ["Professional", "Friendly", "Playful", "Inspirational", "Luxury", "Educational"];
-const goalOptions = ["Get more walk-ins", "Drive online orders", "Grow social following", "Build email list", "Brand awareness", "Generate leads", "Get more reviews", "Increase revenue"];
+const PLANS = PLAN_BY_KEY;
+const industries = INDUSTRIES;
+const toneOptions = BRAND_TONES;
+const goalOptions = MARKETING_GOALS;
 
 interface NotifPrefs { [key: string]: boolean }
 const defaultNotifs: NotifPrefs = { hot_lead: true, campaign_alert: true, competitor_move: true, content_ready: true, weekly_report: true, seo_opportunity: false, new_review: false, email_stats: false };
@@ -271,18 +267,18 @@ export default function DashboardSettings() {
         {activeTab === "Billing" && (
           <div className="space-y-4">
             <div className="rounded-xl border border-border bg-card p-5">
-              <p className="text-sm text-muted-foreground">You are on the <strong className="text-foreground capitalize">{PLANS[currentPlan].name}</strong> plan{PLANS[currentPlan].price > 0 ? ` — $${PLANS[currentPlan].price}/month` : ""}</p>
+              <p className="text-sm text-muted-foreground">You are on the <strong className="text-foreground capitalize">{PLANS[currentPlan].name}</strong> plan{PLANS[currentPlan].monthlyPrice > 0 ? ` — €${PLANS[currentPlan].monthlyPrice}/month` : ""}</p>
             </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              {(Object.entries(PLANS) as [PlanKey, typeof PLANS[PlanKey]][]).map(([key, plan]) => (
-                <div key={key} className={`relative rounded-xl border-2 p-5 ${currentPlan === key ? "border-primary bg-primary/5" : "border-border bg-card"}`}>
-                  {"popular" in plan && plan.popular && <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-semibold text-primary-foreground">Popular</span>}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {CANONICAL_PLANS.map((plan) => (
+                <div key={plan.key} className={`relative rounded-xl border-2 p-5 flex flex-col ${currentPlan === plan.key ? "border-primary bg-primary/5" : "border-border bg-card"}`}>
+                  {plan.popular && <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-semibold text-primary-foreground">Popular</span>}
                   <h4 className="font-bold text-foreground">{plan.name}</h4>
-                  <p className="mt-1 text-2xl font-bold text-foreground">${plan.price}<span className="text-sm font-normal text-muted-foreground">/mo</span></p>
-                  <ul className="mt-3 space-y-1.5">{plan.features.map(f => <li key={f} className="flex items-center gap-2 text-xs text-muted-foreground"><Check className="h-3 w-3 text-success shrink-0" />{f}</li>)}</ul>
-                  <Button variant={currentPlan === key ? "outline" : "default"} size="sm" className="mt-4 w-full"
-                    disabled={currentPlan === key || !!checkoutLoading || key === "free"} onClick={() => handleUpgrade(key)}>
-                    {checkoutLoading === key ? "Opening checkout..." : currentPlan === key ? "Current Plan" : key === "free" ? (currentPlan === "free" ? "Current Plan" : "Included") : `Upgrade to ${plan.name}`}
+                  <p className="mt-1 text-2xl font-bold text-foreground">{plan.monthlyPrice === 0 ? "Free" : `€${plan.monthlyPrice}`}{plan.monthlyPrice > 0 && <span className="text-sm font-normal text-muted-foreground">/mo</span>}</p>
+                  <ul className="mt-3 space-y-1.5 flex-1">{plan.features.map(f => <li key={f} className="flex items-start gap-2 text-xs text-muted-foreground"><Check className="h-3 w-3 mt-0.5 text-success shrink-0" />{f}</li>)}</ul>
+                  <Button variant={currentPlan === plan.key ? "outline" : "default"} size="sm" className="mt-4 w-full"
+                    disabled={currentPlan === plan.key || !!checkoutLoading || plan.key === "free"} onClick={() => handleUpgrade(plan.key)}>
+                    {checkoutLoading === plan.key ? "Opening checkout..." : currentPlan === plan.key ? "Current Plan" : plan.key === "free" ? (currentPlan === "free" ? "Current Plan" : "Included") : `Upgrade to ${plan.name}`}
                   </Button>
                 </div>
               ))}

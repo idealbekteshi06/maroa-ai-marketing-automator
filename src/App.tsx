@@ -21,13 +21,12 @@ const Pricing = lazy(() => import("./pages/Pricing"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Refund = lazy(() => import("./pages/Refund"));
-const Access = lazy(() => import("./pages/Access"));
 const DeleteData = lazy(() => import("./pages/DeleteData"));
 const DataDeletion = lazy(() => import("./pages/DataDeletion"));
 const DataDeletionStatus = lazy(() => import("./pages/DataDeletionStatus"));
 const SocialCallback = lazy(() => import("./pages/SocialCallback"));
 const Compare = lazy(() => import("./pages/Compare"));
-const OnboardingLegacy = lazy(() => import("./pages/OnboardingLegacy"));
+const Strategy = lazy(() => import("./pages/Strategy"));
 
 const queryClient = new QueryClient();
 
@@ -54,17 +53,16 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/onboarding" element={<ProtectedRoute allowIncompleteOnboarding><Onboarding /></ProtectedRoute>} />
-              <Route path="/onboarding-legacy" element={<ProtectedRoute allowIncompleteOnboarding><OnboardingLegacy /></ProtectedRoute>} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/refund" element={<Refund />} />
-              <Route path="/access" element={<Access />} />
               <Route path="/delete-data" element={<DeleteData />} />
               <Route path="/data-deletion" element={<DataDeletion />} />
               <Route path="/data-deletion-status" element={<DataDeletionStatus />} />
               <Route path="/social-callback" element={<SocialCallback />} />
               <Route path="/compare" element={<Compare />} />
+              <Route path="/strategy" element={<ProtectedRoute><Strategy /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

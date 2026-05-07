@@ -48,6 +48,7 @@ function LogoDot() {
 
 /* ── Lazy-loaded tab components ── */
 const DashboardOverview = lazy(() => import("@/components/dashboard/DashboardOverview"));
+const HomeOverview = lazy(() => import("@/components/dashboard/home/Home"));
 const DashboardContent = lazy(() => import("@/components/dashboard/DashboardContent"));
 const DashboardAds = lazy(() => import("@/components/dashboard/DashboardAds"));
 const DashboardSocial = lazy(() => import("@/components/dashboard/DashboardSocial"));
@@ -283,7 +284,7 @@ export default function Dashboard() {
   const renderPage = () => {
     const page = (() => {
       switch (active) {
-        case "overview": return <DashboardOverview />;
+        case "overview": return <HomeOverview onNavigate={setActive} />;
         case "content": return <DashboardContent />;
         case "campaigns": return <DashboardAds />;
         case "social": return <DashboardSocial oauthCode={oauthCode} />;
@@ -528,12 +529,12 @@ export default function Dashboard() {
             <Button variant="ghost" size="icon" className="md:hidden h-9 w-9" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
               <Menu className="h-5 w-5" />
             </Button>
-            <div>
-              <h2 className="text-[15px] font-semibold text-foreground leading-tight">
-                {active === "overview" ? `Welcome, ${firstName}` : meta.title}
-              </h2>
-              <p className="text-[11px] text-muted-foreground hidden sm:block">{meta.subtitle}</p>
-            </div>
+            {active !== "overview" && (
+              <div>
+                <h2 className="text-[15px] font-semibold text-foreground leading-tight">{meta.title}</h2>
+                <p className="text-[11px] text-muted-foreground hidden sm:block">{meta.subtitle}</p>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />

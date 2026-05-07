@@ -62,7 +62,7 @@ export function Footer() {
             </div>
           </div>
           <div className="mt-8 sm:mt-10 flex flex-col items-center justify-between gap-4 border-t border-border pt-8 sm:flex-row">
-            <p className="text-xs text-muted-foreground">© 2026 maroa.ai. All rights reserved.</p>
+            <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} maroa.ai. All rights reserved.</p>
             <div className="flex gap-6">
               <Link to="/login" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Log in</Link>
               <Link to="/signup" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Sign up</Link>

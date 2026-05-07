@@ -7,9 +7,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { apiFireAndForget } from "@/lib/apiClient";
 import { toast } from "sonner";
-import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
-
-const industries = ["Bakery", "Restaurant", "Café", "Salon & Spa", "Gym & Fitness", "Boutique & Retail", "Photography", "Real Estate", "Coaching & Consulting", "Medical & Dental", "Auto Services", "Home Services", "Other"];
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 const AUTH_TIMEOUT_MS = 10_000;
 
@@ -38,12 +36,12 @@ const toAuthErrorMessage = (error: unknown) => {
 };
 
 export default function SignUp() {
+  useDocumentTitle("Create your account");
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [form, setForm] = useState({
     firstName: "", lastName: "", email: "", password: "",
-    businessName: "", industry: "", location: "",
   });
 
   const update = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
@@ -72,9 +70,10 @@ export default function SignUp() {
         user_id: userId,
         email: form.email,
         first_name: form.firstName,
-        business_name: form.businessName,
-        industry: form.industry,
-        location: form.location,
+        last_name: form.lastName,
+        business_name: "",
+        industry: "",
+        location: "",
         target_audience: "",
         brand_tone: "",
         marketing_goal: "",
@@ -102,20 +101,10 @@ export default function SignUp() {
 
       apiFireAndForget("/webhook/new-user-signup", {
         user_id: userId, email: form.email, first_name: form.firstName,
-        last_name: form.lastName, business_name: form.businessName,
-        industry: form.industry, location: form.location, plan: "free",
+        last_name: form.lastName, plan: "free",
       });
 
-      // Trigger instant content generation
-      if (newBiz?.id) {
-        apiFireAndForget("/webhook/instant-content", {
-          user_id: userId,
-          business_id: newBiz.id,
-          email: form.email,
-        });
-      }
-
-      toast.success(SUCCESS_MESSAGES.GENERATED);
+      toast.success("Account created — let's set up your business.");
       navigate("/onboarding");
     } catch (error) {
       toast.error(toAuthErrorMessage(error));
@@ -140,8 +129,6 @@ export default function SignUp() {
     }
   };
 
-  const selectClass = "flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring";
-
   return (
     <div className="flex min-h-screen">
       {/* Left panel */}
@@ -153,7 +140,7 @@ export default function SignUp() {
           <p className="text-4xl font-bold leading-tight">Your marketing,<br />handled by AI.</p>
           <p className="mt-4 text-lg opacity-60">Join 2,000+ small businesses growing on autopilot.</p>
         </div>
-        <p className="text-sm opacity-30">© 2026 maroa.ai</p>
+        <p className="text-sm opacity-30">© {new Date().getFullYear()} maroa.ai</p>
       </div>
 
       {/* Right panel */}
@@ -191,23 +178,15 @@ export default function SignUp() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div><Label htmlFor="fn">First name</Label><Input id="fn" value={form.firstName} onChange={(e) => update("firstName", e.target.value)} className="mt-1 h-11" required /></div>
-              <div><Label htmlFor="ln">Last name</Label><Input id="ln" value={form.lastName} onChange={(e) => update("lastName", e.target.value)} className="mt-1 h-11" required /></div>
+              <div><Label htmlFor="fn">First name</Label><Input id="fn" value={form.firstName} onChange={(e) => update("firstName", e.target.value)} className="mt-1 h-11" required autoComplete="given-name" /></div>
+              <div><Label htmlFor="ln">Last name</Label><Input id="ln" value={form.lastName} onChange={(e) => update("lastName", e.target.value)} className="mt-1 h-11" required autoComplete="family-name" /></div>
             </div>
-            <div><Label htmlFor="email">Email</Label><Input id="email" type="email" value={form.email} onChange={(e) => update("email", e.target.value)} className="mt-1 h-11" required /></div>
-            <div><Label htmlFor="pass">Password</Label><Input id="pass" type="password" value={form.password} onChange={(e) => update("password", e.target.value)} className="mt-1 h-11" required /></div>
-            <div><Label htmlFor="biz">Business name</Label><Input id="biz" value={form.businessName} onChange={(e) => update("businessName", e.target.value)} className="mt-1 h-11" required /></div>
-            <div>
-              <Label htmlFor="industry">Industry</Label>
-              <select id="industry" value={form.industry} onChange={(e) => update("industry", e.target.value)} required className={selectClass + " mt-1"}>
-                <option value="">Select industry</option>
-                {industries.map((i) => <option key={i} value={i}>{i}</option>)}
-              </select>
-            </div>
-            <div><Label htmlFor="loc">Location</Label><Input id="loc" placeholder="City, Country" value={form.location} onChange={(e) => update("location", e.target.value)} className="mt-1 h-11" required /></div>
+            <div><Label htmlFor="email">Email</Label><Input id="email" type="email" value={form.email} onChange={(e) => update("email", e.target.value)} className="mt-1 h-11" required autoComplete="email" /></div>
+            <div><Label htmlFor="pass">Password</Label><Input id="pass" type="password" value={form.password} onChange={(e) => update("password", e.target.value)} className="mt-1 h-11" required autoComplete="new-password" minLength={8} /></div>
             <Button type="submit" size="lg" className="mt-4 w-full h-11" disabled={loading}>
               {loading ? "Creating account..." : "Create account"}
             </Button>
+            <p className="text-center text-[11px] text-muted-foreground">We'll ask for your business details on the next step. 7-day free trial · cancel anytime.</p>
           </form>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">

@@ -8,6 +8,7 @@ import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -39,6 +40,7 @@ const toAuthErrorMessage = (error: unknown) => {
 };
 
 export default function Login() {
+  useDocumentTitle("Sign in");
   const navigate = useNavigate();
   const { user, onboardingComplete, loading: authLoading } = useAuth();
   const [email, setEmail] = useState("");

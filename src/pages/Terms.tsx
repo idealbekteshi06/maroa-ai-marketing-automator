@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 export default function Terms() {
+  useDocumentTitle("Terms of Service");
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border">

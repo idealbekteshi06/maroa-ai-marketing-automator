@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 export default function Refund() {
+  useDocumentTitle("Refund Policy");
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border">
@@ -15,7 +17,7 @@ export default function Refund() {
 
       <main className="mx-auto max-w-3xl px-6 py-16">
         <h1 className="text-3xl font-bold text-foreground">Refund Policy</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Last updated: April 10, 2026</p>
+        <p className="mt-2 text-sm text-muted-foreground">Last updated: May 7, 2026</p>
 
         <div className="mt-8 space-y-8 text-sm leading-relaxed text-muted-foreground">
           <section>
@@ -71,9 +73,9 @@ export default function Refund() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-foreground mb-3">Pre-Launch Pricing</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-3">Free Trial</h2>
             <p>
-              If you registered during our pre-launch period with discounted pricing, the 14-day money-back guarantee applies from the date of your first actual charge (not the registration date). Pre-launch registrations with no payment are not eligible for refunds as no charge was made.
+              All paid plans start with a 7-day free trial. No charge is made during the trial. If you cancel before the trial ends, you will not be billed.
             </p>
           </section>
 
@@ -106,7 +108,7 @@ export default function Refund() {
           </section>
 
           <p className="text-xs text-muted-foreground/60 pt-4 border-t border-border">
-            © 2026 Maroa AI. All rights reserved.
+            © {new Date().getFullYear()} Maroa AI. All rights reserved.
           </p>
         </div>
       </main>
