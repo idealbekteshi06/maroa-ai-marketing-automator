@@ -33,7 +33,7 @@ export function Footer() {
                 maroa<span className="text-primary">.ai</span>
               </Link>
               <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
-                AI-powered marketing for small businesses.
+                The marketing operating system for small businesses. Built in Prishtina.
               </p>
             </div>
             <div>

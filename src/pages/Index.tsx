@@ -13,7 +13,7 @@ const FEATURES = [
   { icon: Sparkles, title: "AI Content Creation", desc: "Posts, captions, ads, and emails — written by AI that knows your business, your city, and your customers." },
   { icon: Target, title: "Ad Optimization", desc: "Meta and Google ads managed by AI. Budgets shift automatically to what converts, every single day." },
   { icon: Search, title: "Competitor Tracking", desc: "Know what your competitors are posting, what's working for them, and how to outperform them." },
-  { icon: MessageCircle, title: "Unified Inbox", desc: "Instagram, Facebook, WhatsApp, and email — every customer conversation in one AI-powered queue." },
+  { icon: MessageCircle, title: "Unified Inbox", desc: "Instagram, Facebook, WhatsApp, and email — every customer message in one place, replies drafted by AI." },
   { icon: Mail, title: "Email Automation", desc: "Welcome sequences, cart recovery, re-engagement — all running on autopilot with personalized content." },
   { icon: BarChart3, title: "Analytics Dashboard", desc: "Understands what content performs best and automatically does more of what works across every channel." },
 ];
@@ -26,8 +26,8 @@ const STEPS = [
 
 const PROOF_STATS = [
   { value: "22", label: "Countries supported" },
-  { value: "17", label: "Languages" },
-  { value: "99%", label: "Uptime" },
+  { value: "6", label: "Languages live" },
+  { value: "99.9%", label: "Uptime · last 90d" },
   { value: "10min", label: "Setup time" },
 ];
 
@@ -140,7 +140,7 @@ export default function Index() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
             </span>
-            Live now · 22 countries · 17 languages
+            Live now · 22 countries · 6 languages
           </span>
 
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.08]">
@@ -343,11 +343,11 @@ export default function Index() {
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link to="/signup"
               className={`inline-flex items-center gap-2 rounded-xl ${c.primaryBg} px-8 py-3.5 text-sm font-semibold text-white ${c.primaryBgHover} transition-all`}>
-              Start Free Trial <ArrowRight className="h-4 w-4" />
+              Start free trial <ArrowRight className="h-4 w-4" />
             </Link>
             <button onClick={scrollToForm}
               className={`inline-flex items-center gap-2 rounded-xl border ${c.cardBorder} px-6 py-3.5 text-sm font-medium ${c.text} ${c.cardHover} transition-all`}>
-              Book a Demo
+              Book a demo
             </button>
           </div>
           <p className={`text-xs ${c.textFaint} mt-4`}>No credit card · 7-day free trial · Cancel anytime</p>
