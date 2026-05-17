@@ -60,7 +60,10 @@ export default function Pricing() {
           </div>
 
           {/* 3-card grid: Growth / Agency / Enterprise */}
-          <div className="mx-auto mt-16 grid max-w-6xl gap-6 lg:grid-cols-3 items-stretch">
+          {/* Tablet (md): 2 columns so the popular Growth card and Agency
+              card sit side-by-side; Enterprise wraps below full-width.
+              lg+ goes back to 3 across. */}
+          <div className="mx-auto mt-16 grid max-w-6xl gap-6 md:grid-cols-2 lg:grid-cols-3 items-stretch">
             {PLANS.map((plan) => (
               <PlanCard
                 key={plan.key}

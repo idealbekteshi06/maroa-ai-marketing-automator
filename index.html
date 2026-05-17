@@ -2,30 +2,72 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>maroa.ai — AI Marketing for Every Business</title>
-    <meta name="description" content="Compliance-first AI marketing for small businesses and agencies. Approval gates, reasoning trace, daily ad audits. $149 Growth / $599 Agency. Cancel anytime." />
-    <meta name="keywords" content="AI marketing, marketing automation, social media AI, content generation, AI marketing platform" />
-    <meta property="og:title" content="maroa.ai — AI Marketing for Every Business" />
+    <!-- Viewport: max-scale 5 (not 1) so users can pinch-zoom for accessibility.
+         WCAG 1.4.4 requires text resize up to 200%; capping at 1 violates it. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5, viewport-fit=cover" />
+    <meta name="format-detection" content="telephone=no, email=no, address=no" />
+
+    <title>maroa.ai — AI Marketing Operations Software for SMBs & Agencies</title>
+    <meta name="description" content="Compliance-first AI marketing for small businesses and agencies. Drafts content, audits Meta/Google/TikTok ads daily, refuses non-compliant claims, logs every decision. $149 Growth / $599 Agency. Cancel anytime." />
+    <meta name="keywords" content="AI marketing software, marketing operations platform, AI ad automation, compliance marketing, agency marketing software, Meta ads automation, Google ads automation, TikTok ads automation, AI content generation, marketing AI agent" />
+    <meta name="author" content="Maroa AI" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="maroa.ai — AI Marketing Operations Software for SMBs & Agencies" />
     <meta property="og:description" content="Compliance-first AI marketing for small businesses and agencies. Approval gates, reasoning trace, daily ad audits. $149 Growth / $599 Agency. Cancel anytime." />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://maroa.ai" />
+    <meta property="og:url" content="https://maroa.ai/" />
     <meta property="og:image" content="https://maroa.ai/og-image.png" />
+    <meta property="og:image:secure_url" content="https://maroa.ai/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="maroa.ai — AI Marketing for Every Business" />
+    <meta property="og:image:alt" content="maroa.ai — AI Marketing Operations Software" />
     <meta property="og:site_name" content="maroa.ai" />
     <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter / X -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="maroa.ai — AI Marketing for Every Business" />
-    <meta name="twitter:description" content="Compliance-first AI marketing for small businesses and agencies. Approval gates, reasoning trace, daily ad audits. $149 Growth / $599 Agency. Cancel anytime." />
+    <meta name="twitter:site" content="@maroa_ai" />
+    <meta name="twitter:creator" content="@maroa_ai" />
+    <meta name="twitter:title" content="maroa.ai — AI Marketing Operations Software" />
+    <meta name="twitter:description" content="Compliance-first AI marketing for SMBs and agencies. $149 Growth / $599 Agency. Cancel anytime." />
     <meta name="twitter:image" content="https://maroa.ai/og-image.png" />
+    <meta name="twitter:image:alt" content="maroa.ai — AI Marketing Operations Software" />
+
+    <!-- Apple / PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Maroa" />
+    <meta name="application-name" content="Maroa" />
+
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="canonical" href="https://maroa.ai" />
+    <link rel="canonical" href="https://maroa.ai/" />
+    <!-- Hreflang: single-language for now (English), explicitly tagged so
+         Google doesn't infer the wrong default. Add ?lang= variants here
+         when locales ship. -->
+    <link rel="alternate" hreflang="en" href="https://maroa.ai/" />
+    <link rel="alternate" hreflang="x-default" href="https://maroa.ai/" />
+
+    <!-- Resource hints — fonts come from Google Fonts; preconnect + preload
+         the critical CSS variant so the hero text doesn't FOUT. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://cdn.simpleicons.org" crossorigin />
+    <link rel="preconnect" href="https://flagcdn.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet" />
+
+    <!-- JSON-LD: Organization + WebSite + SoftwareApplication + FAQPage.
+         FAQPage mirrors the questions on /pricing so they qualify for
+         Google's FAQ rich result. Keep the answers in sync with the
+         on-page FAQ — Google will demote pages that show different
+         text in markup vs. the rendered DOM. -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -33,9 +75,13 @@
         {
           "@type": "Organization",
           "@id": "https://maroa.ai#org",
-          "name": "maroa.ai",
-          "url": "https://maroa.ai",
+          "name": "Maroa AI",
+          "alternateName": "maroa.ai",
+          "url": "https://maroa.ai/",
           "logo": "https://maroa.ai/logo.png",
+          "image": "https://maroa.ai/og-image.png",
+          "description": "Compliance-first AI marketing operations software for SMBs and agencies. Drafts content, audits ads daily, refuses non-compliant claims, logs every decision.",
+          "foundingDate": "2024",
           "sameAs": [
             "https://www.linkedin.com/company/maroa-ai",
             "https://twitter.com/maroa_ai"
@@ -51,20 +97,74 @@
         {
           "@type": "WebSite",
           "@id": "https://maroa.ai#site",
-          "url": "https://maroa.ai",
+          "url": "https://maroa.ai/",
           "name": "maroa.ai",
           "publisher": { "@id": "https://maroa.ai#org" },
-          "inLanguage": "en"
+          "inLanguage": "en",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://maroa.ai/search?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
         },
         {
           "@type": "SoftwareApplication",
-          "name": "maroa.ai",
+          "@id": "https://maroa.ai#app",
+          "name": "Maroa",
           "applicationCategory": "BusinessApplication",
+          "applicationSubCategory": "Marketing Automation Software",
           "operatingSystem": "Web",
+          "url": "https://maroa.ai/",
           "publisher": { "@id": "https://maroa.ai#org" },
           "offers": [
-            {"@type": "Offer", "price": "149", "priceCurrency": "USD", "name": "Growth"},
-            {"@type": "Offer", "price": "599", "priceCurrency": "USD", "name": "Agency"}
+            {"@type": "Offer", "price": "149", "priceCurrency": "USD", "name": "Growth", "url": "https://maroa.ai/signup?plan=growth"},
+            {"@type": "Offer", "price": "599", "priceCurrency": "USD", "name": "Agency", "url": "https://maroa.ai/signup?plan=agency"}
+          ],
+          "featureList": "AI content generation, daily ad audits, compliance refusal, reasoning trace, brand voice signature, weekly scorecards, multi-platform publishing"
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://maroa.ai#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Do I need a credit card to start?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — Maroa is a paid subscription. There's no free tier and no trial. You pick a plan, enter your card, and we charge for the first month immediately."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Who owns the content Maroa writes?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "You do. Every post, ad, email, and image is yours forever — even if you cancel. Export everything as a .zip from Settings any day."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How do I cancel?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Two clicks in Settings → Plan. No phone call, no email back-and-forth, no exit interview. Cancellation takes effect at the end of your current billing cycle — your data stays exportable."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Are there refunds?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No refunds on the current billing cycle, but cancelling stops every future charge immediately. That's the entire risk-reversal: no contracts, no lock-in, no surprise renewals."
+              }
+            }
+          ]
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": "https://maroa.ai#breadcrumb",
+          "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://maroa.ai/"}
           ]
         }
       ]

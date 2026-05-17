@@ -185,17 +185,32 @@ export default function Index() {
 
       {/* ── HERO ── */}
       <main id="main">
-      <section className="pt-16 sm:pt-28 pb-20 px-6">
+      {/* Mobile spacing tightened: pt-12 (was pt-16) so the hero pill
+          isn't shoved off the fold on a 5.4" iPhone SE. Horizontal
+          padding bumps from px-6 to px-5 on smallest devices so the
+          pill + headline don't crowd the viewport edges. */}
+      <section className="pt-12 sm:pt-24 lg:pt-28 pb-16 sm:pb-20 px-5 sm:px-6">
         <div className="max-w-3xl mx-auto text-center">
-          <span className={`inline-flex items-center gap-2 rounded-full border ${c.cardBorder} ${c.card} px-4 py-1.5 text-xs ${c.textSub} mb-8`}>
-            <span className="relative flex h-1.5 w-1.5">
+          {/* Pill: switch to inline-flex with text-wrap balanced + smaller
+              text on mobile so the long string ("Live in 22 countries ·
+              6 languages · 99.9% uptime") doesn't break visually. On sub-
+              340px screens (rare but real) the pill still wraps gracefully. */}
+          <span className={`inline-flex max-w-[calc(100vw-2.5rem)] flex-wrap items-center justify-center gap-1.5 rounded-full border ${c.cardBorder} ${c.card} px-3.5 sm:px-4 py-1.5 text-[11px] sm:text-xs ${c.textSub} mb-6 sm:mb-8 leading-tight`}>
+            <span className="relative flex h-1.5 w-1.5 flex-shrink-0">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
             </span>
-            Live in 22 countries · 6 languages · 99.9% uptime
+            <span className="whitespace-nowrap">Live in 22 countries · 6 languages · 99.9% uptime</span>
           </span>
 
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.08]">
+          {/* Headline: clamp() so the size scales smoothly from 320px
+              (small iPhone) to 1440px (desktop) without snapping at
+              breakpoints. Floor 2.25rem (36px) reads cleanly on 320px;
+              ceiling 4.75rem (76px) matches the previous lg:text-7xl. */}
+          <h1
+            className="font-bold tracking-tight leading-[1.06]"
+            style={{ fontSize: "clamp(2.25rem, 6.4vw + 1rem, 4.75rem)" }}
+          >
             Your Marketing.<br />
             <span className="bg-gradient-to-r from-[#0066CC] via-[#0A84FF] to-[#0066CC] dark:from-[#0A84FF] dark:via-[#409CFF] dark:to-[#0A84FF] bg-clip-text text-transparent">
               Automated by AI.
@@ -208,13 +223,16 @@ export default function Index() {
             your business — automatically. In 22 countries and 17 languages.
           </p>
 
-          <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
+          {/* CTA stack: mobile = full-width column (thumb-friendly tap
+              targets); sm+ = inline row. Min-height 48px on the primary
+              button per Apple HIG + Material recommended touch target. */}
+          <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center px-2 sm:px-0">
             <Link to="/signup?plan=growth"
-              className={`inline-flex items-center justify-center gap-2 rounded-xl ${c.primaryBg} px-8 py-3.5 text-sm font-semibold text-white ${c.primaryBgHover} transition-all shadow-sm`}>
+              className={`inline-flex items-center justify-center gap-2 rounded-xl ${c.primaryBg} px-8 py-3.5 min-h-[48px] text-sm font-semibold text-white ${c.primaryBgHover} transition-all shadow-sm w-full sm:w-auto`}>
               Start with Growth <ArrowRight className="h-4 w-4" />
             </Link>
             <button onClick={scrollToForm}
-              className={`inline-flex items-center justify-center gap-2 rounded-xl border ${c.cardBorder} ${c.card} px-8 py-3.5 text-sm font-medium ${c.text} ${c.cardHover} transition-all`}>
+              className={`inline-flex items-center justify-center gap-2 rounded-xl border ${c.cardBorder} ${c.card} px-8 py-3.5 min-h-[48px] text-sm font-medium ${c.text} ${c.cardHover} transition-all w-full sm:w-auto`}>
               See a 2-minute demo
             </button>
           </div>
@@ -285,7 +303,10 @@ export default function Index() {
         <div className="max-w-5xl mx-auto">
           <p className={`text-xs uppercase tracking-[0.2em] ${c.primary} text-center mb-3`}>How it works</p>
           <h2 className="text-3xl sm:text-4xl font-bold text-center tracking-tight">Ten minutes to set up. Decisions every morning.</h2>
-          <div className="mt-12 grid gap-6 lg:grid-cols-3">
+          {/* Tablet (md): show 2 + 1 layout so the steps don't read as
+              one cramped column on iPad. Falls back to single column on
+              mobile and 3 across on lg+. */}
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {STEPS.map((s, i) => (
               <div key={s.num} className="relative">
                 {i < STEPS.length - 1 && (
@@ -314,7 +335,10 @@ export default function Index() {
           <h2 className="text-3xl sm:text-4xl font-bold text-center tracking-tight">Two plans. Cancel anytime. No contracts.</h2>
           <p className={`text-center ${c.textSub} mt-3 text-sm`}>Replace your agency at 10% the cost.</p>
 
-          <div className="mt-12 grid gap-5 lg:grid-cols-3 items-stretch">
+          {/* Tablet (md): 2 columns so Growth + Agency sit side-by-side
+              and Enterprise wraps below full-width. iPad-portrait was
+              showing 3 cramped columns under the old breakpoint. */}
+          <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3 items-stretch">
             {PLANS.map(p => (
               <div key={p.key}
                 className={`relative group rounded-2xl border p-7 transition-all duration-300 flex flex-col ${
