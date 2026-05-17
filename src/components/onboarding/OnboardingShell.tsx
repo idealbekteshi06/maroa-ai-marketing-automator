@@ -52,7 +52,7 @@ export default function OnboardingShell({
             type="button"
             onClick={onContinue}
             disabled={continueDisabled || loading}
-            className="inline-flex items-center gap-2 rounded-full bg-[var(--brand)] px-7 py-[15px] text-[15px] font-semibold text-white shadow-[0_1px_2px_rgba(10,132,255,0.25)] transition-all hover:-translate-y-px hover:bg-[var(--brand-hover)] hover:shadow-[0_4px_12px_rgba(10,132,255,0.3)] disabled:pointer-events-none disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded-full bg-[var(--brand)] px-7 py-[15px] text-[15px] font-semibold text-white shadow-[0_1px_2px_rgba(37, 99, 235,0.25)] transition-all hover:-translate-y-px hover:bg-[var(--brand-hover)] hover:shadow-[0_4px_12px_rgba(37, 99, 235,0.3)] disabled:pointer-events-none disabled:opacity-40"
           >
             {loading && (
               <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">

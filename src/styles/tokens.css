@@ -13,7 +13,7 @@
 
   /* Extended borders */
   --border-strong: #CBD5E1;
-  --border-focus: #0A84FF;
+  --border-focus: #2563EB;
 
   /* Extended text */
   --text-primary: #0F172A;
@@ -23,11 +23,11 @@
   --text-inverse: #FFFFFF;
 
   /* Brand */
-  --brand: #0A84FF;
+  --brand: #2563EB;
   --brand-hover: #0070E0;
   --brand-active: #005DC7;
   --brand-subtle: #EFF6FF;
-  --brand-dim: rgba(10,132,255,0.08);
+  --brand-dim: rgba(37, 99, 235,0.08);
 
   /* Extended semantic */
   --success-subtle: #F0FDF4;
@@ -76,7 +76,7 @@
   --shadow-md: 0 4px 6px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04);
   --shadow-lg: 0 10px 15px rgba(0,0,0,0.08), 0 4px 6px rgba(0,0,0,0.04);
   --shadow-xl: 0 20px 25px rgba(0,0,0,0.1), 0 8px 10px rgba(0,0,0,0.04);
-  --shadow-focus: 0 0 0 3px rgba(10,132,255,0.25);
+  --shadow-focus: 0 0 0 3px rgba(37, 99, 235,0.25);
 
   /* Transitions */
   --transition-fast: 100ms ease;
@@ -106,7 +106,7 @@
   --surface-overlay: rgba(0,0,0,0.85);
 
   --border-strong: rgba(255,255,255,0.15);
-  --border-focus: #0A84FF;
+  --border-focus: #2563EB;
 
   --text-primary: #F8FAFC;
   --text-secondary: #E2E8F0;
@@ -114,11 +114,11 @@
   --text-disabled: #48484A;
   --text-inverse: #000000;
 
-  --brand: #0A84FF;
-  --brand-hover: #409CFF;
-  --brand-active: #60B4FF;
-  --brand-subtle: rgba(10,132,255,0.08);
-  --brand-dim: rgba(10,132,255,0.12);
+  --brand: #2563EB;
+  --brand-hover: #3b82f6;
+  --brand-active: #60a5fa;
+  --brand-subtle: rgba(37, 99, 235,0.08);
+  --brand-dim: rgba(37, 99, 235,0.12);
 
   --success-subtle: rgba(48,209,88,0.1);
   --warning-subtle: rgba(255,159,10,0.1);
