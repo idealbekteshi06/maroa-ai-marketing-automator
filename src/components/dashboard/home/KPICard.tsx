@@ -36,11 +36,11 @@ export default function KPICard({
   const isEmpty = renderedValue === "0" || renderedValue === "€0" || renderedValue === "$0";
 
   return (
-    <div className="group rounded-2xl border border-[var(--border-default)] bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-xs)]">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
+    <div className="group rounded-2xl border border-border bg-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
           <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{label}</div>
-          <div className="mt-2 font-mono text-[36px] font-bold leading-none tracking-[-0.025em] tabular-nums" style={{ fontFeatureSettings: '"tnum"' }}>
+          <div className="mt-2 font-mono text-[36px] font-bold leading-none tracking-[-0.025em] tabular-nums text-foreground" style={{ fontFeatureSettings: '"tnum"' }}>
             {renderedValue}
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
@@ -52,7 +52,7 @@ export default function KPICard({
           )}
         </div>
         {chartData.length >= 2 && (
-          <div className="mt-1 h-10 w-16 shrink-0">
+          <div className="mt-1 h-12 w-20 shrink-0">
             <ResponsiveContainer width="100%" height="100%">
               {sparklineType === "bar" ? (
                 <BarChart data={chartData}>
