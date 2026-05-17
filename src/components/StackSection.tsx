@@ -146,12 +146,17 @@ export default function StackSection() {
       </p>
 
       {/* Frosted container — soft bg + hairline border. Two marquee
-          rows breathe with vertical spacing alone (no caption, no
-          divider) so the brand library reads as one continuous strip
-          rather than two labelled groups. */}
-      <div className="mt-12 rounded-3xl border border-black/[0.06] dark:border-white/[0.08] bg-[#fafafa]/60 dark:bg-white/[0.02] py-10 sm:py-12 overflow-hidden space-y-8">
+          rows separated by a single hairline. No text caption — the
+          divider alone signals "two grouped lanes" without breaking
+          the visual flow. */}
+      <div className="mt-12 rounded-3xl border border-black/[0.06] dark:border-white/[0.08] bg-[#fafafa]/60 dark:bg-white/[0.02] py-10 sm:py-12 overflow-hidden">
         {/* Engines + infra — 38s, fewer logos, slightly faster cadence */}
         <Marquee logos={ENGINES} durationSeconds={38} />
+
+        {/* Hairline divider — thin, low-contrast, edge-faded via the
+            same horizontal margins so it visually echoes the marquee
+            row above and doesn't read as a hard wall. */}
+        <div className="my-8 h-px bg-black/[0.06] dark:bg-white/[0.08] mx-12 sm:mx-20" aria-hidden="true" />
 
         {/* Channels — 48s, more logos, slower cadence so the row feels
             organic alongside the engines row above it. */}
