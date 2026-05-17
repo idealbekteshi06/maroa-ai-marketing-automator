@@ -32,7 +32,7 @@ function GradientBorderCard({ children }: { children: React.ReactNode }) {
     <div style={{
       borderRadius: 16,
       padding: 2,
-      background: `conic-gradient(from ${angle}deg, #2563EB, #BF5AF2, #30D158, #FF9F0A, #FF375F, #2563EB)`,
+      background: `conic-gradient(from ${angle}deg, #0881FF, #BF5AF2, #30D158, #FF9F0A, #FF375F, #0881FF)`,
     }}>
       <div style={{ borderRadius: 14, background: "hsl(var(--card))", padding: 20 }}>
         {children}

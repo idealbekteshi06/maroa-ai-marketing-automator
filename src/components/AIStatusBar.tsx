@@ -123,8 +123,8 @@ export default function AIStatusBar({ businessId }: AIStatusBarProps) {
 
   const dismiss = () => { setStatus("idle"); setMessage(idleMessages[0]); };
 
-  const bgColor = status === "idle" ? "rgba(48,209,88,0.06)" : status === "success" ? "rgba(48,209,88,0.12)" : status === "working" ? "rgba(37, 99, 235,0.08)" : "rgba(220,38,38,0.08)";
-  const textColor = status === "idle" ? "#30D158" : status === "success" ? "#30D158" : status === "working" ? "#2563EB" : "#DC2626";
+  const bgColor = status === "idle" ? "rgba(48,209,88,0.06)" : status === "success" ? "rgba(48,209,88,0.12)" : status === "working" ? "rgba(8, 129, 255,0.08)" : "rgba(220,38,38,0.08)";
+  const textColor = status === "idle" ? "#30D158" : status === "success" ? "#30D158" : status === "working" ? "#0881FF" : "#DC2626";
 
   return (
     <div style={{
@@ -134,7 +134,7 @@ export default function AIStatusBar({ businessId }: AIStatusBarProps) {
       opacity: visible ? 1 : 0, transition: "opacity 400ms ease",
     }}>
       {status === "idle" && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#30D158", boxShadow: "0 0 6px rgba(48,209,88,0.5)" }} />}
-      {status === "working" && <span style={{ width: 14, height: 14, border: "2px solid #2563EB", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />}
+      {status === "working" && <span style={{ width: 14, height: 14, border: "2px solid #0881FF", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />}
       <span>{message}</span>
       {status === "error" && (
         <button onClick={dismiss} style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: textColor }}>

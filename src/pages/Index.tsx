@@ -98,8 +98,8 @@ function Fade({ children, className = "" }: { children: React.ReactNode; classNa
 
 /* ── Theme colors: resolved dynamically ──
  * Apple-style design system inlined here. Brand switched from generic
- * Tailwind blue-600 (#2563EB, leans purple) to Apple system blue
- * (#2563EB — the iOS/macOS native). Card hover now uses a soft lift
+ * Tailwind blue-600 (#0881FF, leans purple) to Apple system blue
+ * (#0881FF — the iOS/macOS native). Card hover now uses a soft lift
  * (shadow + transform) instead of a border-colour change, which used
  * to jump visually and felt cheap. Buttons and inputs ramp through
  * tighter Apple-blue stops on hover/focus. All transitions land at
@@ -114,14 +114,14 @@ const c = {
   text: "text-[#1d1d1f] dark:text-[#f5f5f7]",
   textSub: "text-[#6e6e73] dark:text-[#a1a1a6]",
   textFaint: "text-[#86868b] dark:text-[#6e6e73]",
-  // Apple system blue: #2563EB in dark, #2563EB in light (Apple uses a
+  // Apple system blue: #0881FF in dark, #0881FF in light (Apple uses a
   // slightly deeper blue on white surfaces for accessibility contrast).
-  primary: "text-[#2563EB] dark:text-[#2563EB]",
-  primaryBg: "bg-[#2563EB] dark:bg-[#2563EB]",
-  primaryBgHover: "hover:bg-[#1d4ed8] dark:hover:bg-[#3b82f6] active:bg-[#1e40af] dark:active:bg-[#60a5fa]",
+  primary: "text-[#0881FF] dark:text-[#0881FF]",
+  primaryBg: "bg-[#0881FF] dark:bg-[#0881FF]",
+  primaryBgHover: "hover:bg-[#0067D9] dark:hover:bg-[#3399FF] active:bg-[#004CA8] dark:active:bg-[#66B3FF]",
   inputBg: "bg-[#f5f5f7] dark:bg-white/[0.04]",
   inputBorder: "border-[#d2d2d7] dark:border-white/[0.10]",
-  inputFocus: "focus:border-[#2563EB] dark:focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#2563EB]/20",
+  inputFocus: "focus:border-[#0881FF] dark:focus:border-[#0881FF] focus:ring-[3px] focus:ring-[#0881FF]/20",
 };
 
 const BIZ_TYPES = INDUSTRIES.slice(0, 12) as readonly string[];
@@ -159,11 +159,11 @@ export default function Index() {
     finally { setSubmitting(false); }
   };
 
-  const inputCls = `w-full rounded-xl border ${c.inputBorder} ${c.inputBg} px-4 py-3 text-sm ${c.text} placeholder:${c.textFaint} ${c.inputFocus} focus:outline-none focus:ring-2 focus:ring-[#2563EB]/25 transition-all`;
+  const inputCls = `w-full rounded-xl border ${c.inputBorder} ${c.inputBg} px-4 py-3 text-sm ${c.text} placeholder:${c.textFaint} ${c.inputFocus} focus:outline-none focus:ring-2 focus:ring-[#0881FF]/25 transition-all`;
 
   return (
     <div className={`min-h-screen ${c.bg} ${c.text} transition-colors duration-300`}>
-      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded focus:bg-[#2563EB] focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-white">
+      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded focus:bg-[#0881FF] focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-white">
         Skip to content
       </a>
 
@@ -174,7 +174,7 @@ export default function Index() {
         </Link>
         <div className="flex items-center gap-3">
           <button onClick={() => setIsDark(!isDark)} className={`rounded-full p-2 ${c.card} ${c.cardBorder} border transition-colors`} aria-label="Toggle theme">
-            {isDark ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-[#2563EB]" />}
+            {isDark ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-[#0881FF]" />}
           </button>
           <Link to="/login" className={`text-sm ${c.textSub} hover:${c.text} transition-colors`}>Sign in</Link>
           <Link to="/signup?plan=growth" className={`hidden sm:inline-flex items-center gap-1.5 rounded-full ${c.primaryBg} px-4 py-1.5 text-xs font-semibold text-white ${c.primaryBgHover} transition-all`}>
@@ -212,7 +212,7 @@ export default function Index() {
             style={{ fontSize: "clamp(2.25rem, 6.4vw + 1rem, 4.75rem)" }}
           >
             Your Marketing.<br />
-            <span className="bg-gradient-to-r from-[#2563EB] via-[#2563EB] to-[#2563EB] dark:from-[#2563EB] dark:via-[#3b82f6] dark:to-[#2563EB] bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-[#0881FF] via-[#0881FF] to-[#0881FF] dark:from-[#0881FF] dark:via-[#3399FF] dark:to-[#0881FF] bg-clip-text text-transparent">
               Automated by AI.
             </span><br />
             While You Sleep.
@@ -250,8 +250,8 @@ export default function Index() {
           <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map(f => (
               <div key={f.title} className={`group rounded-2xl border ${c.cardBorder} ${c.card} p-6 ${c.cardHover} transition-all duration-300`}>
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2563EB]/10 dark:bg-[#2563EB]/10 mb-4 group-hover:scale-110 transition-transform">
-                  <f.icon className="h-5 w-5 text-[#2563EB] dark:text-[#2563EB]" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0881FF]/10 dark:bg-[#0881FF]/10 mb-4 group-hover:scale-110 transition-transform">
+                  <f.icon className="h-5 w-5 text-[#0881FF] dark:text-[#0881FF]" />
                 </div>
                 <h3 className="text-sm font-semibold">{f.title}</h3>
                 <p className={`text-[13px] ${c.textSub} mt-1.5 leading-relaxed`}>{f.desc}</p>
@@ -278,8 +278,8 @@ export default function Index() {
           <div className="mt-12 grid gap-4 sm:grid-cols-2">
             {DIFFERENTIATORS.map(d => (
               <div key={d.title} className={`group rounded-2xl border ${c.cardBorder} ${c.card} p-6 ${c.cardHover} transition-all duration-300`}>
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2563EB]/10 dark:bg-[#2563EB]/10 mb-4 group-hover:scale-110 transition-transform">
-                  <d.icon className="h-5 w-5 text-[#2563EB] dark:text-[#2563EB]" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0881FF]/10 dark:bg-[#0881FF]/10 mb-4 group-hover:scale-110 transition-transform">
+                  <d.icon className="h-5 w-5 text-[#0881FF] dark:text-[#0881FF]" />
                 </div>
                 <h3 className="text-sm font-semibold">{d.title}</h3>
                 <p className={`text-[13px] ${c.textSub} mt-1.5 leading-relaxed`}>{d.desc}</p>
@@ -316,8 +316,8 @@ export default function Index() {
                 )}
                 <div className={`rounded-2xl border ${c.cardBorder} ${c.card} p-6 h-full transition-all duration-300 ${c.cardHover}`}>
                   <div className="flex items-center gap-3 mb-4">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#2563EB] dark:bg-[#2563EB] text-white text-xs font-bold">{s.num}</span>
-                    <s.icon className="h-5 w-5 text-[#2563EB] dark:text-[#2563EB]" />
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0881FF] dark:bg-[#0881FF] text-white text-xs font-bold">{s.num}</span>
+                    <s.icon className="h-5 w-5 text-[#0881FF] dark:text-[#0881FF]" />
                   </div>
                   <h3 className="text-sm font-semibold">{s.title}</h3>
                   <p className={`text-[13px] ${c.textSub} mt-1.5 leading-relaxed`}>{s.desc}</p>
@@ -343,13 +343,13 @@ export default function Index() {
               <div key={p.key}
                 className={`relative group rounded-2xl border p-7 transition-all duration-300 flex flex-col ${
                   p.popular
-                    ? `border-[#2563EB]/30 dark:border-[#2563EB]/30 ${c.card} shadow-[0_0_40px_-12px_rgba(37, 99, 235,0.25)] dark:shadow-[0_0_40px_-12px_rgba(37, 99, 235,0.2)]`
+                    ? `border-[#0881FF]/30 dark:border-[#0881FF]/30 ${c.card} shadow-[0_0_40px_-12px_rgba(8, 129, 255,0.25)] dark:shadow-[0_0_40px_-12px_rgba(8, 129, 255,0.2)]`
                     : `${c.cardBorder} ${c.card} ${c.cardHover}`
                 }`}
                 style={p.popular ? { transform: "scale(1.04)" } : undefined}
               >
                 {p.popular && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#2563EB] dark:bg-[#2563EB] px-4 py-1 text-[10px] font-semibold text-white uppercase tracking-wider">
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#0881FF] dark:bg-[#0881FF] px-4 py-1 text-[10px] font-semibold text-white uppercase tracking-wider">
                     Most popular
                   </span>
                 )}
@@ -373,7 +373,7 @@ export default function Index() {
                 <ul className="mt-7 space-y-2 flex-1">
                   {p.features.map(f => (
                     <li key={f} className={`flex items-start gap-2 text-[12px] ${c.textSub}`}>
-                      <Check className="h-3.5 w-3.5 text-[#2563EB] dark:text-[#2563EB] shrink-0 mt-0.5" />{f}
+                      <Check className="h-3.5 w-3.5 text-[#0881FF] dark:text-[#0881FF] shrink-0 mt-0.5" />{f}
                     </li>
                   ))}
                 </ul>
@@ -395,7 +395,7 @@ export default function Index() {
               <ul className="mt-7 space-y-2 flex-1">
                 {ENTERPRISE_CONTACT.features.map(f => (
                   <li key={f} className={`flex items-start gap-2 text-[12px] ${c.textSub}`}>
-                    <Check className="h-3.5 w-3.5 text-[#2563EB] dark:text-[#2563EB] shrink-0 mt-0.5" />{f}
+                    <Check className="h-3.5 w-3.5 text-[#0881FF] dark:text-[#0881FF] shrink-0 mt-0.5" />{f}
                   </li>
                 ))}
               </ul>
@@ -499,7 +499,7 @@ export default function Index() {
 
       {/* ── FINAL CTA ── */}
       <Fade className="px-6 pb-24">
-        <div className="max-w-3xl mx-auto text-center rounded-3xl border border-[#2563EB]/15 dark:border-[#2563EB]/15 bg-gradient-to-b from-[#E5F1FF]/50 to-transparent dark:from-[#2563EB]/[0.04] dark:to-transparent p-10 sm:p-16">
+        <div className="max-w-3xl mx-auto text-center rounded-3xl border border-[#0881FF]/15 dark:border-[#0881FF]/15 bg-gradient-to-b from-[#E5F1FF]/50 to-transparent dark:from-[#0881FF]/[0.04] dark:to-transparent p-10 sm:p-16">
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
             Stop choosing between<br />a marketing team and your margin.
           </h2>

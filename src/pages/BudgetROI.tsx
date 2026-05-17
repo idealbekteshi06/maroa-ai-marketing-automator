@@ -34,7 +34,7 @@ const channels = [
     roi: 240,
     cpa: 8.75,
     pct: 49,
-    color: "#3b82f6",
+    color: "#3399FF",
     sparkline: [1600, 1750, 1900, 1980, 2050, 2100],
   },
   {
@@ -227,8 +227,8 @@ export default function BudgetROI() {
                   <Area
                     type="monotone"
                     dataKey="spend"
-                    stroke="#3b82f6"
-                    fill="#3b82f6"
+                    stroke="#3399FF"
+                    fill="#3399FF"
                     fillOpacity={0.15}
                     strokeWidth={2}
                     name="Spend"

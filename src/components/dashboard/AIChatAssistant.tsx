@@ -161,7 +161,7 @@ export default function AIChatAssistant({ externalOpen, onExternalOpenChange }: 
         <button
           onClick={() => setOpen(true)}
           className="fixed bottom-20 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full text-primary-foreground md:bottom-5 chat-btn-breathe"
-          style={{ background: "linear-gradient(135deg, #2563EB, #BF5AF2)" }}
+          style={{ background: "linear-gradient(135deg, #0881FF, #BF5AF2)" }}
           aria-label="Open AI chat assistant"
         >
           <MessageCircle className="h-6 w-6" />

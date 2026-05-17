@@ -35,7 +35,7 @@ export default function ChipSelect({ label, options, selected, onChange, min, ma
               onClick={() => toggle(opt)}
               className={`rounded-full border px-4 py-2 text-[13px] font-medium transition-all duration-150 ${
                 active
-                  ? "border-[var(--brand)] bg-[var(--brand)] text-white shadow-[0_1px_2px_rgba(37, 99, 235,0.25)]"
+                  ? "border-[var(--brand)] bg-[var(--brand)] text-white shadow-[0_1px_2px_rgba(8, 129, 255,0.25)]"
                   : "border-[var(--border-default)] bg-white text-muted-foreground hover:border-[var(--border-strong)] hover:text-foreground"
               }`}
             >
