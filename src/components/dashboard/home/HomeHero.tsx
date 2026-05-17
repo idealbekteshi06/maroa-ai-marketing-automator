@@ -1,5 +1,16 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Activity, Sparkles } from "lucide-react";
+
+export interface HeroMetric {
+  /** Compact label, e.g. "Reach", "Leads", "Spend", "Revenue" */
+  label: string;
+  /** Already-formatted display value, e.g. "12.4K", "$284" */
+  value: string;
+  /** "↑ 12%" | "↓ 4.1%" | "—". Optional. */
+  delta?: string;
+  /** Color of the delta — green for up, red for down, muted for neutral. */
+  trend: "up" | "down" | "neutral";
+}
 
 export interface HomeHeroProps {
   /** "Good morning" / "Good afternoon" etc. */
@@ -11,6 +22,9 @@ export interface HomeHeroProps {
   latestActivity: { message: string; timeIso: string } | null;
   /** Short chips for the strip below the headline. Each ~2-5 words. */
   todaysWins: string[];
+  /** 7-day movement strip — up to 4 compact metrics rendered as a stat bar
+   *  beneath the headline. Real values only; pass empty array to hide. */
+  movement: HeroMetric[];
   /** Number of items in the approval queue. Drives the primary CTA. */
   pendingCount: number;
   /** "1h ago" style oldest-approval age, or undefined. */
@@ -28,6 +42,12 @@ function timeAgo(iso: string): string {
   if (h < 24) return `${h}h ago`;
   return `${Math.floor(h / 24)}d ago`;
 }
+
+const TREND_COLOR = {
+  up: "text-[#10B981]",
+  down: "text-[#F87171]",
+  neutral: "text-white/50",
+};
 
 /**
  * HomeHero — the dominant "your AI is alive and working" panel.
@@ -53,11 +73,21 @@ export default function HomeHero({
   actionsLast24h,
   latestActivity,
   todaysWins,
+  movement,
   pendingCount,
   oldestApprovalAge,
   onReviewApprovals,
   onViewActivity,
 }: HomeHeroProps) {
+  // 30s tick — makes the "Latest: … 2m ago" line feel actually live
+  // without re-fetching anything. Just bumps a counter that invalidates
+  // the timeAgo memo.
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => setTick(t => t + 1), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
   const statusLine = useMemo(() => {
     if (latestActivity) {
       return (
@@ -73,7 +103,8 @@ export default function HomeHero({
         Warming up — first AI actions land in ~90 seconds.
       </span>
     );
-  }, [latestActivity]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- tick is intentional
+  }, [latestActivity, tick]);
 
   const headlineStat = actionsLast24h > 0
     ? `${actionsLast24h} action${actionsLast24h === 1 ? "" : "s"} in 24h`
@@ -132,11 +163,40 @@ export default function HomeHero({
               {todaysWins.slice(0, 3).map((w, i) => (
                 <span
                   key={`${w}-${i}`}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.04] px-3 py-1 text-[12px] opacity-90"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.12] bg-white/[0.04] px-3 py-1 text-[12px] opacity-90"
                 >
                   <Sparkles className="h-3 w-3 opacity-70" aria-hidden />
                   {w}
                 </span>
+              ))}
+            </div>
+          )}
+
+          {/* 7-day movement strip — real KPI deltas, hairline separators */}
+          {movement.length > 0 && (
+            <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-3 border-t border-white/10 pt-5 sm:grid-cols-4 sm:divide-x sm:divide-white/10 sm:gap-x-0 sm:gap-y-0">
+              {movement.slice(0, 4).map(m => (
+                <div
+                  key={m.label}
+                  className="sm:px-5 sm:first:pl-0 sm:last:pr-0"
+                >
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.12em] opacity-50">
+                    {m.label}
+                  </div>
+                  <div className="mt-1 flex items-baseline gap-2">
+                    <span
+                      className="font-mono text-[18px] font-semibold tabular-nums"
+                      style={{ fontFeatureSettings: '"tnum"' }}
+                    >
+                      {m.value}
+                    </span>
+                    {m.delta && (
+                      <span className={`text-[11px] font-medium ${TREND_COLOR[m.trend]}`}>
+                        {m.delta}
+                      </span>
+                    )}
+                  </div>
+                </div>
               ))}
             </div>
           )}
@@ -175,16 +235,20 @@ export default function HomeHero({
           </div>
         </div>
 
-        {/* Brain orb — concentric rings, gentle pulse */}
-        <div className="relative hidden h-[180px] w-[180px] shrink-0 items-center justify-center lg:flex">
-          <RingPulse delay="0s" size={180} />
-          <RingPulse delay="0.6s" size={140} />
-          <RingPulse delay="1.2s" size={100} />
+        {/* Brain beacon — large concentric ping rings + brand mark.
+            Holds the right edge of the hero so the panel feels balanced
+            instead of left-heavy. Hidden under lg to keep tablet/mobile
+            from feeling cramped. */}
+        <div className="relative hidden h-[260px] w-[260px] shrink-0 items-center justify-center lg:flex">
+          <RingPing delay="0s" duration="3.6s" inset={0} />
+          <RingPing delay="0.6s" duration="3s" inset={32} />
+          <RingPing delay="1.2s" duration="2.4s" inset={64} />
+          <RingPing delay="1.8s" duration="2s" inset={96} />
           <div
-            className="relative z-10 flex h-16 w-16 items-center justify-center rounded-full shadow-lg"
+            className="relative z-10 flex h-20 w-20 items-center justify-center rounded-full shadow-[0_12px_36px_rgba(8,129,255,0.55)]"
             style={{ background: "var(--brand)" }}
           >
-            <span className="text-2xl font-bold text-white">M</span>
+            <span className="text-[28px] font-bold text-white">M</span>
           </div>
         </div>
       </div>
@@ -192,17 +256,23 @@ export default function HomeHero({
   );
 }
 
-function RingPulse({ size, delay }: { size: number; delay: string }) {
+/**
+ * RingPing — single border ring with a CSS ping animation. Each ring
+ * has its own duration + delay so they cascade out from center like a
+ * radar sweep instead of pulsing in unison. Disabled under
+ * prefers-reduced-motion via the motion-safe: prefix.
+ */
+function RingPing({
+  inset, duration, delay,
+}: { inset: number; duration: string; delay: string }) {
   return (
     <span
       aria-hidden
-      className="absolute inset-0 m-auto rounded-full border opacity-30 motion-safe:animate-pulse"
+      className="absolute rounded-full border border-white/20 opacity-60 motion-safe:animate-ping"
       style={{
-        width: size,
-        height: size,
-        borderColor: "var(--brand)",
+        top: inset, left: inset, right: inset, bottom: inset,
         animationDelay: delay,
-        animationDuration: "3.4s",
+        animationDuration: duration,
       }}
     />
   );

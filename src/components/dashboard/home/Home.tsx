@@ -4,8 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { apiGet } from "@/lib/apiClient";
 
-import TopBar from "./TopBar";
-import HomeHero from "./HomeHero";
+import HomeHero, { type HeroMetric } from "./HomeHero";
 import KPIGrid from "./KPIGrid";
 import NeedsApprovalSection, { type ApprovalItem } from "./NeedsApprovalSection";
 import AgentActivityFeed, { type FeedEntry, mapToFeedEntry } from "./AgentActivityFeed";
@@ -332,6 +331,27 @@ export default function Home({ onNavigate }: HomeProps) {
     revenue: computeDelta(revenueSpark),
   }), [reachSpark, leadsSpark, adSpendSpark, revenueSpark]);
 
+  // Hero movement strip — 4 compact KPIs with real 7-day deltas.
+  // Trend is derived from the arrow character in the delta string so
+  // we don't recompute the comparison; "↑" = up, "↓" = down, "—" = neutral.
+  const trendFromDelta = (d?: string): "up" | "down" | "neutral" => {
+    if (!d || d === "—") return "neutral";
+    if (d.startsWith("↑")) return "up";
+    if (d.startsWith("↓")) return "down";
+    return "neutral";
+  };
+  const compact = (n: number, prefix = ""): string => {
+    if (n >= 1_000_000) return `${prefix}${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${prefix}${(n / 1_000).toFixed(1)}K`;
+    return `${prefix}${n.toLocaleString()}`;
+  };
+  const heroMovement: HeroMetric[] = useMemo(() => [
+    { label: "Reach · 7d",   value: compact(reach),           delta: deltas.reach,   trend: trendFromDelta(deltas.reach) },
+    { label: "Leads",        value: compact(leads),           delta: deltas.leads,   trend: trendFromDelta(deltas.leads) },
+    { label: "Spend · 7d",   value: compact(adSpend, "$"),    delta: deltas.adSpend, trend: trendFromDelta(deltas.adSpend) },
+    { label: "Revenue · 30d", value: compact(revenue, "$"),   delta: deltas.revenue, trend: trendFromDelta(deltas.revenue) },
+  ], [reach, leads, adSpend, revenue, deltas]);
+
   // Approval items — real queried content, real titles, real ages.
   // Map to the ApprovalItem shape NeedsApprovalSection expects.
   // Subtitle prefers a 1-line caption snippet when available (more
@@ -387,26 +407,35 @@ export default function Home({ onNavigate }: HomeProps) {
     <div className="flex gap-8">
       {/* Main column */}
       <div className="min-w-0 flex-1">
-        <TopBar
-          pendingCount={pendingCount}
-          agentCount={agentCount}
-          onOpenPalette={() => setCmdOpen(true)}
-          onScrollToFeed={scrollToFeed}
-          onOpenApprovals={() => onNavigate("approvals")}
-        />
-
+        {/* HERO — owns the whole above-the-fold moment. No competing
+            TopBar or standalone greeting; Dashboard.tsx provides the
+            sticky chrome (search, theme, bell, sign-out). */}
         <HomeHero
           greeting={greeting}
           firstName={firstName}
           actionsLast24h={last24hCount}
           latestActivity={latestActivity}
           todaysWins={todaysWins}
+          movement={heroMovement}
           pendingCount={pendingCount}
           oldestApprovalAge={oldestApprovalAge}
           onReviewApprovals={() => onNavigate("approvals")}
           onViewActivity={scrollToFeed}
         />
 
+        {/* Performance section — small label sets context above the grid */}
+        <SectionLabel
+          eyebrow="Performance"
+          title="Last 7 days"
+          right={
+            <button
+              onClick={() => onNavigate("insights")}
+              className="text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              View report →
+            </button>
+          }
+        />
         <KPIGrid
           reach={reach}
           reachDelta={deltas.reach ?? "—"}
@@ -429,6 +458,7 @@ export default function Home({ onNavigate }: HomeProps) {
           oldestAge={oldestApprovalAge}
         />
 
+        <SectionLabel eyebrow="Live" title="Activity feed" />
         <div ref={feedRef}>
           <AgentActivityFeed items={feed} activeCount={agentCount} />
         </div>
@@ -464,6 +494,29 @@ export default function Home({ onNavigate }: HomeProps) {
         onOpenChange={setCmdOpen}
         onNavigate={(tab) => { onNavigate(tab); setCmdOpen(false); }}
       />
+    </div>
+  );
+}
+
+/**
+ * SectionLabel — small eyebrow + title pair that introduces each
+ * section beneath the hero. Replaces the previous flat "<h3>Section</h3>"
+ * pattern that made the dashboard feel like a stack of identical cards.
+ */
+function SectionLabel({
+  eyebrow, title, right,
+}: { eyebrow: string; title: string; right?: React.ReactNode }) {
+  return (
+    <div className="mb-4 mt-2 flex items-end justify-between gap-3">
+      <div>
+        <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          {eyebrow}
+        </div>
+        <h3 className="mt-0.5 text-[18px] font-semibold leading-tight text-foreground">
+          {title}
+        </h3>
+      </div>
+      {right}
     </div>
   );
 }

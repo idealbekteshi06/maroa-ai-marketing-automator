@@ -23,7 +23,7 @@ export default function WhatsNextCards({ pendingDrafts, profileComplete, newLead
       icon: FileText,
       title: `Review ${pendingDrafts} draft${pendingDrafts !== 1 ? "s" : ""}`,
       subtitle: "Awaiting your approval before publishing",
-      tabKey: "inbox",
+      tabKey: "approvals",
     });
   }
 
