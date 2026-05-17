@@ -220,30 +220,6 @@ export default function Index() {
           </div>
           <p className={`text-xs ${c.textFaint} mt-4`}>Credit card required · Cancel anytime · No contracts</p>
 
-          {/* ── Operations strip — concrete proof of "real software."
-              Four spec-style facts that telegraph engineering depth
-              without needing screenshots or testimonials. Each one is
-              a backend reality (Sonnet/Opus auto-routing, 4-hour
-              pacing loop, 20 compliance rulesets, full decision log).
-              Mono font + uppercase labels = the status-page treatment
-              that B2B buyers read as "engineering team built this." */}
-          <ul
-            className={`mt-10 mx-auto inline-flex flex-wrap items-stretch divide-x divide-[#e8e8ed] dark:divide-white/[0.08] rounded-2xl border ${c.cardBorder} ${c.card} overflow-hidden text-left`}
-            aria-label="Operational specs"
-          >
-            {[
-              { value: "Sonnet 4.5 + Opus 4.7", label: "Auto-routed" },
-              { value: "Every 4h",              label: "Pacing alerts" },
-              { value: "20 industries",         label: "Compliance gates" },
-              { value: "100%",                  label: "Decisions logged" },
-            ].map((s) => (
-              <li key={s.label} className="px-4 sm:px-5 py-3 flex-1 min-w-[140px]">
-                <p className={`font-mono text-[12px] sm:text-[13px] ${c.text} leading-tight`}>{s.value}</p>
-                <p className={`mt-1 text-[9px] uppercase tracking-[0.16em] ${c.textFaint} font-medium`}>{s.label}</p>
-              </li>
-            ))}
-          </ul>
-
           <FlagStrip className="mt-10" ariaLabel="Live in 22 countries" />
         </div>
       </section>
