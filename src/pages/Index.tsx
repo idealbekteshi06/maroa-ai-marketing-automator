@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { apiPost } from "@/lib/apiClient";
-import { Loader2, Check, Target, BarChart3, Zap, ArrowRight, Sun, Moon, Sparkles, Search, MessageCircle, Mail, Link2, Cpu } from "lucide-react";
+import { Loader2, Check, Target, BarChart3, Zap, ArrowRight, Sun, Moon, Sparkles, Search, MessageCircle, Mail, Link2, Cpu, FileSearch, ShieldCheck, Quote, Film } from "lucide-react";
 import { PLANS } from "@/lib/constants/plans";
 import { INDUSTRIES } from "@/lib/constants/industries";
 import FlagStrip from "@/components/FlagStrip";
@@ -14,11 +14,40 @@ const COUNTRIES = ["Kosovo", "Albania", "USA", "UK", "Germany", "UAE", "Turkey",
 // "powered by AI" filler. The verbs do the work the buzzwords used to.
 const FEATURES = [
   { icon: Sparkles, title: "Content, written daily",      desc: "Posts, captions, ads, and emails crafted in your voice — tuned to your industry, city, and last week's performance." },
-  { icon: Target,   title: "Ads, optimized hourly",       desc: "Meta and Google budgets shift toward what's working, with pacing alerts every four hours and no manual rebalancing." },
+  { icon: Target,   title: "Ads, audited every morning",   desc: "Meta, Google, and TikTok budgets reviewed daily; pacing alerts every four hours; learning-phase respect built in." },
   { icon: Search,   title: "Competitors, watched",         desc: "What they shipped, what's outperforming, where their audience is moving — surfaced before you'd notice on your own." },
   { icon: MessageCircle, title: "One unified inbox",       desc: "Instagram, Facebook, WhatsApp, email — every message in one queue, with reply drafts already written for your tap." },
   { icon: Mail,     title: "Lifecycle email on autopilot",desc: "Welcome flows, cart recovery, win-back — sent on the day each customer is most likely to convert, in their language." },
   { icon: BarChart3,title: "One dashboard that decides",  desc: "Spend, conversions, creative scores, agent decisions — surfaced as the next action to take, not a wall of charts." },
+];
+
+// Differentiators — the four backend capabilities that separate Maroa
+// from any "AI marketing assistant" in the category. Each one is a
+// load-bearing service in the codebase (services/* in the backend),
+// not a roadmap promise. Surfaced as a dedicated row so the visitor
+// can tell the difference between a wrapper around GPT and an
+// operating system designed around marketing constraints.
+const DIFFERENTIATORS = [
+  {
+    icon: FileSearch,
+    title: "Reasoning trace on every output",
+    desc: "See exactly which framework, audience stage, and past-performance signal drove each draft. Override any choice and re-run.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "20-industry compliance, hard-blocked",
+    desc: "FDA, FTC, FCA, ABA, fair-housing — claims that violate them never ship. Maroa rewrites into compliant copy with citations.",
+  },
+  {
+    icon: Quote,
+    title: "AI-search citation tracking",
+    desc: "Where your brand is cited across ChatGPT, Perplexity, and Google AI Overviews — tracked weekly, with prompts to lift it.",
+  },
+  {
+    icon: Film,
+    title: "Higgsfield image + video, in your brand",
+    desc: "On-brand visuals generated on demand: product hero shots, ad creative, founder reels — Soul-trained on your assets.",
+  },
 ];
 
 const STEPS = [
@@ -212,6 +241,34 @@ export default function Index() {
                 </div>
                 <h3 className="text-sm font-semibold">{f.title}</h3>
                 <p className={`text-[13px] ${c.textSub} mt-1.5 leading-relaxed`}>{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Fade>
+
+      {/* ── DIFFERENTIATORS ──
+          Four backend capabilities the homepage was hiding. Each one
+          maps to a load-bearing service folder in the backend, not a
+          roadmap promise. Lives between Features and How-it-works so
+          the visitor sees "what it does" → "why it's not just a GPT
+          wrapper" → "how to start." */}
+      <Fade className="px-6 pb-24">
+        <div className="max-w-5xl mx-auto">
+          <p className={`text-xs uppercase tracking-[0.2em] ${c.primary} text-center mb-3`}>Why Maroa, not a generic AI tool</p>
+          <h2 className="text-3xl sm:text-4xl font-bold text-center tracking-tight">An operating system, not a prompt wrapper.</h2>
+          <p className={`text-center ${c.textSub} mt-3 text-sm max-w-2xl mx-auto`}>
+            The four things that separate Maroa from any "AI marketing assistant" in the category.
+            Every one is a service running in production today, not a roadmap promise.
+          </p>
+          <div className="mt-12 grid gap-4 sm:grid-cols-2">
+            {DIFFERENTIATORS.map(d => (
+              <div key={d.title} className={`group rounded-2xl border ${c.cardBorder} ${c.card} p-6 ${c.cardHover} transition-all duration-300`}>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0066CC]/10 dark:bg-[#0A84FF]/10 mb-4 group-hover:scale-110 transition-transform">
+                  <d.icon className="h-5 w-5 text-[#0066CC] dark:text-[#0A84FF]" />
+                </div>
+                <h3 className="text-sm font-semibold">{d.title}</h3>
+                <p className={`text-[13px] ${c.textSub} mt-1.5 leading-relaxed`}>{d.desc}</p>
               </div>
             ))}
           </div>
