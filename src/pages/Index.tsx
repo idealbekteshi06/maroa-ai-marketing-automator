@@ -191,36 +191,39 @@ export default function Index() {
           pill + headline don't crowd the viewport edges. */}
       <section className="pt-12 sm:pt-24 lg:pt-28 pb-16 sm:pb-20 px-5 sm:px-6">
         <div className="max-w-3xl mx-auto text-center">
-          {/* Pill: switch to inline-flex with text-wrap balanced + smaller
-              text on mobile so the long string ("Live in 22 countries ·
-              6 languages · 99.9% uptime") doesn't break visually. On sub-
-              340px screens (rare but real) the pill still wraps gracefully. */}
+          {/* Pill: positioning shift — leading with the approval-gate
+              promise (the load-bearing brand differentiator) instead of
+              capacity stats. Country count = 8 (matches the visible
+              FlagStrip below + the actual ContactPoint.areaServed array
+              in the schema.org JSON-LD). */}
           <span className={`inline-flex max-w-[calc(100vw-2.5rem)] flex-wrap items-center justify-center gap-1.5 rounded-full border ${c.cardBorder} ${c.card} px-3.5 sm:px-4 py-1.5 text-[11px] sm:text-xs ${c.textSub} mb-6 sm:mb-8 leading-tight`}>
             <span className="relative flex h-1.5 w-1.5 flex-shrink-0">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
             </span>
-            <span className="whitespace-nowrap">Live in 22 countries · 6 languages · 99.9% uptime</span>
+            <span className="whitespace-nowrap">Live · 8 countries · approval-first</span>
           </span>
 
-          {/* Headline: clamp() so the size scales smoothly from 320px
-              (small iPhone) to 1440px (desktop) without snapping at
-              breakpoints. Floor 2.25rem (36px) reads cleanly on 320px;
-              ceiling 4.75rem (76px) matches the previous lg:text-7xl. */}
+          {/* Headline: 3 lines around the approval-gate positioning.
+              Middle line ("before it ships.") gets the brand-blue
+              gradient so the load-bearing word ("before") is what the
+              eye catches. clamp() keeps it readable from 320px → 1440px
+              without snapping at breakpoints. */}
           <h1
             className="font-bold tracking-tight leading-[1.06]"
             style={{ fontSize: "clamp(2.25rem, 6.4vw + 1rem, 4.75rem)" }}
           >
-            Your Marketing.<br />
+            Marketing that asks<br />
             <span className="bg-gradient-to-r from-[#0881FF] via-[#0881FF] to-[#0881FF] dark:from-[#0881FF] dark:via-[#3399FF] dark:to-[#0881FF] bg-clip-text text-transparent">
-              Automated by AI.
+              before it ships.
             </span><br />
-            While You Sleep.
+            Not after.
           </h1>
 
           <p className={`mt-7 text-base sm:text-lg ${c.textSub} max-w-2xl mx-auto leading-relaxed`}>
-            maroa.ai creates your posts, writes your ads, tracks your competitors, and grows
-            your business — automatically. In 22 countries and 17 languages.
+            Maroa drafts a week of content, runs your ads, watches competitors, and refuses
+            claims it can&apos;t back up. Every action goes through an approval gate before
+            it touches your brand.
           </p>
 
           {/* CTA stack: mobile = full-width column (thumb-friendly tap
@@ -238,7 +241,7 @@ export default function Index() {
           </div>
           <p className={`text-xs ${c.textFaint} mt-4`}>Credit card required · Cancel anytime · No contracts</p>
 
-          <FlagStrip className="mt-10" ariaLabel="Live in 22 countries" />
+          <FlagStrip className="mt-10" ariaLabel="Live in 8 countries" />
         </div>
       </section>
 
