@@ -189,8 +189,7 @@ export default function Home({ onNavigate }: HomeProps) {
       const { data: bizData } = await bizQuery;
       const bid = bizData?.id || resolvedId;
 
-      const [publishedRes, leadsRes, pendingRes, rc, ri, rr, rw, snapRes] = await Promise.all([
-        externalSupabase.from("generated_content").select("id", { count: "exact", head: true }).eq("business_id", bid).eq("status", "published"),
+      const [leadsRes, pendingRes, rc, ri, rr, rw, snapRes] = await Promise.all([
         externalSupabase.from("contacts").select("id", { count: "exact", head: true }).eq("business_id", bid),
         // Pending content — fetch real rows (not just count) so we can show real titles + caption previews.
         externalSupabase.from("generated_content").select("id, content_theme, platform, caption, created_at").eq("business_id", bid).eq("status", "pending_approval").order("created_at", { ascending: false }).limit(5),
@@ -203,7 +202,6 @@ export default function Home({ onNavigate }: HomeProps) {
         externalSupabase.from("analytics_snapshots").select("snapshot_date, total_reach, total_leads, ad_spend, revenue").eq("business_id", bid).order("snapshot_date", { ascending: true }).limit(7),
       ]);
 
-      setPublishedCount(publishedRes.count ?? 0);
       setLeads(leadsRes.count ?? 0);
       setPendingItems((pendingRes.data ?? []) as PendingContent[]);
 
@@ -261,7 +259,6 @@ export default function Home({ onNavigate }: HomeProps) {
         const s = data?.summary;
         if (!s) return;
         if (typeof s.total_reach === "number") setReach(s.total_reach);
-        if (typeof s.posts_published === "number") setPublishedCount(s.posts_published);
         if (typeof s.active_leads === "number") setLeads(s.active_leads);
         if (typeof s.ad_spend === "number") setAdSpend(s.ad_spend);
         if (typeof s.revenue === "number") setRevenue(s.revenue);
@@ -334,17 +331,6 @@ export default function Home({ onNavigate }: HomeProps) {
     message: f.message.charAt(0).toUpperCase() + f.message.slice(1),
     timeLabel: relativeTimeShort(f.time),
   }));
-
-  const oldestApprovalAge = pendingItems.length > 0
-    ? (() => {
-        const ms = Date.now() - new Date(pendingItems[pendingItems.length - 1].created_at).getTime();
-        const h = Math.round(ms / (1000 * 60 * 60));
-        if (h < 1) return "just now";
-        if (h === 1) return "1h ago";
-        if (h < 24) return `${h}h ago`;
-        return `${Math.round(h / 24)}d ago`;
-      })()
-    : undefined;
 
   // Skeleton while loading — uses shadcn's bg-muted (always defined) so
   // the loader actually renders. Old version used var(--bg-muted) which
