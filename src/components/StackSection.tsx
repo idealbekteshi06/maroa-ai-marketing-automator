@@ -145,19 +145,13 @@ export default function StackSection() {
         We don&apos;t reinvent the model — we orchestrate the best ones into one system that ships every day.
       </p>
 
-      {/* Frosted container — soft bg + hairline border. */}
-      <div className="mt-12 rounded-3xl border border-black/[0.06] dark:border-white/[0.08] bg-[#fafafa]/60 dark:bg-white/[0.02] py-10 sm:py-12 overflow-hidden">
+      {/* Frosted container — soft bg + hairline border. Two marquee
+          rows breathe with vertical spacing alone (no caption, no
+          divider) so the brand library reads as one continuous strip
+          rather than two labelled groups. */}
+      <div className="mt-12 rounded-3xl border border-black/[0.06] dark:border-white/[0.08] bg-[#fafafa]/60 dark:bg-white/[0.02] py-10 sm:py-12 overflow-hidden space-y-8">
         {/* Engines + infra — 38s, fewer logos, slightly faster cadence */}
         <Marquee logos={ENGINES} durationSeconds={38} />
-
-        <div className="my-8 h-px bg-black/[0.06] dark:bg-white/[0.08] mx-6 sm:mx-10" aria-hidden="true" />
-
-        {/* Caption above the channels row — same as the static version. */}
-        <p className="text-center text-[10px] uppercase tracking-[0.2em] text-[#86868b] dark:text-[#6e6e73] font-medium mb-6 px-6">
-          Ad platforms <span className="text-[#0066CC] dark:text-[#0A84FF]">we manage</span>
-          <span className="mx-2.5 text-[#d2d2d7] dark:text-[#3a3a3c]">·</span>
-          Social channels <span className="text-[#86868b]">we publish</span>
-        </p>
 
         {/* Channels — 48s, more logos, slower cadence so the row feels
             organic alongside the engines row above it. */}
