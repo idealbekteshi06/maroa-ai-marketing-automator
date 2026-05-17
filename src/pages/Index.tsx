@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { apiPost } from "@/lib/apiClient";
-import { Loader2, Check, Target, BarChart3, Zap, ArrowRight, Sun, Moon, Sparkles, Search, MessageCircle, Mail, Link2, Cpu, FileSearch, ShieldCheck, Quote, Film } from "lucide-react";
+import { Loader2, Check, Target, BarChart3, Zap, ArrowRight, Sun, Moon, Sparkles, Search, MessageCircle, Mail, Link2, Cpu, FileSearch, ShieldCheck, Quote, Film, CreditCard, FileX, Download, ChevronDown } from "lucide-react";
 import { PLANS } from "@/lib/constants/plans";
 import { INDUSTRIES } from "@/lib/constants/industries";
 import FlagStrip from "@/components/FlagStrip";
@@ -11,15 +11,15 @@ import StackSection from "@/components/StackSection";
 const COUNTRIES = ["Kosovo", "Albania", "USA", "UK", "Germany", "UAE", "Turkey", "Italy", "France", "Other"];
 
 // Apple-style sentence-case titles. Each description is one tight
-// sentence (≤ 20 words) — verb-first, concrete, no "automatically" or
-// "powered by AI" filler. The verbs do the work the buzzwords used to.
+// sentence (≤ 22 words) — verb-first, leading with the *outcome the
+// owner cares about*, then the mechanism. No "automatically" filler.
 const FEATURES = [
-  { icon: Sparkles, title: "Content, written daily",      desc: "Posts, captions, ads, and emails crafted in your voice — tuned to your industry, city, and last week's performance." },
-  { icon: Target,   title: "Ads, audited every morning",   desc: "Meta, Google, and TikTok budgets reviewed daily; pacing alerts every four hours; learning-phase respect built in." },
-  { icon: Search,   title: "Competitors, watched",         desc: "What they shipped, what's outperforming, where their audience is moving — surfaced before you'd notice on your own." },
-  { icon: MessageCircle, title: "One unified inbox",       desc: "Instagram, Facebook, WhatsApp, email — every message in one queue, with reply drafts already written for your tap." },
-  { icon: Mail,     title: "Lifecycle email on autopilot",desc: "Welcome flows, cart recovery, win-back — sent on the day each customer is most likely to convert, in their language." },
-  { icon: BarChart3,title: "One dashboard that decides",  desc: "Spend, conversions, creative scores, agent decisions — surfaced as the next action to take, not a wall of charts." },
+  { icon: Sparkles, title: "Content, written daily",      desc: "Get your Sunday back. Posts, captions, ads, and emails drafted in your voice — tuned to your city and last week's performance." },
+  { icon: Target,   title: "Ads, audited every morning",   desc: "Catch budget bleed before lunch. Meta, Google, and TikTok reviewed at 9 a.m.; pacing alerts every four hours." },
+  { icon: Search,   title: "Competitors, watched",         desc: "Know what your competitors shipped before they get traction. Weekly scan + alert when their creative or offer changes." },
+  { icon: MessageCircle, title: "One unified inbox",       desc: "Reply to every customer in a single tap. Instagram, Facebook, WhatsApp, email — all in one queue, with drafts pre-written." },
+  { icon: Mail,     title: "Lifecycle email on autopilot",desc: "Recover the carts you're losing. Welcome flows, cart recovery, win-back — sent on the day each customer is most likely to buy." },
+  { icon: BarChart3,title: "One dashboard that decides",  desc: "Stop staring at charts. Spend, conversions, creative scores, agent decisions — surfaced as the next action to take." },
 ];
 
 // Differentiators — the four backend capabilities that separate Maroa
@@ -400,6 +400,51 @@ export default function Index() {
         </div>
       </Fade>
 
+      {/* ── FAQ — homepage objection-handler ──
+          Four questions, chosen to hit the four most-common
+          conversion-killing objections in B2B SaaS at this stage:
+          (1) hidden-cost fear, (2) lock-in fear, (3) content-ownership
+          fear, (4) trial-end / billing-shock fear. Lives right above
+          the final CTA so a wavering visitor doesn't have to leave
+          the page to get an answer. Uses native <details> so it works
+          without JS state and is keyboard-accessible by default. */}
+      <Fade className="px-6 pb-24">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-3xl sm:text-4xl font-bold text-center tracking-tight">Things people ask before signing up.</h2>
+          <div className="mt-10 space-y-3">
+            {[
+              {
+                q: "Do I need a credit card to start?",
+                a: "No. The 7-day trial is free and asks for nothing. We collect payment only when you pick a paid plan after the trial.",
+              },
+              {
+                q: "Who owns the content Maroa writes?",
+                a: "You do. Every post, ad, email, and image is yours forever — even if you cancel. Export everything as a .zip from Settings any day.",
+              },
+              {
+                q: "How do I cancel?",
+                a: "Two clicks in Settings → Billing. No phone call, no email back-and-forth, no exit interview. Your account flips to the free read-only plan and your data stays put.",
+              },
+              {
+                q: "What happens at the end of the trial?",
+                a: "Your account converts to Free (you keep everything you generated) unless you actively pick a paid plan. Nothing publishes without your approval, and we never charge a card we don't have.",
+              },
+            ].map((item) => (
+              <details
+                key={item.q}
+                className={`group rounded-2xl border ${c.cardBorder} ${c.card} px-5 py-4 transition-colors`}
+              >
+                <summary className="flex cursor-pointer items-center justify-between gap-4 list-none">
+                  <span className={`text-[15px] font-medium ${c.text}`}>{item.q}</span>
+                  <ChevronDown className={`h-4 w-4 flex-shrink-0 ${c.textSub} transition-transform group-open:rotate-180`} />
+                </summary>
+                <p className={`mt-3 text-sm leading-relaxed ${c.textSub}`}>{item.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </Fade>
+
       {/* ── FINAL CTA ── */}
       <Fade className="px-6 pb-24">
         <div className="max-w-3xl mx-auto text-center rounded-3xl border border-[#0A84FF]/15 dark:border-[#0A84FF]/15 bg-gradient-to-b from-[#E5F1FF]/50 to-transparent dark:from-[#0A84FF]/[0.04] dark:to-transparent p-10 sm:p-16">
@@ -419,7 +464,29 @@ export default function Index() {
               Talk to a human
             </button>
           </div>
-          <p className={`text-xs ${c.textFaint} mt-4`}>Free for 7 days · No card · Cancel in two clicks</p>
+
+          {/* ── Risk-reversal triple — replaces the refund-guarantee
+              idea (we can't actually refund) with three commitments
+              we *can* keep: no card up-front, no annual contract,
+              your content is exportable any day. The pills sit
+              centred under the CTA so they're the last thing the
+              visitor reads before deciding. */}
+          <ul className="mt-8 flex flex-wrap items-center justify-center gap-2">
+            <li className={`inline-flex items-center gap-2 rounded-full border ${c.cardBorder} ${c.card} px-3.5 py-1.5 text-[12px] ${c.text}`}>
+              <CreditCard className={`h-3.5 w-3.5 ${c.primary}`} />
+              No card to start
+            </li>
+            <li className={`inline-flex items-center gap-2 rounded-full border ${c.cardBorder} ${c.card} px-3.5 py-1.5 text-[12px] ${c.text}`}>
+              <FileX className={`h-3.5 w-3.5 ${c.primary}`} />
+              No annual contract
+            </li>
+            <li className={`inline-flex items-center gap-2 rounded-full border ${c.cardBorder} ${c.card} px-3.5 py-1.5 text-[12px] ${c.text}`}>
+              <Download className={`h-3.5 w-3.5 ${c.primary}`} />
+              Your content exports any day
+            </li>
+          </ul>
+
+          <p className={`text-xs ${c.textFaint} mt-5`}>Free for 7 days · Cancel in two clicks · Your data stays yours</p>
         </div>
       </Fade>
       </main>
