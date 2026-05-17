@@ -125,6 +125,17 @@ export const getGoogleCampaigns = (params: Record<string, string>) =>
 export const getAdCreatives = (params: Record<string, string>) =>
   get("/webhook/ad-creatives-get", params);
 
+// ─── Ad Optimizer (WF02) ─────────────────────────────────────
+/** Re-runs the daily audit for one campaign on demand. Returns the
+ *  fresh ad_audit_results row (decision + reasoning + score). */
+export const adOptimizerAuditCampaign = (data: {
+  campaign_id: string;
+  business_id: string;
+}) => post<{ ok: true; audit?: Record<string, unknown> }>(
+  "/webhook/ad-optimizer-audit-campaign",
+  data,
+);
+
 export const updateAdCreative = (data: Record<string, unknown>) =>
   post("/webhook/ad-creative-update", data);
 

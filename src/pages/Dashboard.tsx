@@ -7,8 +7,9 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  FileText, Megaphone, Settings, Menu, X, LogOut, Home,
-  MoreHorizontal, Rocket, Brain, ChevronRight, Scale,
+  FileText, Megaphone, Settings, Menu, X, LogOut, Home, Mail,
+  Users, Globe, MousePointer, BarChart3, Star, MoreHorizontal,
+  Rocket, Brain, ChevronRight, Scale,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import NotificationCenter from "@/components/NotificationCenter";
@@ -82,30 +83,128 @@ const LaunchOrchestrator = lazy(() => import("@/pages/LaunchOrchestrator"));
 const BudgetROI = lazy(() => import("@/pages/BudgetROI"));
 const ProfileEnhancement = lazy(() => import("@/pages/ProfileEnhancement"));
 
-/* ── Sidebar nav: only surfaces that are real, finished, and load-bearing.
- * Every other key (wf1-*, ai-brain, orchestrator, the SEO/CRO sub-pages,
- * etc.) is still wired in renderPage() and reachable via ?tab=<key> — just
- * hidden from the sidebar so customers don't land on stubs.
+/* ── Sidebar nav.
+ * Top: 2 always-visible singletons (Home, Approvals).
+ * Middle: 8 collapsible groups bucketing the ~30 wired surfaces by what
+ *   they produce — Content, Ads, Email, Audience, SEO, CRO, Insights,
+ *   Reputation.
+ * Bottom: Settings + Sign-out are anchored in the sidebar footer.
+ * Stubs (LocalPresence, EmailLifecycle, CompetitorIntel, etc.) stay
+ * out of nav until their pages are wired to real data.
  *
  * `to` is set for items that navigate to a separate route (e.g. /strategy)
  * instead of swapping a dashboard tab.
  */
 type NavItem = { key: string; label: string; icon: typeof Home; to?: string };
+type NavGroup = { key: string; label: string; icon: typeof Home; items: NavItem[] };
 
-const primaryNav: NavItem[] = [
+const topSingletons: NavItem[] = [
   { key: "overview", label: "Home", icon: Home },
   { key: "approvals", label: "Approvals", icon: Scale },
-  { key: "content", label: "Content", icon: FileText },
-  { key: "campaigns", label: "Ads", icon: Megaphone },
-  { key: "settings", label: "Settings", icon: Settings },
+];
+
+const navGroups: NavGroup[] = [
+  {
+    key: "content",
+    label: "Content",
+    icon: FileText,
+    items: [
+      { key: "content", label: "Posts & captions", icon: FileText },
+      { key: "social", label: "Social hub", icon: Users },
+      { key: "schema", label: "Schema markup", icon: Globe },
+      { key: "campaign", label: "Instant campaign", icon: Megaphone },
+    ],
+  },
+  {
+    key: "ads",
+    label: "Ads",
+    icon: Megaphone,
+    items: [
+      { key: "campaigns", label: "Live campaigns", icon: Megaphone },
+      { key: "ad-optimization", label: "Ad optimization", icon: BarChart3 },
+      { key: "ab-tests", label: "A/B tests", icon: BarChart3 },
+    ],
+  },
+  {
+    key: "email",
+    label: "Email",
+    icon: Mail,
+    items: [
+      { key: "email", label: "Email marketing", icon: Mail },
+      { key: "community", label: "Community engagement", icon: Users },
+    ],
+  },
+  {
+    key: "audience",
+    label: "Audience",
+    icon: Users,
+    items: [
+      { key: "crm", label: "CRM & leads", icon: Users },
+      { key: "lead-magnets", label: "Lead magnets", icon: FileText },
+      { key: "research", label: "Customer research", icon: Brain },
+      { key: "ideas", label: "Marketing ideas", icon: Brain },
+      { key: "launch", label: "Launch campaign", icon: Rocket },
+    ],
+  },
+  {
+    key: "seo",
+    label: "SEO",
+    icon: Globe,
+    items: [
+      { key: "seo", label: "SEO overview", icon: Globe },
+      { key: "ai-seo", label: "AI SEO", icon: Brain },
+      { key: "seo-pages", label: "SEO pages", icon: FileText },
+    ],
+  },
+  {
+    key: "cro",
+    label: "CRO",
+    icon: MousePointer,
+    items: [
+      { key: "popup-cro", label: "Popups", icon: MousePointer },
+      { key: "onboarding-cro", label: "Onboarding CRO", icon: MousePointer },
+      { key: "signup-cro", label: "Signup CRO", icon: MousePointer },
+      { key: "upgrade-cro", label: "Upgrade CRO", icon: MousePointer },
+      { key: "free-tools", label: "Free tools", icon: FileText },
+    ],
+  },
+  {
+    key: "insights",
+    label: "Insights",
+    icon: BarChart3,
+    items: [
+      { key: "ai-brain", label: "AI Brain", icon: Brain },
+      { key: "orchestrator", label: "AI Orchestrator", icon: Brain },
+      { key: "competitors", label: "Competitors", icon: BarChart3 },
+      { key: "sales", label: "Sales assets", icon: FileText },
+      { key: "revops", label: "RevOps", icon: BarChart3 },
+      { key: "pricing", label: "Pricing strategy", icon: BarChart3 },
+      { key: "health", label: "Health score", icon: BarChart3 },
+    ],
+  },
+  {
+    key: "reputation",
+    label: "Reputation",
+    icon: Star,
+    items: [
+      { key: "reviews", label: "Reviews", icon: Star },
+      { key: "referral", label: "Referrals", icon: Star },
+    ],
+  },
 ];
 
 const moreItemsBase: NavItem[] = [
   { key: "strategy", label: "Strategy", icon: Brain, to: "/strategy" },
 ];
 
-/* Mobile bottom tab bar mirrors primary nav. */
-const mobileNav: NavItem[] = primaryNav;
+/* Mobile bottom tab bar — 5 thumb-reachable slots. */
+const mobileNav: NavItem[] = [
+  { key: "overview", label: "Home", icon: Home },
+  { key: "approvals", label: "Approvals", icon: Scale },
+  { key: "content", label: "Content", icon: FileText },
+  { key: "campaigns", label: "Ads", icon: Megaphone },
+  { key: "settings", label: "Settings", icon: Settings },
+];
 
 /* Page titles and subtitles — keyed by nav key */
 const pageMeta: Record<string, { title: string; subtitle: string }> = {
@@ -296,15 +395,21 @@ export default function Dashboard() {
   };
 
   /* ── Sidebar content (shared desktop + mobile) ──
-   * 5 primary items + collapsible "More" with Strategy and (only when
-   * incomplete) Onboarding. Expanded state persists per user.
+   * Top singletons + 8 collapsible groups + "More" (Strategy + conditional
+   * Onboarding). Per-group expanded state persists; the group containing
+   * the current active tab auto-opens.
    */
-  const [moreOpen, setMoreOpen] = useState<boolean>(
-    () => localStorage.getItem("maroa.nav.moreOpen") === "1",
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(
+    () => {
+      try {
+        const raw = localStorage.getItem("maroa.nav.openGroups");
+        return raw ? JSON.parse(raw) : {};
+      } catch { return {}; }
+    },
   );
   useEffect(() => {
-    localStorage.setItem("maroa.nav.moreOpen", moreOpen ? "1" : "0");
-  }, [moreOpen]);
+    localStorage.setItem("maroa.nav.openGroups", JSON.stringify(openGroups));
+  }, [openGroups]);
 
   const moreItems: NavItem[] = [
     ...moreItemsBase,
@@ -312,6 +417,17 @@ export default function Dashboard() {
       ? [{ key: "onboarding", label: "Onboarding", icon: Rocket, to: "/onboarding" } as NavItem]
       : []),
   ];
+
+  /* Auto-open the group containing the active tab so deep links land
+   * with their parent visible. */
+  const activeGroupKey = navGroups.find(g =>
+    g.items.some(i => i.key === active),
+  )?.key;
+  useEffect(() => {
+    if (activeGroupKey && !openGroups[activeGroupKey]) {
+      setOpenGroups(prev => ({ ...prev, [activeGroupKey]: true }));
+    }
+  }, [activeGroupKey, openGroups]);
 
   const NavItemButton = ({
     item,
@@ -347,44 +463,78 @@ export default function Dashboard() {
     </button>
   );
 
+  const GroupButton = ({
+    group,
+    onItemClick,
+  }: {
+    group: NavGroup;
+    onItemClick?: () => void;
+  }) => {
+    const isOpen = !!openGroups[group.key];
+    const containsActive = group.items.some(i => i.key === active);
+    return (
+      <div>
+        <button
+          type="button"
+          onClick={() => setOpenGroups(prev => ({ ...prev, [group.key]: !prev[group.key] }))}
+          className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
+            containsActive && !isOpen
+              ? "bg-primary/5 text-primary"
+              : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground"
+          }`}
+          aria-expanded={isOpen}
+        >
+          <group.icon className="h-[18px] w-[18px]" strokeWidth={1.5} />
+          <span className="flex-1 text-left">{group.label}</span>
+          <ChevronRight
+            className={`h-3.5 w-3.5 transition-transform ${isOpen ? "rotate-90" : ""}`}
+          />
+        </button>
+        {isOpen && (
+          <div className="mt-0.5 space-y-0.5 pb-1">
+            {group.items.map(item => (
+              <NavItemButton
+                key={item.key}
+                item={item}
+                onItemClick={onItemClick}
+                indent
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const SidebarNav = ({ onItemClick }: { onItemClick?: () => void }) => (
     <nav className="flex-1 overflow-y-auto px-2 py-2">
       <div className="space-y-0.5">
-        {primaryNav.map((item) => (
+        {topSingletons.map(item => (
           <NavItemButton key={item.key} item={item} onItemClick={onItemClick} />
         ))}
       </div>
 
+      <div className="mt-3 space-y-0.5 border-t border-sidebar-border pt-3">
+        {navGroups.map(group => (
+          <GroupButton key={group.key} group={group} onItemClick={onItemClick} />
+        ))}
+      </div>
+
       {moreItems.length > 0 && (
-        <div className="mt-2">
-          <button
-            type="button"
-            onClick={() => setMoreOpen((v) => !v)}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
-            aria-expanded={moreOpen}
-          >
-            <MoreHorizontal className="h-[18px] w-[18px]" strokeWidth={1.5} />
-            <span className="flex-1 text-left">More</span>
-            <ChevronRight
-              className={`h-3.5 w-3.5 transition-transform ${
-                moreOpen ? "rotate-90" : ""
-              }`}
-            />
-          </button>
-          {moreOpen && (
-            <div className="mt-1 space-y-0.5 pb-1">
-              {moreItems.map((item) => (
-                <NavItemButton
-                  key={item.key}
-                  item={item}
-                  onItemClick={onItemClick}
-                  indent
-                />
-              ))}
-            </div>
-          )}
+        <div className="mt-3 border-t border-sidebar-border pt-3">
+          <GroupButton
+            group={{ key: "more", label: "More", icon: MoreHorizontal, items: moreItems }}
+            onItemClick={onItemClick}
+          />
         </div>
       )}
+
+      <div className="mt-3 border-t border-sidebar-border pt-3">
+        <NavItemButton
+          item={{ key: "settings", label: "Settings", icon: Settings }}
+          onItemClick={onItemClick}
+        />
+      </div>
     </nav>
   );
 
