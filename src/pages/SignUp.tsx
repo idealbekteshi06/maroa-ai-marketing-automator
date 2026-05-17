@@ -7,7 +7,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { apiFireAndForget } from "@/lib/apiClient";
 import { toast } from "sonner";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 import { events as analytics } from "@/lib/analytics";
 import { PLAN_BY_KEY, type PlanKey } from "@/lib/constants/plans";
 
@@ -38,7 +38,15 @@ const toAuthErrorMessage = (error: unknown) => {
 };
 
 export default function SignUp() {
-  useDocumentTitle("Create your account");
+  // Signup IS indexable (it's a conversion surface; we want it ranking
+  // for branded queries like "maroa signup"). Description keeps the
+  // primary CTA framing.
+  useSEO({
+    title: "Create your account",
+    description:
+      "Start Maroa today. Pick a plan, connect your accounts, get your first content drafts and ad audits tomorrow morning. Cancel anytime — no contracts.",
+    path: "/signup",
+  });
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);

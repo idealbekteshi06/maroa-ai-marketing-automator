@@ -1,9 +1,14 @@
 import { Link } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 
 export default function Privacy() {
-  useDocumentTitle("Privacy Policy");
+  useSEO({
+    title: "Privacy Policy",
+    description:
+      "How Maroa collects, stores, and protects your data. OAuth tokens encrypted at rest. EU + US data residency. No selling, no sharing. GDPR + CCPA compliant.",
+    path: "/privacy",
+  });
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border">

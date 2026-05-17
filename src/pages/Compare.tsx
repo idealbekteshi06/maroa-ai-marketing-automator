@@ -4,7 +4,7 @@ import { Navbar } from "@/components/landing/Navbar";
 import { Footer } from "@/components/landing/Footer";
 import { Button } from "@/components/ui/button";
 import { Check, X } from "lucide-react";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 
 const tools = ["maroa.ai", "Marketing Agency", "Hootsuite", "Buffer", "Jasper"];
 
@@ -34,20 +34,25 @@ function CellValue({ val }: { val: boolean | string }) {
 }
 
 export default function Compare() {
-  useDocumentTitle("How Maroa compares");
+  // SEO managed end-to-end by useSEO (title + meta description +
+  // canonical + OG + Twitter). The page-specific JSON-LD lives below
+  // — kept as a separate script tag so React doesn't fight it.
+  useSEO({
+    title: "Maroa vs agency, Hootsuite, Buffer & Jasper",
+    description:
+      "Compare maroa.ai with marketing agencies, Hootsuite, Buffer, and Jasper across AI content, auto-posting, ad management, and price. Starts at $149/mo. Cancel anytime.",
+    path: "/compare",
+  });
   useEffect(() => {
-    document.title = "maroa.ai vs Marketing Agency vs Hootsuite vs Buffer | Compare";
-    const meta = document.querySelector('meta[name="description"]');
-    if (meta) meta.setAttribute("content", "Compare maroa.ai with marketing agencies, Hootsuite, Buffer, and Jasper. AI content, auto-posting, ad management — all for $49/mo.");
-    
-    // Add JSON-LD
     const script = document.createElement("script");
     script.type = "application/ld+json";
     script.textContent = JSON.stringify({
       "@context": "https://schema.org",
       "@type": "WebPage",
-      name: "maroa.ai vs Marketing Agencies & Tools | Comparison",
-      description: "Compare maroa.ai with marketing agencies, Hootsuite, Buffer, and Jasper.",
+      name: "Maroa vs marketing agencies, Hootsuite, Buffer & Jasper",
+      description:
+        "Side-by-side comparison: AI content, auto-posting, ad management, A/B testing, competitor tracking, weekly strategy. Maroa from $149/mo vs $800+ agency retainers.",
+      url: "https://maroa.ai/compare",
     });
     document.head.appendChild(script);
     return () => { document.head.removeChild(script); };

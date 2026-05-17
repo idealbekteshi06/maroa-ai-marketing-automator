@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 
 /**
  * /refund — Cancellation & Refund Policy
@@ -16,7 +16,12 @@ import { useDocumentTitle } from "@/hooks/useDocumentTitle";
  * "Cancellation Policy" so the label matches the new content.
  */
 export default function Refund() {
-  useDocumentTitle("Cancellation & Refund Policy");
+  useSEO({
+    title: "Cancellation & Refund Policy",
+    description:
+      "Cancel anytime in two clicks. No contracts, no lock-in. Current billing cycle is non-refundable; cancelling stops all future charges immediately.",
+    path: "/refund",
+  });
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border">

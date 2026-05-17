@@ -8,7 +8,7 @@ import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 import { events as analytics } from "@/lib/analytics";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -41,7 +41,15 @@ const toAuthErrorMessage = (error: unknown) => {
 };
 
 export default function Login() {
-  useDocumentTitle("Sign in");
+  // Auth pages: noindex so they don't compete with the homepage for
+  // brand-name queries in the SERP. The /login URL still works for
+  // direct navigation and inbound deep-links.
+  useSEO({
+    title: "Sign in",
+    description: "Sign in to your Maroa workspace.",
+    path: "/login",
+    robots: "noindex, follow",
+  });
   const navigate = useNavigate();
   const { user, onboardingComplete, loading: authLoading } = useAuth();
   const [email, setEmail] = useState("");

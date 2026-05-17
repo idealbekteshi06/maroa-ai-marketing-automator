@@ -1,9 +1,14 @@
 import { Link } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 
 export default function Terms() {
-  useDocumentTitle("Terms of Service");
+  useSEO({
+    title: "Terms of Service",
+    description:
+      "Terms governing your use of maroa.ai. Monthly subscription, cancel anytime, you own all generated content, OAuth scope limited to publishing on your behalf.",
+    path: "/terms",
+  });
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border">

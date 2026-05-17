@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { postCheckout } from "@/lib/apiClient";
 import { PLANS, ENTERPRISE_CONTACT, type Plan } from "@/lib/constants/plans";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useSEO } from "@/hooks/useSEO";
 
 /**
  * Pricing page — premium 2-tier + Enterprise.
@@ -23,7 +23,12 @@ import { useDocumentTitle } from "@/hooks/useDocumentTitle";
  * once below the grid and once inside each plan's feature list.
  */
 export default function Pricing() {
-  useDocumentTitle("Pricing");
+  useSEO({
+    title: "Pricing — $149 Growth / $599 Agency",
+    description:
+      "Two paid plans. Growth $149/mo for one business. Agency $599/mo for up to 5 brands. Annual saves ~30%. Cancel anytime — no contracts, no lock-in, no refunds needed.",
+    path: "/pricing",
+  });
   const [loading, setLoading] = useState<string | null>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
