@@ -47,7 +47,17 @@ function useFadeIn() {
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
-  return { ref, style: { opacity: vis ? 1 : 0, transform: vis ? "translateY(0)" : "translateY(20px)", transition: "opacity 0.6s ease, transform 0.6s ease" } as React.CSSProperties };
+  // Apple's standard motion curve (cubic-bezier 0.25, 0.1, 0.25, 1) —
+  // softer than plain `ease`, 0.55s lets fast scrolls still land cleanly.
+  return {
+    ref,
+    style: {
+      opacity: vis ? 1 : 0,
+      transform: vis ? "translateY(0)" : "translateY(18px)",
+      transition: "opacity 0.55s cubic-bezier(0.25, 0.1, 0.25, 1), transform 0.55s cubic-bezier(0.25, 0.1, 0.25, 1)",
+      willChange: vis ? "auto" : "opacity, transform",
+    } as React.CSSProperties,
+  };
 }
 
 function Fade({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -55,21 +65,32 @@ function Fade({ children, className = "" }: { children: React.ReactNode; classNa
   return <section ref={f.ref} style={f.style} className={className}>{children}</section>;
 }
 
-/* ── Theme colors: resolved dynamically ── */
+/* ── Theme colors: resolved dynamically ──
+ * Apple-style design system inlined here. Brand switched from generic
+ * Tailwind blue-600 (#2563EB, leans purple) to Apple system blue
+ * (#0A84FF — the iOS/macOS native). Card hover now uses a soft lift
+ * (shadow + transform) instead of a border-colour change, which used
+ * to jump visually and felt cheap. Buttons and inputs ramp through
+ * tighter Apple-blue stops on hover/focus. All transitions land at
+ * 200ms with the standard Apple ease curve. */
 const c = {
-  bg: "bg-white dark:bg-[#0a0a0a]",
-  card: "bg-[#f5f5f7] dark:bg-[#111]",
-  cardBorder: "border-[#e5e5e5] dark:border-[#222]",
-  cardHover: "hover:border-[#ccc] dark:hover:border-[#333]",
-  text: "text-[#0a0a0a] dark:text-white",
-  textSub: "text-[#6b7280] dark:text-[#9ca3af]",
-  textFaint: "text-[#9ca3af] dark:text-[#6b7280]",
-  primary: "text-blue-600 dark:text-blue-400",
-  primaryBg: "bg-blue-600 dark:bg-blue-500",
-  primaryBgHover: "hover:bg-blue-700 dark:hover:bg-blue-400",
-  inputBg: "bg-[#f0f0f2] dark:bg-white/[0.03]",
-  inputBorder: "border-[#ddd] dark:border-white/[0.06]",
-  inputFocus: "focus:border-blue-400 dark:focus:border-white/20",
+  bg: "bg-white dark:bg-[#000]",
+  card: "bg-[#fafafa] dark:bg-[#0a0a0a]",
+  cardBorder: "border-[#e8e8ed] dark:border-white/[0.08]",
+  // Lift on hover: shadow + tiny translate, no border-colour change.
+  // Apple-clean — the card "rises" instead of getting re-outlined.
+  cardHover: "hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-6px_rgba(0,0,0,0.08)] dark:hover:border-white/[0.14] dark:hover:bg-[#141414]",
+  text: "text-[#1d1d1f] dark:text-[#f5f5f7]",
+  textSub: "text-[#6e6e73] dark:text-[#a1a1a6]",
+  textFaint: "text-[#86868b] dark:text-[#6e6e73]",
+  // Apple system blue: #0A84FF in dark, #0066CC in light (Apple uses a
+  // slightly deeper blue on white surfaces for accessibility contrast).
+  primary: "text-[#0066CC] dark:text-[#0A84FF]",
+  primaryBg: "bg-[#0066CC] dark:bg-[#0A84FF]",
+  primaryBgHover: "hover:bg-[#0052A3] dark:hover:bg-[#409CFF] active:bg-[#003D7A] dark:active:bg-[#60B4FF]",
+  inputBg: "bg-[#f5f5f7] dark:bg-white/[0.04]",
+  inputBorder: "border-[#d2d2d7] dark:border-white/[0.10]",
+  inputFocus: "focus:border-[#0A84FF] dark:focus:border-[#0A84FF] focus:ring-[3px] focus:ring-[#0A84FF]/20",
 };
 
 const BIZ_TYPES = INDUSTRIES.slice(0, 12) as readonly string[];
@@ -107,11 +128,11 @@ export default function Index() {
     finally { setSubmitting(false); }
   };
 
-  const inputCls = `w-full rounded-xl border ${c.inputBorder} ${c.inputBg} px-4 py-3 text-sm ${c.text} placeholder:${c.textFaint} ${c.inputFocus} focus:outline-none focus:ring-1 focus:ring-blue-500/20 transition-all`;
+  const inputCls = `w-full rounded-xl border ${c.inputBorder} ${c.inputBg} px-4 py-3 text-sm ${c.text} placeholder:${c.textFaint} ${c.inputFocus} focus:outline-none focus:ring-2 focus:ring-[#0A84FF]/25 transition-all`;
 
   return (
     <div className={`min-h-screen ${c.bg} ${c.text} transition-colors duration-300`}>
-      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded focus:bg-blue-600 focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-white">
+      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded focus:bg-[#0066CC] focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-white">
         Skip to content
       </a>
 
@@ -122,7 +143,7 @@ export default function Index() {
         </Link>
         <div className="flex items-center gap-3">
           <button onClick={() => setIsDark(!isDark)} className={`rounded-full p-2 ${c.card} ${c.cardBorder} border transition-colors`} aria-label="Toggle theme">
-            {isDark ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-blue-500" />}
+            {isDark ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-[#0A84FF]" />}
           </button>
           <Link to="/login" className={`text-sm ${c.textSub} hover:${c.text} transition-colors`}>Sign in</Link>
           <Link to="/signup" className={`hidden sm:inline-flex items-center gap-1.5 rounded-full ${c.primaryBg} px-4 py-1.5 text-xs font-semibold text-white ${c.primaryBgHover} transition-all`}>
@@ -145,7 +166,7 @@ export default function Index() {
 
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.08]">
             Your Marketing.<br />
-            <span className="bg-gradient-to-r from-blue-500 via-blue-600 to-blue-500 dark:from-blue-400 dark:via-blue-500 dark:to-blue-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-[#0066CC] via-[#0A84FF] to-[#0066CC] dark:from-[#0A84FF] dark:via-[#409CFF] dark:to-[#0A84FF] bg-clip-text text-transparent">
               Automated by AI.
             </span><br />
             While You Sleep.
@@ -179,8 +200,8 @@ export default function Index() {
           <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map(f => (
               <div key={f.title} className={`group rounded-2xl border ${c.cardBorder} ${c.card} p-6 ${c.cardHover} transition-all duration-300`}>
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600/10 dark:bg-blue-400/10 mb-4 group-hover:scale-110 transition-transform">
-                  <f.icon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0066CC]/10 dark:bg-[#0A84FF]/10 mb-4 group-hover:scale-110 transition-transform">
+                  <f.icon className="h-5 w-5 text-[#0066CC] dark:text-[#0A84FF]" />
                 </div>
                 <h3 className="text-sm font-semibold">{f.title}</h3>
                 <p className={`text-[13px] ${c.textSub} mt-1.5 leading-relaxed`}>{f.desc}</p>
@@ -205,8 +226,8 @@ export default function Index() {
                 )}
                 <div className={`rounded-2xl border ${c.cardBorder} ${c.card} p-6 h-full transition-all duration-300 ${c.cardHover}`}>
                   <div className="flex items-center gap-3 mb-4">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 dark:bg-blue-500 text-white text-xs font-bold">{s.num}</span>
-                    <s.icon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0066CC] dark:bg-[#0A84FF] text-white text-xs font-bold">{s.num}</span>
+                    <s.icon className="h-5 w-5 text-[#0066CC] dark:text-[#0A84FF]" />
                   </div>
                   <h3 className="text-sm font-semibold">{s.title}</h3>
                   <p className={`text-[13px] ${c.textSub} mt-1.5 leading-relaxed`}>{s.desc}</p>
@@ -229,13 +250,13 @@ export default function Index() {
               <div key={p.key}
                 className={`relative group rounded-2xl border p-6 transition-all duration-300 flex flex-col ${
                   p.popular
-                    ? `border-blue-500/40 dark:border-blue-400/40 ${c.card} shadow-[0_0_40px_-12px_rgba(59,130,246,0.25)] dark:shadow-[0_0_40px_-12px_rgba(96,165,250,0.2)]`
+                    ? `border-[#0A84FF]/30 dark:border-[#0A84FF]/30 ${c.card} shadow-[0_0_40px_-12px_rgba(10,132,255,0.25)] dark:shadow-[0_0_40px_-12px_rgba(10,132,255,0.2)]`
                     : `${c.cardBorder} ${c.card} ${c.cardHover}`
                 }`}
                 style={p.popular ? { transform: "scale(1.02)" } : undefined}
               >
                 {p.popular && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 dark:bg-blue-500 px-4 py-1 text-[10px] font-semibold text-white uppercase tracking-wider">
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#0066CC] dark:bg-[#0A84FF] px-4 py-1 text-[10px] font-semibold text-white uppercase tracking-wider">
                     Most Popular
                   </span>
                 )}
@@ -253,7 +274,7 @@ export default function Index() {
                 <ul className="mt-5 space-y-2 flex-1">
                   {p.features.map(f => (
                     <li key={f} className={`flex items-start gap-2 text-[12px] ${c.textSub}`}>
-                      <Check className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400 shrink-0 mt-0.5" />{f}
+                      <Check className="h-3.5 w-3.5 text-[#0A84FF] dark:text-[#0A84FF] shrink-0 mt-0.5" />{f}
                     </li>
                   ))}
                 </ul>
@@ -277,7 +298,7 @@ export default function Index() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-8">
             {PROOF_STATS.map(s => (
               <div key={s.label} className="text-center">
-                <p className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-blue-500 dark:from-blue-400 dark:to-blue-300 bg-clip-text text-transparent">{s.value}</p>
+                <p className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#0066CC] to-[#0A84FF] dark:from-[#0A84FF] dark:to-[#60B4FF] bg-clip-text text-transparent">{s.value}</p>
                 <p className={`text-xs ${c.textSub} mt-1 uppercase tracking-wider`}>{s.label}</p>
               </div>
             ))}
@@ -333,7 +354,7 @@ export default function Index() {
 
       {/* ── FINAL CTA ── */}
       <Fade className="px-6 pb-24">
-        <div className="max-w-3xl mx-auto text-center rounded-3xl border border-blue-500/20 dark:border-blue-400/20 bg-gradient-to-b from-blue-50/50 to-transparent dark:from-blue-500/[0.04] dark:to-transparent p-10 sm:p-16">
+        <div className="max-w-3xl mx-auto text-center rounded-3xl border border-[#0A84FF]/15 dark:border-[#0A84FF]/15 bg-gradient-to-b from-[#E5F1FF]/50 to-transparent dark:from-[#0A84FF]/[0.04] dark:to-transparent p-10 sm:p-16">
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
             Ready to put your marketing<br />on autopilot?
           </h2>
