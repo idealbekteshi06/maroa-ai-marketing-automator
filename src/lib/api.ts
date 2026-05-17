@@ -940,3 +940,143 @@ export const wf4RequestTestimonialPermission = (data: {
   businessId: string;
   reviewId: string;
 }) => post("/webhook/wf4-testimonial-request-permission", data);
+
+// ─── Creative-concept approval (Strategy page) ───────────────
+// Wired against the n8n-era workflow contract; backend endpoints land
+// behind /webhook/creative-concept-{list,develop,decision}. Until those
+// are deployed, calls throw a clear "not implemented" error so the
+// Strategy page surfaces a readable failure instead of an undefined-is-
+// not-a-function crash. Replace with real post()/get() calls once the
+// backend ships.
+
+export type CreativeConcept = {
+  /** Free-form text of the top concept Maroa chose to develop. */
+  top_concept: {
+    name: string;
+    pattern: string;
+    insight: string;
+    why_it_wins: string;
+    big_idea: string;
+    execution_brief: string;
+  };
+};
+
+export type ListCreativeConceptsArgs = {
+  businessId: string;
+  limit?: number;
+};
+
+export type DevelopCreativeConceptArgs = {
+  businessId: string;
+  contentGoal: string;
+  ideaLevel: "campaign" | "tactic" | "asset";
+};
+
+export type CreativeConceptDecisionArgs = {
+  businessId: string;
+  conceptId: string;
+  decision: "approve" | "reject";
+};
+
+const CC_NOT_IMPLEMENTED =
+  "Creative-concept API not wired yet. Implement /webhook/creative-concept-{list,develop,decision} on the backend and replace this stub.";
+
+export async function listCreativeConcepts(
+  _args: ListCreativeConceptsArgs,
+): Promise<{ items: Array<{
+  id: string;
+  content_goal: string;
+  idea_level: string;
+  insight: string;
+  top_concept: CreativeConcept["top_concept"];
+  weighted_score: number;
+  humankind_score: number;
+  pattern: string;
+  status: string;
+  created_at: string;
+}> }> {
+  throw new Error(CC_NOT_IMPLEMENTED);
+}
+
+export async function developCreativeConcept(
+  _args: DevelopCreativeConceptArgs,
+): Promise<{ ok: true }> {
+  throw new Error(CC_NOT_IMPLEMENTED);
+}
+
+export async function creativeConceptDecision(
+  _args: CreativeConceptDecisionArgs,
+): Promise<{ ok: true }> {
+  throw new Error(CC_NOT_IMPLEMENTED);
+}
+
+// ─── Soul ID character training (Strategy page) ───────────────
+// Wraps the Higgsfield Soul ID training contract. Same stub pattern
+// as the creative-concept block above — replace with real calls once
+// the backend endpoints land.
+
+export type BusinessCharacter = {
+  id: string;
+  character_type: "founder" | "team_member" | "spokesperson" | "mascot";
+  name: string;
+  is_default: boolean;
+  training_status: "queued" | "training" | "ready" | "failed";
+  trained_at?: string | null;
+  reference_id?: string | null;
+};
+
+const CHAR_NOT_IMPLEMENTED =
+  "Soul ID character API not wired yet. Implement /webhook/character-{create,train,list,set-default} on the backend and replace this stub.";
+
+export async function charactersList(
+  _args: { businessId: string },
+): Promise<{ characters: BusinessCharacter[] }> {
+  throw new Error(CHAR_NOT_IMPLEMENTED);
+}
+
+export async function characterCreate(
+  _args: { businessId: string; name: string; characterType: BusinessCharacter["character_type"]; imageUrls: string[] },
+): Promise<{ characterId: string }> {
+  throw new Error(CHAR_NOT_IMPLEMENTED);
+}
+
+export async function characterTrain(
+  _args: { businessId: string; characterId: string },
+): Promise<{ ok: true }> {
+  throw new Error(CHAR_NOT_IMPLEMENTED);
+}
+
+export async function characterSetDefault(
+  _args: { businessId: string; characterId: string },
+): Promise<{ ok: true }> {
+  throw new Error(CHAR_NOT_IMPLEMENTED);
+}
+
+// ─── Customer-asset image vetting (Strategy page) ─────────────
+// Same stub pattern. The "smart" variant returns Soul-generated
+// variants alongside the verdict so the UI can present alternatives.
+
+export type VetterVerdict = {
+  verdict: "use_as_is" | "needs_enhance" | "needs_regen" | "reject";
+  total_100: number;
+  borderline: boolean;
+  manual_review_recommended: boolean;
+  genre: string;
+  scores: Record<string, number>;
+  hard_gates_fired: string[];
+};
+
+const VET_NOT_IMPLEMENTED =
+  "Asset vetter API not wired yet. Implement /webhook/asset-{vet,smart-process} on the backend and replace this stub.";
+
+export async function vetCustomerAsset(
+  _args: { businessId: string; imageUrl: string; contentTheme?: string },
+): Promise<VetterVerdict> {
+  throw new Error(VET_NOT_IMPLEMENTED);
+}
+
+export async function smartProcessAsset(
+  _args: { businessId: string; imageUrl: string; contentTheme?: string },
+): Promise<{ verdict: VetterVerdict; generated: string[]; path: string }> {
+  throw new Error(VET_NOT_IMPLEMENTED);
+}
