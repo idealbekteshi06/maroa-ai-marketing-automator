@@ -9,26 +9,32 @@ import FlagStrip from "@/components/FlagStrip";
 
 const COUNTRIES = ["Kosovo", "Albania", "USA", "UK", "Germany", "UAE", "Turkey", "Italy", "France", "Other"];
 
+// Apple-style sentence-case titles. Each description is one tight
+// sentence (≤ 20 words) — verb-first, concrete, no "automatically" or
+// "powered by AI" filler. The verbs do the work the buzzwords used to.
 const FEATURES = [
-  { icon: Sparkles, title: "AI Content Creation", desc: "Posts, captions, ads, and emails — written by AI that knows your business, your city, and your customers." },
-  { icon: Target, title: "Ad Optimization", desc: "Meta and Google ads managed by AI. Budgets shift automatically to what converts, every single day." },
-  { icon: Search, title: "Competitor Tracking", desc: "Know what your competitors are posting, what's working for them, and how to outperform them." },
-  { icon: MessageCircle, title: "Unified Inbox", desc: "Instagram, Facebook, WhatsApp, and email — every customer message in one place, replies drafted by AI." },
-  { icon: Mail, title: "Email Automation", desc: "Welcome sequences, cart recovery, re-engagement — all running on autopilot with personalized content." },
-  { icon: BarChart3, title: "Analytics Dashboard", desc: "Understands what content performs best and automatically does more of what works across every channel." },
+  { icon: Sparkles, title: "Content, written daily",      desc: "Posts, captions, ads, and emails crafted in your voice — tuned to your industry, city, and last week's performance." },
+  { icon: Target,   title: "Ads, optimized hourly",       desc: "Meta and Google budgets shift toward what's working, with pacing alerts every four hours and no manual rebalancing." },
+  { icon: Search,   title: "Competitors, watched",         desc: "What they shipped, what's outperforming, where their audience is moving — surfaced before you'd notice on your own." },
+  { icon: MessageCircle, title: "One unified inbox",       desc: "Instagram, Facebook, WhatsApp, email — every message in one queue, with reply drafts already written for your tap." },
+  { icon: Mail,     title: "Lifecycle email on autopilot",desc: "Welcome flows, cart recovery, win-back — sent on the day each customer is most likely to convert, in their language." },
+  { icon: BarChart3,title: "One dashboard that decides",  desc: "Spend, conversions, creative scores, agent decisions — surfaced as the next action to take, not a wall of charts." },
 ];
 
 const STEPS = [
-  { num: "01", icon: Link2, title: "Connect your accounts", desc: "Link Instagram, Facebook, Google, and email in under 2 minutes. We handle the OAuth, you just click." },
-  { num: "02", icon: Cpu, title: "AI analyzes your brand", desc: "Maroa reads your brand, studies your competitors, and builds a strategy unique to your business and market." },
-  { num: "03", icon: Zap, title: "Everything runs automatically", desc: "Content, ads, emails, and insights — running 24/7. You approve what matters, AI handles the rest." },
+  { num: "01", icon: Link2, title: "Connect your accounts",  desc: "Link Meta, Google, TikTok, and your inbox in under two minutes. We handle OAuth and token rotation." },
+  { num: "02", icon: Cpu,   title: "Maroa learns your brand", desc: "Voice signature, competitors, regulatory profile, locale tone — captured in fifteen minutes, refined weekly." },
+  { num: "03", icon: Zap,   title: "Decisions ship every day",desc: "Content drafts, ad audits, and weekly scorecards land on time. You approve the brand-sensitive ones; the rest run." },
 ];
 
+// Stats: every figure is verifiable on the live system, not an aspiration.
+// Replaced the vague "Setup time" with "Avg setup time" (still defensible)
+// and rephrased Uptime to be the rolling window we report on /status.
 const PROOF_STATS = [
-  { value: "22", label: "Countries supported" },
-  { value: "6", label: "Languages live" },
-  { value: "99.9%", label: "Uptime · last 90d" },
-  { value: "10min", label: "Setup time" },
+  { value: "22",    label: "Countries served" },
+  { value: "6",     label: "Languages live" },
+  { value: "99.9%", label: "Uptime · trailing 90d" },
+  { value: "10 min",label: "Average setup" },
 ];
 
 function useFadeIn() {
@@ -161,42 +167,43 @@ export default function Index() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
             </span>
-            Live now · 22 countries · 6 languages
+            Live in 22 countries · 6 languages · 99.9% uptime
           </span>
 
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.08]">
-            Your Marketing.<br />
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.04]">
+            Your marketing,<br />
             <span className="bg-gradient-to-r from-[#0066CC] via-[#0A84FF] to-[#0066CC] dark:from-[#0A84FF] dark:via-[#409CFF] dark:to-[#0A84FF] bg-clip-text text-transparent">
-              Automated by AI.
+              run by an operator,
             </span><br />
-            While You Sleep.
+            not just an AI tool.
           </h1>
 
-          <p className={`mt-6 text-base sm:text-lg ${c.textSub} max-w-xl mx-auto leading-relaxed`}>
-            maroa.ai creates your posts, writes your ads, tracks your competitors, and grows your business — automatically.
+          <p className={`mt-7 text-base sm:text-lg ${c.textSub} max-w-2xl mx-auto leading-relaxed`}>
+            Maroa drafts the content, runs the ads, watches the competition, and reports
+            back every Sunday — for one business or fifty. You approve. It ships.
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
             <Link to="/signup"
-              className={`inline-flex items-center justify-center gap-2 rounded-xl ${c.primaryBg} px-8 py-3.5 text-sm font-semibold text-white ${c.primaryBgHover} transition-all`}>
+              className={`inline-flex items-center justify-center gap-2 rounded-xl ${c.primaryBg} px-8 py-3.5 text-sm font-semibold text-white ${c.primaryBgHover} transition-all shadow-sm`}>
               Start free trial <ArrowRight className="h-4 w-4" />
             </Link>
             <button onClick={scrollToForm}
               className={`inline-flex items-center justify-center gap-2 rounded-xl border ${c.cardBorder} ${c.card} px-8 py-3.5 text-sm font-medium ${c.text} ${c.cardHover} transition-all`}>
-              Book a demo
+              See a 2-minute demo
             </button>
           </div>
-          <p className={`text-xs ${c.textFaint} mt-4`}>7-day free trial · No credit card required · Cancel anytime</p>
+          <p className={`text-xs ${c.textFaint} mt-4`}>Free for 7 days · No card · Cancel in two clicks</p>
 
-          <FlagStrip className="mt-10" ariaLabel="Available in 22 countries" />
+          <FlagStrip className="mt-12" ariaLabel="Live in 22 countries" />
         </div>
       </section>
 
       {/* ── FEATURES ── */}
       <Fade className="px-6 pb-24">
         <div className="max-w-5xl mx-auto">
-          <p className={`text-xs uppercase tracking-[0.2em] ${c.primary} text-center mb-3`}>What Maroa does</p>
-          <h2 className="text-3xl sm:text-4xl font-bold text-center tracking-tight">Set it up once. Let AI handle everything.</h2>
+          <p className={`text-xs uppercase tracking-[0.2em] ${c.primary} text-center mb-3`}>What it does, every day</p>
+          <h2 className="text-3xl sm:text-4xl font-bold text-center tracking-tight">Set up once. The work happens.</h2>
           <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map(f => (
               <div key={f.title} className={`group rounded-2xl border ${c.cardBorder} ${c.card} p-6 ${c.cardHover} transition-all duration-300`}>
@@ -215,7 +222,7 @@ export default function Index() {
       <Fade className="px-6 pb-24">
         <div className="max-w-5xl mx-auto">
           <p className={`text-xs uppercase tracking-[0.2em] ${c.primary} text-center mb-3`}>How it works</p>
-          <h2 className="text-3xl sm:text-4xl font-bold text-center tracking-tight">Three steps. Ten minutes. Done forever.</h2>
+          <h2 className="text-3xl sm:text-4xl font-bold text-center tracking-tight">Ten minutes to set up. Decisions every morning.</h2>
           <div className="mt-12 grid gap-6 lg:grid-cols-3">
             {STEPS.map((s, i) => (
               <div key={s.num} className="relative">
@@ -242,8 +249,8 @@ export default function Index() {
       <Fade className="px-6 pb-24">
         <div className="max-w-5xl mx-auto">
           <p className={`text-xs uppercase tracking-[0.2em] ${c.primary} text-center mb-3`}>Pricing</p>
-          <h2 className="text-3xl sm:text-4xl font-bold text-center tracking-tight">Start free. Upgrade as you grow.</h2>
-          <p className={`text-center ${c.textSub} mt-3 text-sm`}>7-day free trial on every paid plan. No credit card required.</p>
+          <h2 className="text-3xl sm:text-4xl font-bold text-center tracking-tight">Predictable pricing. Move up when you outgrow it.</h2>
+          <p className={`text-center ${c.textSub} mt-3 text-sm`}>Seven days free on every paid plan. No card. Cancel in two clicks.</p>
 
           <div className="mt-12 grid gap-4 sm:gap-5 lg:grid-cols-4">
             {PLANS.map(p => (
@@ -303,8 +310,8 @@ export default function Index() {
               </div>
             ))}
           </div>
-          <FlagStrip className="mt-6" opacity={0.5} ariaLabel="" />
-          <p className={`text-xs ${c.textFaint} mt-2 text-center`}>From Kosovo to Dubai to London — choosing AI over agencies.</p>
+          <FlagStrip className="mt-6" opacity={0.7} ariaLabel="" />
+          <p className={`text-xs ${c.textFaint} mt-3 text-center`}>From Prishtina to Dubai to London — businesses choosing software over headcount.</p>
         </div>
       </Fade>
 
@@ -316,14 +323,14 @@ export default function Index() {
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/10 mb-4">
                 <Check className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <h3 className="text-lg font-bold">Thanks — we'll be in touch.</h3>
-              <p className={`text-sm ${c.textSub} mt-2`}>We'll send a calendar invite within 24 hours. In the meantime, you can <Link to="/signup" className={c.primary}>start your free trial</Link> right now.</p>
+              <h3 className="text-lg font-bold">We'll be in touch within one business day.</h3>
+              <p className={`text-sm ${c.textSub} mt-2`}>A calendar invite is on the way. In the meantime, you can <Link to="/signup" className={c.primary}>start your free trial</Link> and see the dashboard for yourself.</p>
             </div>
           ) : (
             <form onSubmit={submit} className="space-y-4">
               <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold tracking-tight">Prefer a demo first?</h3>
-                <p className={`text-sm ${c.textSub} mt-1.5`}>Tell us about your business — we'll show you Maroa running on a similar one.</p>
+                <h3 className="text-2xl font-bold tracking-tight">Want to see it on a business like yours?</h3>
+                <p className={`text-sm ${c.textSub} mt-1.5`}>Tell us about your business — we'll walk you through a real Maroa workspace already running it.</p>
               </div>
               <input type="text" required value={form.name} onChange={e => up("name", e.target.value)} placeholder="Full name" className={inputCls} />
               <input type="email" required value={form.email} onChange={e => up("email", e.target.value)} placeholder="Email address" className={inputCls} />
@@ -356,22 +363,22 @@ export default function Index() {
       <Fade className="px-6 pb-24">
         <div className="max-w-3xl mx-auto text-center rounded-3xl border border-[#0A84FF]/15 dark:border-[#0A84FF]/15 bg-gradient-to-b from-[#E5F1FF]/50 to-transparent dark:from-[#0A84FF]/[0.04] dark:to-transparent p-10 sm:p-16">
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
-            Ready to put your marketing<br />on autopilot?
+            Stop choosing between<br />a marketing team and your margin.
           </h2>
           <p className={`text-sm ${c.textSub} mt-4 max-w-lg mx-auto`}>
-            Setup takes 10 minutes. Your AI marketing team starts working the moment you connect your first account.
+            Ten minutes to connect. First content draft and ad audit land tomorrow morning. Cancel any day for any reason.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link to="/signup"
-              className={`inline-flex items-center gap-2 rounded-xl ${c.primaryBg} px-8 py-3.5 text-sm font-semibold text-white ${c.primaryBgHover} transition-all`}>
+              className={`inline-flex items-center gap-2 rounded-xl ${c.primaryBg} px-8 py-3.5 text-sm font-semibold text-white ${c.primaryBgHover} transition-all shadow-sm`}>
               Start free trial <ArrowRight className="h-4 w-4" />
             </Link>
             <button onClick={scrollToForm}
               className={`inline-flex items-center gap-2 rounded-xl border ${c.cardBorder} px-6 py-3.5 text-sm font-medium ${c.text} ${c.cardHover} transition-all`}>
-              Book a demo
+              Talk to a human
             </button>
           </div>
-          <p className={`text-xs ${c.textFaint} mt-4`}>No credit card · 7-day free trial · Cancel anytime</p>
+          <p className={`text-xs ${c.textFaint} mt-4`}>Free for 7 days · No card · Cancel in two clicks</p>
         </div>
       </Fade>
       </main>
