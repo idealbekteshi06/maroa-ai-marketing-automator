@@ -20,6 +20,7 @@ import CompetitorAlert from "@/components/CompetitorAlert";
 import WeeklyReportOverlay from "@/components/WeeklyReportOverlay";
 import WelcomeModal from "@/components/WelcomeModal";
 import Heartbeat from "@/components/Heartbeat";
+import FounderPill from "@/components/dashboard/FounderPill";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 
 /* Animated logo dot — pure CSS keyframes, no React reconciliation. */
@@ -444,6 +445,7 @@ export default function Dashboard() {
 
       {/* ── Main content ── */}
       <div className="flex flex-1 flex-col min-w-0">
+        <FounderPill />
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-card/80 backdrop-blur-xl px-4">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" className="md:hidden h-9 w-9" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
