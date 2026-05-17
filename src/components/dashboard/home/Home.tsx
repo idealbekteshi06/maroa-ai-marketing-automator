@@ -1,14 +1,12 @@
-import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { apiGet } from "@/lib/apiClient";
 
-import HomeHero, { type HeroMetric } from "./HomeHero";
+import HomeHeader from "./HomeHeader";
 import KPIGrid from "./KPIGrid";
-import NeedsApprovalSection, { type ApprovalItem } from "./NeedsApprovalSection";
-import AgentActivityFeed, { type FeedEntry, mapToFeedEntry } from "./AgentActivityFeed";
-import WhatsNextCards from "./WhatsNextCards";
+import WorkQueue, { type QueueApproval, type QueueActivity } from "./WorkQueue";
 import ProfileStrengthWidget from "./ProfileStrengthWidget";
 import CommandPalette from "./CommandPalette";
 
@@ -126,6 +124,18 @@ function pendingItemTitle(item: PendingContent): string {
   return "Untitled draft";
 }
 
+/** "2m" / "3h" / "1d" — compact relative time for activity rows. */
+function relativeTimeShort(iso: string): string {
+  if (!iso) return "";
+  const ms = Date.now() - new Date(iso).getTime();
+  const m = Math.round(ms / 60_000);
+  if (m < 1) return "now";
+  if (m < 60) return `${m}m`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.round(h / 24)}d`;
+}
+
 function pendingItemSubtitle(item: PendingContent): string {
   const created = new Date(item.created_at);
   const ageMs = Date.now() - created.getTime();
@@ -157,19 +167,12 @@ export default function Home({ onNavigate }: HomeProps) {
   const [adSpendSpark, setAdSpendSpark] = useState<number[]>([]);
   const [revenue, setRevenue] = useState(0);
   const [revenueSpark, setRevenueSpark] = useState<number[]>([]);
-  const [publishedCount, setPublishedCount] = useState(0);
   const [pendingItems, setPendingItems] = useState<PendingContent[]>([]);
-  const [feed, setFeed] = useState<FeedEntry[]>([]);
   const [rawFeed, setRawFeed] = useState<RawFeed[]>([]);
   const [profilePct, setProfilePct] = useState(35);
 
   // UI state
   const [cmdOpen, setCmdOpen] = useState(false);
-  const feedRef = useRef<HTMLDivElement>(null);
-
-  const scrollToFeed = useCallback(() => {
-    feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, []);
 
   // ── Fetch data ──
   const fetchData = useCallback(async () => {
@@ -228,7 +231,6 @@ export default function Home({ onNavigate }: HomeProps) {
       ((rw.data ?? []) as WinRow[]).forEach(w => feedItems.push({ type: "brand_memory", emoji: "🏆", message: w.message?.slice(0, 50) || formatActivity(w.win_type || ""), time: w.notified_at }));
       feedItems.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
       setRawFeed(feedItems.slice(0, 10));
-      setFeed(feedItems.slice(0, 10).map(mapToFeedEntry));
 
       // Profile completion
       const od = bizData?.onboarding_data;
@@ -276,14 +278,12 @@ export default function Home({ onNavigate }: HomeProps) {
         () => {
           const item: RawFeed = { type: "content_generated", emoji: "✍️", message: formatActivity("content_generated"), time: new Date().toISOString() };
           setRawFeed(prev => [item, ...prev].slice(0, 10));
-          setFeed(prev => [mapToFeedEntry(item, 0), ...prev].slice(0, 10));
         })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "contacts", filter: `business_id=eq.${businessId}` },
         () => {
           setLeads(c => c + 1);
           const item: RawFeed = { type: "lead_captured", emoji: "👤", message: formatActivity("lead_captured"), time: new Date().toISOString() };
           setRawFeed(prev => [item, ...prev].slice(0, 10));
-          setFeed(prev => [mapToFeedEntry(item, 0), ...prev].slice(0, 10));
         })
       .subscribe();
     return () => { externalSupabase.removeChannel(channel); };
@@ -292,34 +292,11 @@ export default function Home({ onNavigate }: HomeProps) {
   // ── Derived values ──
   const firstName = getFirstName(user);
   const greeting = getGreeting();
-  const agentCount = feed.length > 0 ? 3 : 0;
-  const profileComplete = profilePct >= 85;
   const pendingCount = pendingItems.length;
 
-  // Hero inputs — all from real data, none invented.
   const last24hCount = useMemo(() => {
     const cutoff = Date.now() - 24 * 60 * 60 * 1000;
     return rawFeed.filter(f => new Date(f.time).getTime() >= cutoff).length;
-  }, [rawFeed]);
-
-  const latestActivity = rawFeed.length > 0
-    ? { message: rawFeed[0].message, timeIso: rawFeed[0].time }
-    : null;
-
-  // Today's wins — distinct activity messages from the last 24h, up to 3.
-  const todaysWins = useMemo(() => {
-    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-    const seen = new Set<string>();
-    const out: string[] = [];
-    for (const f of rawFeed) {
-      if (new Date(f.time).getTime() < cutoff) continue;
-      const msg = f.message;
-      if (seen.has(msg)) continue;
-      seen.add(msg);
-      out.push(msg.charAt(0).toUpperCase() + msg.slice(1));
-      if (out.length >= 3) break;
-    }
-    return out;
   }, [rawFeed]);
 
   // Honest deltas — computeDelta() returns undefined when the series is
@@ -331,50 +308,32 @@ export default function Home({ onNavigate }: HomeProps) {
     revenue: computeDelta(revenueSpark),
   }), [reachSpark, leadsSpark, adSpendSpark, revenueSpark]);
 
-  // Hero movement strip — 4 compact KPIs with real 7-day deltas.
-  // Trend is derived from the arrow character in the delta string so
-  // we don't recompute the comparison; "↑" = up, "↓" = down, "—" = neutral.
-  const trendFromDelta = (d?: string): "up" | "down" | "neutral" => {
-    if (!d || d === "—") return "neutral";
-    if (d.startsWith("↑")) return "up";
-    if (d.startsWith("↓")) return "down";
-    return "neutral";
-  };
-  const compact = (n: number, prefix = ""): string => {
-    if (n >= 1_000_000) return `${prefix}${(n / 1_000_000).toFixed(1)}M`;
-    if (n >= 1_000) return `${prefix}${(n / 1_000).toFixed(1)}K`;
-    return `${prefix}${n.toLocaleString()}`;
-  };
-  const heroMovement: HeroMetric[] = useMemo(() => [
-    { label: "Reach · 7d",   value: compact(reach),           delta: deltas.reach,   trend: trendFromDelta(deltas.reach) },
-    { label: "Leads",        value: compact(leads),           delta: deltas.leads,   trend: trendFromDelta(deltas.leads) },
-    { label: "Spend · 7d",   value: compact(adSpend, "$"),    delta: deltas.adSpend, trend: trendFromDelta(deltas.adSpend) },
-    { label: "Revenue · 30d", value: compact(revenue, "$"),   delta: deltas.revenue, trend: trendFromDelta(deltas.revenue) },
-  ], [reach, leads, adSpend, revenue, deltas]);
-
-  // Approval items — real queried content, real titles, real ages.
-  // Map to the ApprovalItem shape NeedsApprovalSection expects.
-  // Subtitle prefers a 1-line caption snippet when available (more
-  // useful than "drafted 2h ago" for deciding what to review next);
-  // falls back to age + platform if no caption.
-  const approvalItems: ApprovalItem[] = pendingItems.slice(0, 3).map((item, i) => {
+  // Map pending content rows → WorkQueue's QueueApproval shape.
+  // Snippet prefers a one-line caption preview; falls back to platform+age.
+  const queueApprovals: QueueApproval[] = pendingItems.slice(0, 3).map(item => {
     const caption = (item.caption || "").trim();
     const snippet = caption
-      ? (caption.length > 90 ? caption.slice(0, 87) + "..." : caption)
+      ? (caption.length > 110 ? caption.slice(0, 107) + "..." : caption)
       : pendingItemSubtitle(item);
+    const type: QueueApproval["type"] =
+      item.platform?.toLowerCase().includes("ad") ? "ad" :
+      item.platform?.toLowerCase().includes("image") ? "creative" : "post";
     return {
       id: item.id,
       title: pendingItemTitle(item),
-      subtitle: snippet,
-      // Type is inferred from platform if possible; default to "post".
-      type: (item.platform?.toLowerCase().includes("ad") ? "ad" :
-             item.platform?.toLowerCase().includes("image") ? "creative" :
-             "post") as ApprovalItem["type"],
-      // Urgency: items older than 24h are "today" priority, fresher are "this_week".
-      urgency: i === 0 && (Date.now() - new Date(item.created_at).getTime()) > 24 * 60 * 60 * 1000
-        ? "today" : "this_week",
+      snippet,
+      platform: item.platform ?? undefined,
+      type,
+      createdAt: item.created_at,
     };
   });
+
+  // Map raw activity feed → WorkQueue's QueueActivity shape.
+  const queueActivity: QueueActivity[] = rawFeed.slice(0, 6).map((f, i) => ({
+    id: `${f.time}-${i}`,
+    message: f.message.charAt(0).toUpperCase() + f.message.slice(1),
+    timeLabel: relativeTimeShort(f.time),
+  }));
 
   const oldestApprovalAge = pendingItems.length > 0
     ? (() => {
@@ -404,38 +363,18 @@ export default function Home({ onNavigate }: HomeProps) {
   }
 
   return (
-    <div className="flex gap-8">
-      {/* Main column */}
-      <div className="min-w-0 flex-1">
-        {/* HERO — owns the whole above-the-fold moment. No competing
-            TopBar or standalone greeting; Dashboard.tsx provides the
-            sticky chrome (search, theme, bell, sign-out). */}
-        <HomeHero
-          greeting={greeting}
-          firstName={firstName}
-          actionsLast24h={last24hCount}
-          latestActivity={latestActivity}
-          todaysWins={todaysWins}
-          movement={heroMovement}
-          pendingCount={pendingCount}
-          oldestApprovalAge={oldestApprovalAge}
-          onReviewApprovals={() => onNavigate("approvals")}
-          onViewActivity={scrollToFeed}
-        />
+    <div className="mx-auto max-w-[1200px]">
+      {/* 1. HEADER — compact greeting + live status pill, hairline only */}
+      <HomeHeader
+        greeting={greeting}
+        firstName={firstName}
+        actionsLast24h={last24hCount}
+        pendingCount={pendingCount}
+        onReviewApprovals={() => onNavigate("approvals")}
+      />
 
-        {/* Performance section — small label sets context above the grid */}
-        <SectionLabel
-          eyebrow="Performance"
-          title="Last 7 days"
-          right={
-            <button
-              onClick={() => onNavigate("insights")}
-              className="text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              View report →
-            </button>
-          }
-        />
+      {/* 2. KPIs — the visual centerpiece, full-width sparklines */}
+      <div className="mb-8">
         <KPIGrid
           reach={reach}
           reachDelta={deltas.reach ?? "—"}
@@ -450,43 +389,26 @@ export default function Home({ onNavigate }: HomeProps) {
           revenueDelta={deltas.revenue ?? "—"}
           revenueSpark={revenueSpark}
         />
+      </div>
 
-        <NeedsApprovalSection
-          items={approvalItems}
-          onReview={() => onNavigate("approvals")}
-          onApproveAll={() => onNavigate("approvals")}
-          oldestAge={oldestApprovalAge}
+      {/* 3. TWO-COLUMN — WorkQueue dominates; ProfileStrengthWidget rail */}
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_320px]">
+        <WorkQueue
+          pending={queueApprovals}
+          activity={queueActivity}
+          pendingCount={pendingCount}
+          onReviewItem={() => onNavigate("approvals")}
+          onReviewAll={() => onNavigate("approvals")}
+          onViewAllActivity={() => onNavigate("approvals")}
         />
 
-        <SectionLabel eyebrow="Live" title="Activity feed" />
-        <div ref={feedRef}>
-          <AgentActivityFeed items={feed} activeCount={agentCount} />
-        </div>
-
-        <WhatsNextCards
-          pendingDrafts={pendingCount}
-          profileComplete={profileComplete}
-          newLeads={leads}
-          onNavigate={onNavigate}
-        />
-
-        {/* Profile widget — mobile only (below 1280px) */}
-        <div className="xl:hidden">
+        <aside className="xl:sticky xl:top-4 xl:self-start">
           <ProfileStrengthWidget
             percentage={profilePct}
             sectionsRemaining={Math.max(0, Math.ceil((100 - profilePct) / 16))}
             onNavigate={() => onNavigate("profile-enhancement")}
           />
-        </div>
-      </div>
-
-      {/* Right rail — desktop only */}
-      <div className="sticky top-4 hidden w-[320px] shrink-0 self-start xl:block">
-        <ProfileStrengthWidget
-          percentage={profilePct}
-          sectionsRemaining={Math.max(0, Math.ceil((100 - profilePct) / 16))}
-          onNavigate={() => onNavigate("profile-enhancement")}
-        />
+        </aside>
       </div>
 
       <CommandPalette
@@ -494,29 +416,6 @@ export default function Home({ onNavigate }: HomeProps) {
         onOpenChange={setCmdOpen}
         onNavigate={(tab) => { onNavigate(tab); setCmdOpen(false); }}
       />
-    </div>
-  );
-}
-
-/**
- * SectionLabel — small eyebrow + title pair that introduces each
- * section beneath the hero. Replaces the previous flat "<h3>Section</h3>"
- * pattern that made the dashboard feel like a stack of identical cards.
- */
-function SectionLabel({
-  eyebrow, title, right,
-}: { eyebrow: string; title: string; right?: React.ReactNode }) {
-  return (
-    <div className="mb-4 mt-2 flex items-end justify-between gap-3">
-      <div>
-        <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-          {eyebrow}
-        </div>
-        <h3 className="mt-0.5 text-[18px] font-semibold leading-tight text-foreground">
-          {title}
-        </h3>
-      </div>
-      {right}
     </div>
   );
 }
