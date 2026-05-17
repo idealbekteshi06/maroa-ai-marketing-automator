@@ -6,6 +6,7 @@ import { Loader2, Check, Target, BarChart3, Zap, ArrowRight, Sun, Moon, Sparkles
 import { PLANS } from "@/lib/constants/plans";
 import { INDUSTRIES } from "@/lib/constants/industries";
 import FlagStrip from "@/components/FlagStrip";
+import StackSection from "@/components/StackSection";
 
 const COUNTRIES = ["Kosovo", "Albania", "USA", "UK", "Germany", "UAE", "Turkey", "Italy", "France", "Other"];
 
@@ -273,6 +274,15 @@ export default function Index() {
             ))}
           </div>
         </div>
+      </Fade>
+
+      {/* ── STACK / "BUILT ON THE BEST" ──
+          Two grouped rows: AI engines + infrastructure (5 tiles) and
+          ad platforms + social channels (10 tiles, with explicit
+          Ads vs Publishing role tags so we don't over-claim paid-ad
+          management for channels we only publish to). */}
+      <Fade className="px-6 pb-24">
+        <StackSection />
       </Fade>
 
       {/* ── HOW IT WORKS ── */}
