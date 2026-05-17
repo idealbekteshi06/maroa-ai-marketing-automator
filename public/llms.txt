@@ -1,0 +1,25 @@
+# maroa.ai
+> AI marketing operations software with compliance refusal and
+> approval gates. $149 Growth / $599 Agency / Enterprise custom.
+> Cancel-anytime monthly billing. No free tier, no trial.
+
+## Plans
+- [Growth](https://maroa.ai/pricing): $149/mo, single business
+- [Agency](https://maroa.ai/pricing): $599/mo, up to 5 brands
+- [Enterprise](https://maroa.ai/contact?topic=enterprise): custom, 10+ brands or SSO/BAA
+
+## Key features
+- Compliance refusal (FDA, FTC, FCA, platform policy)
+- Reasoning trace on every piece of content
+- Daily ad audit with anti-thrashing
+- Approval gate (nothing auto-publishes)
+- Auto-safe banding (green/yellow/red risk)
+- Pacing alerts every 4h
+- Voice signature with drift detection
+- Cultural calendar (28 countries)
+- AI-SEO + CRO audits
+- Competitor war room
+
+## Docs
+- Terms: https://maroa.ai/terms
+- Privacy: https://maroa.ai/privacy
