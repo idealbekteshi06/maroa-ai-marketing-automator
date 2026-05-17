@@ -24,11 +24,26 @@
  */
 
 type LogoRef =
-  | { kind: "icon"; slug: string; name: string; role?: string; href?: string }
+  | {
+      kind: "icon";
+      slug: string;
+      name: string;
+      role?: string;
+      href?: string;
+      /** Logo is monochrome-dark (near-black) and disappears on true-black
+       * surfaces. We force it to pure white in dark mode via a brightness-0
+       * + invert filter (pipeline: black silhouette → white silhouette).
+       * Don't set this for coloured logos — it would wipe their brand
+       * colour and turn them white too. */
+      invertOnDark?: boolean;
+    }
   | { kind: "wordmark"; text: string; name: string; role?: string; href?: string };
 
 const ENGINES: LogoRef[] = [
-  { kind: "icon", slug: "anthropic", name: "Anthropic Claude", href: "https://anthropic.com" },
+  // Anthropic + Stripe glyphs are dark-on-light and invisible against
+  // true-black. Stripe's actual brand colour is purple #635BFF (visible
+  // fine), so only Anthropic needs the invert treatment here.
+  { kind: "icon", slug: "anthropic", name: "Anthropic Claude", href: "https://anthropic.com", invertOnDark: true },
   { kind: "wordmark", text: "Higgsfield", name: "Higgsfield", href: "https://higgsfield.ai" },
   { kind: "icon", slug: "supabase", name: "Supabase", href: "https://supabase.com" },
   { kind: "wordmark", text: "Inngest", name: "Inngest", href: "https://inngest.com" },
@@ -40,18 +55,22 @@ const CHANNELS: LogoRef[] = [
   // the budget-weight order across most accounts.
   { kind: "icon", slug: "googleads", name: "Google Ads", role: "Ads", href: "https://ads.google.com" },
   { kind: "icon", slug: "meta", name: "Meta Ads", role: "Ads", href: "https://www.facebook.com/business/ads" },
-  { kind: "icon", slug: "tiktok", name: "TikTok Ads", role: "Ads", href: "https://ads.tiktok.com" },
+  // TikTok's official mark is black; needs invert in dark mode.
+  { kind: "icon", slug: "tiktok", name: "TikTok Ads", role: "Ads", href: "https://ads.tiktok.com", invertOnDark: true },
   // Organic publishing via Ayrshare + Meta Graph (Publishing).
   { kind: "icon", slug: "instagram", name: "Instagram", role: "Publishing", href: "https://instagram.com" },
   { kind: "icon", slug: "facebook", name: "Facebook", role: "Publishing", href: "https://facebook.com" },
   { kind: "wordmark", text: "LinkedIn", name: "LinkedIn", role: "Publishing", href: "https://linkedin.com" },
   { kind: "icon", slug: "pinterest", name: "Pinterest", role: "Publishing", href: "https://pinterest.com" },
   { kind: "icon", slug: "youtube", name: "YouTube", role: "Publishing", href: "https://youtube.com" },
-  { kind: "icon", slug: "x", name: "X", role: "Publishing", href: "https://x.com" },
-  { kind: "icon", slug: "threads", name: "Threads", role: "Publishing", href: "https://threads.net" },
+  // X and Threads — black-glyph brand marks. Both need invert on dark.
+  { kind: "icon", slug: "x", name: "X", role: "Publishing", href: "https://x.com", invertOnDark: true },
+  { kind: "icon", slug: "threads", name: "Threads", role: "Publishing", href: "https://threads.net", invertOnDark: true },
 ];
 
 function Logo({ logo }: { logo: LogoRef }) {
+  const invertOnDark = logo.kind === "icon" && logo.invertOnDark;
+
   const inner =
     logo.kind === "icon" ? (
       <img
@@ -61,11 +80,22 @@ function Logo({ logo }: { logo: LogoRef }) {
         height={40}
         loading="lazy"
         decoding="async"
-        className="h-10 w-auto max-w-[120px] object-contain"
+        // Dark-mode invert pipeline for monochrome-dark logos
+        // (Anthropic, TikTok, X, Threads): brightness-0 nukes whatever
+        // colour to pure black, then invert lifts pure black to pure
+        // white. Net result: the silhouette stays exactly the same,
+        // just legible on a true-black background. Coloured logos
+        // (Meta blue, Google multi-color, Instagram gradient, etc.)
+        // skip this filter entirely so their brand colour is preserved.
+        className={
+          invertOnDark
+            ? "h-10 w-auto max-w-[120px] object-contain dark:brightness-0 dark:invert"
+            : "h-10 w-auto max-w-[120px] object-contain"
+        }
       />
     ) : (
       // Wordmark sized to match logo height. Tracking tightened so the
-      // word reads as a logo, not a heading.
+      // word reads as a logo, not a heading. Adapts via text-colour.
       <span className="inline-flex items-center h-10 text-[20px] font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
         {logo.text}
       </span>
@@ -75,14 +105,13 @@ function Logo({ logo }: { logo: LogoRef }) {
     <span
       title={logo.role ? `${logo.name} — ${logo.role}` : logo.name}
       aria-label={logo.role ? `${logo.name}, ${logo.role}` : logo.name}
-      // Apple stack-page treatment: monochrome 55% at rest → full colour
-      // 100% on hover. No translate, no shadow — the page is the surface.
+      // Full colour at rest (user feedback: "have color without touching
+      // them"). Subtle scale on hover so the strip still feels alive.
       className="
         inline-flex items-center justify-center
         h-10 px-1 sm:px-2
-        grayscale opacity-55
-        hover:grayscale-0 hover:opacity-100
-        transition-[filter,opacity] duration-200
+        transition-transform duration-200
+        hover:scale-110
       "
     >
       {inner}
