@@ -195,17 +195,17 @@ export default function Index() {
             Live in 22 countries · 6 languages · 99.9% uptime
           </span>
 
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.04]">
-            Marketing operations,<br />
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.08]">
+            Your Marketing.<br />
             <span className="bg-gradient-to-r from-[#0066CC] via-[#0A84FF] to-[#0066CC] dark:from-[#0A84FF] dark:via-[#409CFF] dark:to-[#0A84FF] bg-clip-text text-transparent">
-              fully automated.
-            </span>
+              Automated by AI.
+            </span><br />
+            While You Sleep.
           </h1>
 
           <p className={`mt-7 text-base sm:text-lg ${c.textSub} max-w-2xl mx-auto leading-relaxed`}>
-            Drafts 60+ posts a month. Audits Meta, Google, and TikTok ads at 9 a.m. Refuses
-            non-compliant claims before they spend a dollar. Writes its reasoning down so you
-            can audit every decision. For one business or fifty.
+            maroa.ai creates your posts, writes your ads, tracks your competitors, and grows
+            your business — automatically. In 22 countries and 17 languages.
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
