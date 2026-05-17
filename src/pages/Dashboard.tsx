@@ -7,13 +7,8 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  LayoutDashboard, FileText, Megaphone, Share2, Target,
-  Search, Settings, Menu, X, LogOut, Globe, Star, Mail,
-  Users, Home, MoreHorizontal, Gift, Magnet, Rocket,
-  Lightbulb, Brain, Code, FileSearch, DollarSign,
-  MessageSquare, Briefcase, BarChart3, Wrench, MousePointer,
-  UserPlus, TrendingUp, CreditCard, Bot, Palette, Inbox,
-  ChevronRight, Sparkles, Scale,
+  FileText, Megaphone, Settings, Menu, X, LogOut, Home,
+  MoreHorizontal, Rocket, Brain, ChevronRight, Scale,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import NotificationCenter from "@/components/NotificationCenter";
@@ -86,82 +81,30 @@ const LaunchOrchestrator = lazy(() => import("@/pages/LaunchOrchestrator"));
 const BudgetROI = lazy(() => import("@/pages/BudgetROI"));
 const ProfileEnhancement = lazy(() => import("@/pages/ProfileEnhancement"));
 
-/* ── v2 Navigation (REFACTOR_BRIEF_V2 section 2.1) ────────────
- * 7 primary items per Miller's 7±2 law. Workflows expand into 4 categories
- * per the V2 spec. Legacy pages are kept reachable via direct URL (?tab=key)
- * but removed from sidebar to eliminate cognitive overload (Hick's Law).
+/* ── Sidebar nav: only surfaces that are real, finished, and load-bearing.
+ * Every other key (wf1-*, ai-brain, orchestrator, the SEO/CRO sub-pages,
+ * etc.) is still wired in renderPage() and reachable via ?tab=<key> — just
+ * hidden from the sidebar so customers don't land on stubs.
+ *
+ * `to` is set for items that navigate to a separate route (e.g. /strategy)
+ * instead of swapping a dashboard tab.
  */
-type NavItem = { key: string; label: string; icon: typeof Home };
-type WorkflowGroup = { label: string; items: NavItem[] };
+type NavItem = { key: string; label: string; icon: typeof Home; to?: string };
 
 const primaryNav: NavItem[] = [
   { key: "overview", label: "Home", icon: Home },
-  // Approvals sits second per Miller's 7±2 — it's the brand promise
-  // ("Marketing that asks before it ships. Not after.") and the most
-  // load-bearing operator surface. ShieldCheck mark matches the
-  // landing-page differentiator card icon for visual continuity.
   { key: "approvals", label: "Approvals", icon: Scale },
-  { key: "inbox", label: "Inbox", icon: Inbox },
-  { key: "studio", label: "Studio", icon: Palette },
-  { key: "insights", label: "Insights", icon: BarChart3 },
-  { key: "crm", label: "Customers", icon: Users },
-  { key: "ai-brain", label: "Ask Maroa", icon: Sparkles },
-];
-
-const workflowGroups: WorkflowGroup[] = [
-  {
-    label: "Audience Growth",
-    items: [
-      { key: "wf1-daily-content", label: "Daily Content Engine", icon: FileText },
-      { key: "wf6-local-presence", label: "Local + Digital Presence", icon: Globe },
-      { key: "wf12-launch", label: "Launch Orchestrator", icon: Rocket },
-    ],
-  },
-  {
-    label: "Revenue Generation",
-    items: [
-      { key: "wf3-ads", label: "Ad Optimization", icon: Megaphone },
-      { key: "wf7-email", label: "Email Lifecycle", icon: Mail },
-      { key: "wf2-leads", label: "Lead Scoring", icon: TrendingUp },
-    ],
-  },
-  {
-    label: "Customer Operations",
-    items: [
-      { key: "wf4-reviews", label: "Reviews & Reputation", icon: Star },
-      { key: "wf11-inbox", label: "Unified Inbox", icon: MessageSquare },
-      { key: "wf8-insights", label: "Customer Insights", icon: FileSearch },
-    ],
-  },
-  {
-    label: "Intelligence",
-    items: [
-      { key: "wf5-competitors", label: "Competitor Intelligence", icon: Target },
-      { key: "wf13-brief", label: "Weekly Strategy Brief", icon: Scale },
-      { key: "wf14-budget", label: "Budget & ROI Optimizer", icon: DollarSign },
-    ],
-  },
-];
-
-/* Every key reachable anywhere in the app — used for route resolution and shortcuts */
-const allNavItems: NavItem[] = [
-  ...primaryNav,
-  ...workflowGroups.flatMap((g) => g.items),
+  { key: "content", label: "Content", icon: FileText },
+  { key: "campaigns", label: "Ads", icon: Megaphone },
   { key: "settings", label: "Settings", icon: Settings },
 ];
 
-/* Mobile bottom tab bar — 5 items per REFACTOR_BRIEF_V2 section 2.7.
- * Approvals replaced Content here — approvals is the load-bearing
- * brand-promise surface and outranks the workflow-#1 content link
- * for mobile-thumb access. Content remains reachable via the
- * Workflows accordion in the desktop sidebar. */
-const mobileNav: NavItem[] = [
-  { key: "overview", label: "Home", icon: Home },
-  { key: "approvals", label: "Approvals", icon: Scale },
-  { key: "inbox", label: "Inbox", icon: Inbox },
-  { key: "studio", label: "Studio", icon: Palette },
-  { key: "ai-brain", label: "Ask", icon: Sparkles },
+const moreItemsBase: NavItem[] = [
+  { key: "strategy", label: "Strategy", icon: Brain, to: "/strategy" },
 ];
+
+/* Mobile bottom tab bar mirrors primary nav. */
+const mobileNav: NavItem[] = primaryNav;
 
 /* Page titles and subtitles — keyed by nav key */
 const pageMeta: Record<string, { title: string; subtitle: string }> = {
@@ -248,7 +191,7 @@ export default function Dashboard() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [showReport, setShowReport] = useState(true);
-  const { user, businessId, signOut } = useAuth();
+  const { user, businessId, signOut, onboardingComplete } = useAuth();
   const navigate = useNavigate();
 
   const handleNavigate = useCallback((tab: string) => setActive(tab), []);
@@ -352,23 +295,22 @@ export default function Dashboard() {
   };
 
   /* ── Sidebar content (shared desktop + mobile) ──
-   * 7-item primary nav + expandable Workflows group (4 categories per
-   * REFACTOR_BRIEF_V2 section 2.1). Expanded state persists per user in
-   * localStorage. Keyboard navigation is handled by useKeyboardShortcuts.
+   * 5 primary items + collapsible "More" with Strategy and (only when
+   * incomplete) Onboarding. Expanded state persists per user.
    */
-  const [workflowsOpen, setWorkflowsOpen] = useState<boolean>(
-    () => localStorage.getItem("maroa.nav.workflowsOpen") === "1",
+  const [moreOpen, setMoreOpen] = useState<boolean>(
+    () => localStorage.getItem("maroa.nav.moreOpen") === "1",
   );
   useEffect(() => {
-    localStorage.setItem("maroa.nav.workflowsOpen", workflowsOpen ? "1" : "0");
-  }, [workflowsOpen]);
+    localStorage.setItem("maroa.nav.moreOpen", moreOpen ? "1" : "0");
+  }, [moreOpen]);
 
-  const activeIsWorkflow = workflowGroups.some((g) =>
-    g.items.some((i) => i.key === active),
-  );
-  useEffect(() => {
-    if (activeIsWorkflow && !workflowsOpen) setWorkflowsOpen(true);
-  }, [activeIsWorkflow, workflowsOpen]);
+  const moreItems: NavItem[] = [
+    ...moreItemsBase,
+    ...(onboardingComplete === false
+      ? [{ key: "onboarding", label: "Onboarding", icon: Rocket, to: "/onboarding" } as NavItem]
+      : []),
+  ];
 
   const NavItemButton = ({
     item,
@@ -381,20 +323,24 @@ export default function Dashboard() {
   }) => (
     <button
       onClick={() => {
-        setActive(item.key);
+        if (item.to) {
+          navigate(item.to);
+        } else {
+          setActive(item.key);
+        }
         onItemClick?.();
       }}
       className={`flex w-full items-center gap-3 rounded-lg ${
         indent ? "pl-9 pr-3" : "px-3"
       } py-2 text-[13px] font-medium transition-colors ${
-        active === item.key
+        !item.to && active === item.key
           ? "border-l-[3px] border-primary bg-primary/10 text-primary"
           : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground"
       }`}
     >
       <item.icon
         className="h-[18px] w-[18px]"
-        strokeWidth={active === item.key ? 2 : 1.5}
+        strokeWidth={!item.to && active === item.key ? 2 : 1.5}
       />
       {item.label}
     </button>
@@ -408,59 +354,36 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Expandable Workflows group */}
-      <div className="mt-2">
-        <button
-          type="button"
-          onClick={() => setWorkflowsOpen((v) => !v)}
-          className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
-            activeIsWorkflow && !workflowsOpen
-              ? "bg-primary/5 text-primary"
-              : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground"
-          }`}
-          aria-expanded={workflowsOpen}
-        >
-          <Bot className="h-[18px] w-[18px]" strokeWidth={1.5} />
-          <span className="flex-1 text-left">Workflows</span>
-          <ChevronRight
-            className={`h-3.5 w-3.5 transition-transform ${
-              workflowsOpen ? "rotate-90" : ""
-            }`}
-          />
-        </button>
-        {workflowsOpen && (
-          <div className="mt-1 space-y-2 pb-1">
-            {workflowGroups.map((group) => (
-              <div key={group.label}>
-                <p className="px-5 pb-0.5 pt-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/40">
-                  {group.label}
-                </p>
-                <div className="space-y-0.5">
-                  {group.items.map((item) => (
-                    <NavItemButton
-                      key={item.key}
-                      item={item}
-                      onItemClick={onItemClick}
-                      indent
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="mt-3 border-t border-sidebar-border pt-2">
-        <NavItemButton
-          item={{ key: "profile-enhancement", label: "Improve your AI", icon: Sparkles }}
-          onItemClick={onItemClick}
-        />
-        <NavItemButton
-          item={{ key: "settings", label: "Settings", icon: Settings }}
-          onItemClick={onItemClick}
-        />
-      </div>
+      {moreItems.length > 0 && (
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={() => setMoreOpen((v) => !v)}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+            aria-expanded={moreOpen}
+          >
+            <MoreHorizontal className="h-[18px] w-[18px]" strokeWidth={1.5} />
+            <span className="flex-1 text-left">More</span>
+            <ChevronRight
+              className={`h-3.5 w-3.5 transition-transform ${
+                moreOpen ? "rotate-90" : ""
+              }`}
+            />
+          </button>
+          {moreOpen && (
+            <div className="mt-1 space-y-0.5 pb-1">
+              {moreItems.map((item) => (
+                <NavItemButton
+                  key={item.key}
+                  item={item}
+                  onItemClick={onItemClick}
+                  indent
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </nav>
   );
 
