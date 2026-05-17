@@ -16,11 +16,11 @@ export function Footer() {
             Join 2,000+ small businesses growing with AI.
           </p>
           <div className="mt-8 sm:mt-10 px-4 sm:px-0">
-            <Link to="/signup" className="inline-block w-full sm:w-auto">
-              <Button variant="hero" size="xl" className="w-full sm:w-auto">Start free trial</Button>
+            <Link to="/signup?plan=growth" className="inline-block w-full sm:w-auto">
+              <Button variant="hero" size="xl" className="w-full sm:w-auto">Start with Growth — $149/mo</Button>
             </Link>
           </div>
-          <p className="mt-4 text-xs text-muted-foreground">No credit card required</p>
+          <p className="mt-4 text-xs text-muted-foreground">From $149/mo · Cancel anytime · No contracts</p>
         </div>
       </div>
 
@@ -56,7 +56,7 @@ export function Footer() {
               <ul className="mt-3 sm:mt-4 space-y-2.5 sm:space-y-3">
                 <li><Link to="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy Policy</Link></li>
                 <li><Link to="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms of Service</Link></li>
-                <li><Link to="/refund" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Refund Policy</Link></li>
+                <li><Link to="/refund" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Cancellation Policy</Link></li>
                 <li><Link to="/data-deletion" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Data Deletion</Link></li>
               </ul>
             </div>

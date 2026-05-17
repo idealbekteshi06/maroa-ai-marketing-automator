@@ -88,19 +88,19 @@ export default function UpgradeModal({ open, onClose, featureName, description, 
           >
             <span className="absolute -top-2.5 left-3 rounded-full bg-primary px-2 py-0.5 text-[9px] font-bold text-primary-foreground uppercase">Most popular</span>
             <p className="text-sm font-bold text-foreground">Growth</p>
-            <p className="text-lg font-bold text-foreground">$59<span className="text-xs font-normal text-muted-foreground">/mo</span></p>
+            <p className="text-lg font-bold text-foreground">$149<span className="text-xs font-normal text-muted-foreground">/mo</span></p>
           </button>
           <button
             onClick={() => handleUpgrade("agency")}
             className="rounded-xl border border-border p-4 text-left transition-colors hover:border-primary/30 hover:bg-muted/50"
           >
             <p className="text-sm font-bold text-foreground mt-1">Agency</p>
-            <p className="text-lg font-bold text-foreground">$99<span className="text-xs font-normal text-muted-foreground">/mo</span></p>
+            <p className="text-lg font-bold text-foreground">$599<span className="text-xs font-normal text-muted-foreground">/mo</span></p>
           </button>
         </div>
 
         <Button onClick={() => handleUpgrade("growth")} className="mt-4 w-full h-11">
-          Start 14-day free trial
+          Start with Growth — $149/mo
         </Button>
         <button onClick={onClose} className="mt-2 w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors py-2">
           Maybe later

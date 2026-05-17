@@ -96,9 +96,9 @@ export default function Compare() {
 
           <div className="mt-12 text-center">
             <Link to="/signup">
-              <Button variant="hero" size="xl">Start free with maroa.ai</Button>
+              <Button variant="hero" size="xl">Start with Growth — $149/mo</Button>
             </Link>
-            <p className="mt-3 text-xs text-muted-foreground">No credit card required</p>
+            <p className="mt-3 text-xs text-muted-foreground">Cancel anytime · No contracts</p>
           </div>
         </div>
       </main>

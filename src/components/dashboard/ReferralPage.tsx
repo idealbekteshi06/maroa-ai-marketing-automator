@@ -155,7 +155,7 @@ export default function ReferralPage() {
         <div className="space-y-4">
           {[
             { step: "1", title: "Share your link", desc: "Send your referral link to business owner friends" },
-            { step: "2", title: "They sign up", desc: "They create an account and start their free trial" },
+            { step: "2", title: "They sign up", desc: "They create an account and subscribe" },
             { step: "3", title: "You earn", desc: "When they subscribe, you get 1 month free automatically" },
           ].map(s => (
             <div key={s.step} className="flex items-start gap-3">

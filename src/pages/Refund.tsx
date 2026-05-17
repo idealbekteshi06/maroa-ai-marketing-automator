@@ -2,8 +2,21 @@ import { Link } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
+/**
+ * /refund — Cancellation & Refund Policy
+ *
+ * Replaces the previous 14-day money-back guarantee page. Per the May
+ * 2026 pricing repositioning, Maroa is a premium B2B SaaS with no free
+ * trial, no money-back guarantee, and no refund window. The entire
+ * risk-reversal mechanism is cancel-anytime monthly billing — the
+ * current month is non-refundable, but no future charge is taken.
+ *
+ * URL stays /refund so existing inbound links (Paddle receipts, support
+ * emails, sitemap, search results) don't 404. The footer link reads
+ * "Cancellation Policy" so the label matches the new content.
+ */
 export default function Refund() {
-  useDocumentTitle("Refund Policy");
+  useDocumentTitle("Cancellation & Refund Policy");
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border">
@@ -16,91 +29,113 @@ export default function Refund() {
       </header>
 
       <main className="mx-auto max-w-3xl px-6 py-16">
-        <h1 className="text-3xl font-bold text-foreground">Refund Policy</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Last updated: May 7, 2026</p>
+        <h1 className="text-3xl font-bold text-foreground">Cancellation &amp; Refund Policy</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Last updated: May 17, 2026</p>
 
         <div className="mt-8 space-y-8 text-sm leading-relaxed text-muted-foreground">
           <section>
-            <h2 className="text-lg font-semibold text-foreground mb-3">14-Day Money-Back Guarantee</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-3">
+              Cancel anytime. No contracts. No lock-in.
+            </h2>
             <p>
-              Maroa AI ("maroa.ai") offers a 14-day money-back guarantee on all paid plans. If you are not satisfied with our service for any reason within the first 14 days of your initial payment, you may request a full refund — no questions asked.
+              Maroa AI (&ldquo;maroa.ai&rdquo;) is a month-to-month subscription. You can
+              cancel at any time, from your own dashboard, in two clicks &mdash; no phone
+              call, no email back-and-forth, no exit interview. When you cancel, no
+              further charges will be made after the end of your current billing cycle.
             </p>
             <p className="mt-2">
-              This guarantee applies to:
+              The current billing cycle is the entire risk-reversal: pay for the month
+              you&apos;re in, decide if it&apos;s worth it, cancel any day. We never
+              auto-rebill after a cancellation, and we never extend the cycle without
+              your explicit consent.
             </p>
-            <ul className="list-disc pl-5 mt-2 space-y-1">
-              <li>First-time subscribers on any paid plan (Starter, Growth, or Agency)</li>
-              <li>Both monthly and annual billing cycles</li>
-              <li>The full amount of your first payment</li>
-            </ul>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-foreground mb-3">How to Request a Refund</h2>
-            <p>To request a refund within the 14-day guarantee period:</p>
+            <h2 className="text-lg font-semibold text-foreground mb-3">No refunds</h2>
+            <p>
+              Maroa does not offer refunds on the current billing cycle, free trials,
+              or money-back guarantees on any plan (Growth or Agency). Payment for
+              the current month is non-refundable.
+            </p>
+            <p className="mt-2">
+              This is a deliberate choice that mirrors how premium B2B SaaS tools
+              price themselves: cancel any time you want, but the month you paid for
+              is yours to use to the end. It keeps our cost structure clean and our
+              subscription predictable for everyone.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-foreground mb-3">How to cancel</h2>
             <ol className="list-decimal pl-5 mt-2 space-y-1">
-              <li>Send an email to <strong className="text-foreground">support@maroa.ai</strong></li>
-              <li>Use the subject line: "Refund Request"</li>
-              <li>Include your account email address and the reason for your refund (optional but appreciated)</li>
+              <li>Open the dashboard and go to <strong className="text-foreground">Settings &rarr; Plan &amp; Billing</strong>.</li>
+              <li>Click <strong className="text-foreground">&ldquo;Cancel my plan&rdquo;</strong>.</li>
+              <li>Confirm. That&apos;s it &mdash; no further charges.</li>
             </ol>
             <p className="mt-2">
-              We process all refund requests within 5 business days. Refunds are issued to the original payment method. Depending on your bank or payment provider, it may take an additional 5-10 business days for the refund to appear on your statement.
+              Your access continues through the end of the billing period you already
+              paid for. Your data is preserved for 30 days after the period ends, in
+              case you want to reactivate, then permanently deleted.
             </p>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-foreground mb-3">Cancellations</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-3">Annual billing</h2>
             <p>
-              You can cancel your subscription at any time from your dashboard under <strong className="text-foreground">Settings → Plan & Billing</strong>. When you cancel:
+              Annual plans are paid up front for 12 months at the discounted rate.
+              Annual subscriptions are also non-refundable &mdash; once paid, the
+              subscription runs the full year. You can cancel auto-renewal at any
+              time; cancellation takes effect at the end of the paid-up year.
             </p>
-            <ul className="list-disc pl-5 mt-2 space-y-1">
-              <li>Your access continues until the end of your current billing period</li>
-              <li>No further charges will be made after cancellation</li>
-              <li>Your data is retained for 30 days after the billing period ends, in case you want to reactivate</li>
-              <li>After 30 days, your data may be permanently deleted</li>
-            </ul>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-foreground mb-3">After the 14-Day Period</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-3">Your content is yours</h2>
             <p>
-              After the 14-day guarantee period has passed:
-            </p>
-            <ul className="list-disc pl-5 mt-2 space-y-1">
-              <li><strong className="text-foreground">Monthly plans:</strong> No refunds for partial months. Cancel to prevent future charges.</li>
-              <li><strong className="text-foreground">Annual plans:</strong> We may offer a pro-rata refund for unused months at our discretion. Contact support@maroa.ai to discuss.</li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-foreground mb-3">Free Trial</h2>
-            <p>
-              All paid plans start with a 7-day free trial. No charge is made during the trial. If you cancel before the trial ends, you will not be billed.
+              Everything Maroa generates &mdash; posts, captions, ads, emails,
+              reasoning traces, image and video assets &mdash; is yours forever, even
+              after you cancel. Export the full archive as a <code className="text-foreground">.zip</code>{" "}
+              from Settings any day, before or after cancellation.
             </p>
           </section>
 
           <section>
             <h2 className="text-lg font-semibold text-foreground mb-3">Exceptions</h2>
-            <p>Refunds will not be issued in cases of:</p>
+            <p>We may issue a refund, at our sole discretion, in two narrow cases:</p>
             <ul className="list-disc pl-5 mt-2 space-y-1">
-              <li>Violation of our Terms of Service</li>
-              <li>Fraudulent or abusive use of the platform</li>
-              <li>Chargebacks filed without first contacting our support team</li>
+              <li>
+                <strong className="text-foreground">Unauthorised charge.</strong> If
+                someone subscribed using your card without consent, email{" "}
+                <strong className="text-foreground">support@maroa.ai</strong> within 14
+                days. We will investigate and refund a confirmed unauthorised charge.
+              </li>
+              <li>
+                <strong className="text-foreground">Sustained service outage.</strong>{" "}
+                If our service is unavailable for more than 72 consecutive hours on
+                paid infrastructure (excluding scheduled maintenance), we will pro-rate
+                a credit toward your next billing period.
+              </li>
             </ul>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-foreground mb-3">Payment Processor</h2>
-            <p>
-              Payments are processed by Paddle (our merchant of record). Refunds are handled through Paddle's system. In some cases, Paddle may contact you directly regarding your refund status.
+            <p className="mt-2">
+              All other refund requests will be respectfully declined. Filing a
+              chargeback without first contacting support will result in account
+              termination.
             </p>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-foreground mb-3">Contact Us</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-3">Payment processor</h2>
             <p>
-              For any questions about refunds, cancellations, or billing:
+              Payments are processed by Paddle (our merchant of record). Where Paddle
+              is the merchant, refunds &mdash; in the rare cases they are issued
+              &mdash; are routed through Paddle&apos;s system and may take 5&ndash;10
+              business days to appear on your statement.
             </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-foreground mb-3">Questions</h2>
             <ul className="list-disc pl-5 mt-2 space-y-1">
               <li>Email: <strong className="text-foreground">support@maroa.ai</strong></li>
               <li>Response time: within 24 hours on business days</li>
@@ -108,7 +143,7 @@ export default function Refund() {
           </section>
 
           <p className="text-xs text-muted-foreground/60 pt-4 border-t border-border">
-            © {new Date().getFullYear()} Maroa AI. All rights reserved.
+            &copy; {new Date().getFullYear()} Maroa AI. All rights reserved.
           </p>
         </div>
       </main>

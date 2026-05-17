@@ -35,7 +35,7 @@ export function Navbar() {
             <Button variant="ghost" size="sm" className="text-[13px]">Log in</Button>
           </Link>
           <Link to="/signup">
-            <Button size="sm" className="text-[13px] h-9 rounded-full px-5">Start free trial</Button>
+            <Button size="sm" className="text-[13px] h-9 rounded-full px-5">Start with Growth</Button>
           </Link>
         </div>
 
@@ -58,7 +58,7 @@ export function Navbar() {
               <Button variant="outline" className="w-full">Log in</Button>
             </Link>
             <Link to="/signup" onClick={() => setOpen(false)}>
-              <Button className="w-full">Start free trial</Button>
+              <Button className="w-full">Start with Growth</Button>
             </Link>
           </div>
         </div>

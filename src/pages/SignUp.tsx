@@ -1,14 +1,15 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { apiFireAndForget } from "@/lib/apiClient";
 import { toast } from "sonner";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { events as analytics } from "@/lib/analytics";
+import { PLAN_BY_KEY, type PlanKey } from "@/lib/constants/plans";
 
 const AUTH_TIMEOUT_MS = 20_000;
 
@@ -39,11 +40,22 @@ const toAuthErrorMessage = (error: unknown) => {
 export default function SignUp() {
   useDocumentTitle("Create your account");
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [form, setForm] = useState({
     firstName: "", lastName: "", email: "", password: "",
   });
+
+  // Plan-aware sign-up. Read ?plan=growth / ?plan=agency from the URL.
+  // No free tier exists — if the user lands without a valid plan param,
+  // default to Growth (the most-popular tier). Backend rejects unknown
+  // plans at /webhook/new-user-signup, so this is purely a UX default.
+  const selectedPlan = useMemo<PlanKey>(() => {
+    const raw = searchParams.get("plan");
+    return raw === "agency" || raw === "growth" ? raw : "growth";
+  }, [searchParams]);
+  const plan = PLAN_BY_KEY[selectedPlan];
 
   const update = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -80,8 +92,11 @@ export default function SignUp() {
         brand_tone: "",
         marketing_goal: "",
         is_active: true,
-        plan: "free",
-        plan_price: 0,
+        // No free tier exists; users land here with a chosen plan
+        // (?plan=growth or ?plan=agency). Card is collected after
+        // /onboarding through the Paddle checkout, not here.
+        plan: selectedPlan,
+        plan_price: plan.monthlyPrice,
         daily_budget: 0,
         onboarding_complete: false,
         social_accounts_connected: false,
@@ -103,7 +118,7 @@ export default function SignUp() {
 
       apiFireAndForget("/webhook/new-user-signup", {
         user_id: userId, email: form.email, first_name: form.firstName,
-        last_name: form.lastName, plan: "free",
+        last_name: form.lastName, plan: selectedPlan,
       });
 
       analytics.signupCompleted("email", userId);
@@ -143,7 +158,9 @@ export default function SignUp() {
         </Link>
         <div>
           <p className="text-4xl font-bold leading-tight">Your marketing,<br />handled by AI.</p>
-          <p className="mt-4 text-lg opacity-60">Join 2,000+ small businesses growing on autopilot.</p>
+          <p className="mt-4 text-lg opacity-60">
+            You're starting with <span className="font-semibold opacity-100">{plan.name}</span> — ${plan.monthlyPrice}/mo. Cancel anytime. No contracts.
+          </p>
         </div>
         <p className="text-sm opacity-30">© {new Date().getFullYear()} maroa.ai</p>
       </div>
@@ -158,7 +175,9 @@ export default function SignUp() {
         </div>
         <div className="mx-auto w-full max-w-md flex-1 px-6 pb-12 animate-fade-in">
           <h1 className="text-2xl font-bold text-foreground">Create your account</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Start your free trial — no credit card needed.</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Starting on <span className="font-medium text-foreground">{plan.name} — ${plan.monthlyPrice}/mo</span>. Credit card collected after onboarding. Cancel anytime.
+          </p>
 
           <Button
             variant="outline"
@@ -189,9 +208,11 @@ export default function SignUp() {
             <div><Label htmlFor="email">Email</Label><Input id="email" type="email" value={form.email} onChange={(e) => update("email", e.target.value)} className="mt-1 h-11" required autoComplete="email" /></div>
             <div><Label htmlFor="pass">Password</Label><Input id="pass" type="password" value={form.password} onChange={(e) => update("password", e.target.value)} className="mt-1 h-11" required autoComplete="new-password" minLength={8} /></div>
             <Button type="submit" size="lg" className="mt-4 w-full h-11" disabled={loading}>
-              {loading ? "Creating account..." : "Create account"}
+              {loading ? "Creating account..." : `${plan.ctaLabel} — $${plan.monthlyPrice}/mo`}
             </Button>
-            <p className="text-center text-[11px] text-muted-foreground">We'll ask for your business details on the next step. 7-day free trial · cancel anytime.</p>
+            <p className="text-center text-[11px] text-muted-foreground">
+              Business details next, then card. ${plan.monthlyPrice}/mo · Cancel anytime · No contracts.
+            </p>
           </form>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">

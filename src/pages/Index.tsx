@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { apiPost } from "@/lib/apiClient";
 import { Loader2, Check, Target, BarChart3, Zap, ArrowRight, Sun, Moon, Sparkles, Search, MessageCircle, Mail, Link2, Cpu, FileSearch, ShieldCheck, Quote, Film, CreditCard, FileX, Download, ChevronDown } from "lucide-react";
-import { PLANS } from "@/lib/constants/plans";
+import { PLANS, ENTERPRISE_CONTACT } from "@/lib/constants/plans";
 import { INDUSTRIES } from "@/lib/constants/industries";
 import FlagStrip from "@/components/FlagStrip";
 import StackSection from "@/components/StackSection";
@@ -172,8 +172,8 @@ export default function Index() {
             {isDark ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-[#0A84FF]" />}
           </button>
           <Link to="/login" className={`text-sm ${c.textSub} hover:${c.text} transition-colors`}>Sign in</Link>
-          <Link to="/signup" className={`hidden sm:inline-flex items-center gap-1.5 rounded-full ${c.primaryBg} px-4 py-1.5 text-xs font-semibold text-white ${c.primaryBgHover} transition-all`}>
-            Start free trial <ArrowRight className="h-3 w-3" />
+          <Link to="/signup?plan=growth" className={`hidden sm:inline-flex items-center gap-1.5 rounded-full ${c.primaryBg} px-4 py-1.5 text-xs font-semibold text-white ${c.primaryBgHover} transition-all`}>
+            Start with Growth <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
       </nav>
@@ -204,16 +204,16 @@ export default function Index() {
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
-            <Link to="/signup"
+            <Link to="/signup?plan=growth"
               className={`inline-flex items-center justify-center gap-2 rounded-xl ${c.primaryBg} px-8 py-3.5 text-sm font-semibold text-white ${c.primaryBgHover} transition-all shadow-sm`}>
-              Start free trial <ArrowRight className="h-4 w-4" />
+              Start with Growth <ArrowRight className="h-4 w-4" />
             </Link>
             <button onClick={scrollToForm}
               className={`inline-flex items-center justify-center gap-2 rounded-xl border ${c.cardBorder} ${c.card} px-8 py-3.5 text-sm font-medium ${c.text} ${c.cardHover} transition-all`}>
               See a 2-minute demo
             </button>
           </div>
-          <p className={`text-xs ${c.textFaint} mt-4`}>Free for 7 days · No card · Cancel in two clicks</p>
+          <p className={`text-xs ${c.textFaint} mt-4`}>Cancel anytime · No contracts · Credit card required</p>
 
           <FlagStrip className="mt-12" ariaLabel="Live in 22 countries" />
         </div>
@@ -302,57 +302,80 @@ export default function Index() {
         </div>
       </Fade>
 
-      {/* ── PRICING ── */}
+      {/* ── PRICING — 3-card grid: Growth / Agency / Enterprise ── */}
       <Fade className="px-6 pb-24">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <p className={`text-xs uppercase tracking-[0.2em] ${c.primary} text-center mb-3`}>Pricing</p>
-          <h2 className="text-3xl sm:text-4xl font-bold text-center tracking-tight">Predictable pricing. Move up when you outgrow it.</h2>
-          <p className={`text-center ${c.textSub} mt-3 text-sm`}>Seven days free on every paid plan. No card. Cancel in two clicks.</p>
+          <h2 className="text-3xl sm:text-4xl font-bold text-center tracking-tight">Two plans. Cancel anytime. No contracts.</h2>
+          <p className={`text-center ${c.textSub} mt-3 text-sm`}>Replace your agency at 10% the cost.</p>
 
-          <div className="mt-12 grid gap-4 sm:gap-5 lg:grid-cols-4">
+          <div className="mt-12 grid gap-5 lg:grid-cols-3 items-stretch">
             {PLANS.map(p => (
               <div key={p.key}
-                className={`relative group rounded-2xl border p-6 transition-all duration-300 flex flex-col ${
+                className={`relative group rounded-2xl border p-7 transition-all duration-300 flex flex-col ${
                   p.popular
                     ? `border-[#0A84FF]/30 dark:border-[#0A84FF]/30 ${c.card} shadow-[0_0_40px_-12px_rgba(10,132,255,0.25)] dark:shadow-[0_0_40px_-12px_rgba(10,132,255,0.2)]`
                     : `${c.cardBorder} ${c.card} ${c.cardHover}`
                 }`}
-                style={p.popular ? { transform: "scale(1.02)" } : undefined}
+                style={p.popular ? { transform: "scale(1.04)" } : undefined}
               >
                 {p.popular && (
                   <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#0066CC] dark:bg-[#0A84FF] px-4 py-1 text-[10px] font-semibold text-white uppercase tracking-wider">
-                    Most Popular
+                    Most popular
                   </span>
                 )}
                 <p className={`text-[11px] uppercase tracking-[0.15em] ${c.textSub}`}>{p.name}</p>
-                <div className="mt-4">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-bold">{p.monthlyPrice === 0 ? "Free" : `€${p.annualPrice}`}</span>
-                    {p.monthlyPrice > 0 && <span className={`text-sm ${c.textSub}`}>/mo</span>}
-                  </div>
-                  <p className={`text-[11px] ${c.textFaint} mt-1`}>
-                    {p.monthlyPrice === 0 ? "7-day trial · no card" : `billed annually · €${p.monthlyPrice}/mo monthly`}
-                  </p>
+                <div className="mt-3 flex items-baseline gap-1">
+                  <span className="text-5xl font-bold tracking-tight">${p.monthlyPrice}</span>
+                  <span className={`text-sm ${c.textSub}`}>/mo</span>
                 </div>
-                <p className={`mt-3 text-[12px] ${c.textSub}`}>{p.desc}</p>
-                <ul className="mt-5 space-y-2 flex-1">
+                <p className={`text-[11px] ${c.textFaint} mt-1`}>
+                  or ${p.annualTotal.toLocaleString("en-US")}/yr — save ${p.annualSavings.toLocaleString("en-US")}
+                </p>
+                <p className={`mt-3 text-[13px] ${c.textSub} leading-relaxed`}>{p.desc}</p>
+                <Link to={`/signup?plan=${p.key}`}
+                  className={`mt-6 w-full inline-flex items-center justify-center gap-1 rounded-xl py-3 text-center text-sm font-semibold transition-all ${
+                    p.popular
+                      ? `${c.primaryBg} text-white ${c.primaryBgHover} shadow-sm`
+                      : `${c.card} border ${c.cardBorder} ${c.text} ${c.cardHover}`
+                  }`}>
+                  {p.ctaLabel} <ArrowRight className="h-4 w-4" />
+                </Link>
+                <ul className="mt-7 space-y-2 flex-1">
                   {p.features.map(f => (
                     <li key={f} className={`flex items-start gap-2 text-[12px] ${c.textSub}`}>
                       <Check className="h-3.5 w-3.5 text-[#0A84FF] dark:text-[#0A84FF] shrink-0 mt-0.5" />{f}
                     </li>
                   ))}
                 </ul>
-                <Link to="/signup"
-                  className={`mt-6 w-full rounded-xl py-3 text-center text-sm font-medium transition-all ${
-                    p.popular
-                      ? `${c.primaryBg} text-white ${c.primaryBgHover}`
-                      : `${c.card} border ${c.cardBorder} ${c.text} ${c.cardHover}`
-                  }`}>
-                  {p.monthlyPrice === 0 ? "Start free" : "Start free trial"}
-                </Link>
               </div>
             ))}
+
+            {/* Enterprise — contact-only, no posted number. */}
+            <div className={`relative rounded-2xl border p-7 transition-all duration-300 flex flex-col ${c.cardBorder} ${c.card} ${c.cardHover}`}>
+              <p className={`text-[11px] uppercase tracking-[0.15em] ${c.textSub}`}>{ENTERPRISE_CONTACT.cta === "Talk to sales" ? "Enterprise" : "Enterprise"}</p>
+              <div className="mt-3 flex items-baseline gap-1">
+                <span className="text-5xl font-bold tracking-tight">Custom</span>
+              </div>
+              <p className={`text-[11px] ${c.textFaint} mt-1`}>10+ brands or regulated industries</p>
+              <p className={`mt-3 text-[13px] ${c.textSub} leading-relaxed`}>{ENTERPRISE_CONTACT.headline}</p>
+              <Link to={ENTERPRISE_CONTACT.href}
+                className={`mt-6 w-full inline-flex items-center justify-center gap-1 rounded-xl py-3 text-center text-sm font-semibold transition-all ${c.card} border ${c.cardBorder} ${c.text} ${c.cardHover}`}>
+                {ENTERPRISE_CONTACT.cta} <ArrowRight className="h-4 w-4" />
+              </Link>
+              <ul className="mt-7 space-y-2 flex-1">
+                {ENTERPRISE_CONTACT.features.map(f => (
+                  <li key={f} className={`flex items-start gap-2 text-[12px] ${c.textSub}`}>
+                    <Check className="h-3.5 w-3.5 text-[#0A84FF] dark:text-[#0A84FF] shrink-0 mt-0.5" />{f}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
+
+          <p className={`mt-8 text-center text-sm ${c.textFaint} max-w-3xl mx-auto`}>
+            Cancel anytime. No contracts. No lock-in.
+          </p>
         </div>
       </Fade>
 
@@ -365,7 +388,7 @@ export default function Index() {
                 <Check className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
               </div>
               <h3 className="text-lg font-bold">We'll be in touch within one business day.</h3>
-              <p className={`text-sm ${c.textSub} mt-2`}>A calendar invite is on the way. In the meantime, you can <Link to="/signup" className={c.primary}>start your free trial</Link> and see the dashboard for yourself.</p>
+              <p className={`text-sm ${c.textSub} mt-2`}>A calendar invite is on the way. In the meantime, you can <Link to="/signup" className={c.primary}>start your subscription</Link> and see the dashboard for yourself.</p>
             </div>
           ) : (
             <form onSubmit={submit} className="space-y-4">
@@ -376,8 +399,8 @@ export default function Index() {
               <input type="text" required value={form.name} onChange={e => up("name", e.target.value)} placeholder="Full name" className={inputCls} />
               <input type="email" required value={form.email} onChange={e => up("email", e.target.value)} placeholder="Email address" className={inputCls} />
               <select value={form.plan} onChange={e => up("plan", e.target.value)} className={inputCls}>
-                {PLANS.filter(p => p.monthlyPrice > 0).map(p => (
-                  <option key={p.key} value={p.key}>{p.name} — €{p.annualPrice}/mo{p.popular ? " (Most Popular)" : ""}</option>
+                {PLANS.map(p => (
+                  <option key={p.key} value={p.key}>{p.name} — ${p.monthlyPrice}/mo{p.popular ? " (Most Popular)" : ""}</option>
                 ))}
               </select>
               <div className="grid grid-cols-2 gap-3">
@@ -394,7 +417,7 @@ export default function Index() {
                 className={`w-full rounded-xl ${c.primaryBg} py-3.5 text-sm font-semibold text-white ${c.primaryBgHover} transition-all disabled:opacity-50 flex items-center justify-center gap-2`}>
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <><span>Request a demo</span><ArrowRight className="h-4 w-4" /></>}
               </button>
-              <p className={`text-center text-[11px] ${c.textFaint}`}>Or skip the demo and <Link to="/signup" className={c.primary}>start your free trial</Link> right now.</p>
+              <p className={`text-center text-[11px] ${c.textFaint}`}>Or skip the demo and <Link to="/signup" className={c.primary}>start your subscription</Link> right now.</p>
             </form>
           )}
         </div>
@@ -415,7 +438,7 @@ export default function Index() {
             {[
               {
                 q: "Do I need a credit card to start?",
-                a: "No. The 7-day trial is free and asks for nothing. We collect payment only when you pick a paid plan after the trial.",
+                a: "Yes — Maroa is a paid subscription. There's no free tier and no trial. You pick a plan, enter your card, and we charge for the first month immediately.",
               },
               {
                 q: "Who owns the content Maroa writes?",
@@ -423,11 +446,11 @@ export default function Index() {
               },
               {
                 q: "How do I cancel?",
-                a: "Two clicks in Settings → Billing. No phone call, no email back-and-forth, no exit interview. Your account flips to the free read-only plan and your data stays put.",
+                a: "Two clicks in Settings → Plan. No phone call, no email back-and-forth, no exit interview. Cancellation takes effect at the end of your current billing cycle — your data stays exportable.",
               },
               {
-                q: "What happens at the end of the trial?",
-                a: "Your account converts to Free (you keep everything you generated) unless you actively pick a paid plan. Nothing publishes without your approval, and we never charge a card we don't have.",
+                q: "Are there refunds?",
+                a: "No refunds on the current billing cycle, but cancelling stops every future charge immediately. That's the entire risk-reversal: no contracts, no lock-in, no surprise renewals.",
               },
             ].map((item) => (
               <details
@@ -452,12 +475,12 @@ export default function Index() {
             Stop choosing between<br />a marketing team and your margin.
           </h2>
           <p className={`text-sm ${c.textSub} mt-4 max-w-lg mx-auto`}>
-            Ten minutes to connect. First content draft and ad audit land tomorrow morning. Cancel any day for any reason.
+            Ten minutes to connect. First content draft and ad audit land tomorrow morning. Cancel anytime — no contracts.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link to="/signup"
+            <Link to="/signup?plan=growth"
               className={`inline-flex items-center gap-2 rounded-xl ${c.primaryBg} px-8 py-3.5 text-sm font-semibold text-white ${c.primaryBgHover} transition-all shadow-sm`}>
-              Start free trial <ArrowRight className="h-4 w-4" />
+              Start with Growth — $149/mo <ArrowRight className="h-4 w-4" />
             </Link>
             <button onClick={scrollToForm}
               className={`inline-flex items-center gap-2 rounded-xl border ${c.cardBorder} px-6 py-3.5 text-sm font-medium ${c.text} ${c.cardHover} transition-all`}>
@@ -465,16 +488,14 @@ export default function Index() {
             </button>
           </div>
 
-          {/* ── Risk-reversal triple — replaces the refund-guarantee
-              idea (we can't actually refund) with three commitments
-              we *can* keep: no card up-front, no annual contract,
-              your content is exportable any day. The pills sit
-              centred under the CTA so they're the last thing the
-              visitor reads before deciding. */}
+          {/* ── Risk-reversal triple — the whole guarantee, stated as
+              three commitments we actually keep: cancel-anytime monthly
+              billing, no annual lock-in, your content exports any day.
+              No refund, no trial — premium positioning. */}
           <ul className="mt-8 flex flex-wrap items-center justify-center gap-2">
             <li className={`inline-flex items-center gap-2 rounded-full border ${c.cardBorder} ${c.card} px-3.5 py-1.5 text-[12px] ${c.text}`}>
               <CreditCard className={`h-3.5 w-3.5 ${c.primary}`} />
-              No card to start
+              Cancel anytime
             </li>
             <li className={`inline-flex items-center gap-2 rounded-full border ${c.cardBorder} ${c.card} px-3.5 py-1.5 text-[12px] ${c.text}`}>
               <FileX className={`h-3.5 w-3.5 ${c.primary}`} />
@@ -486,7 +507,7 @@ export default function Index() {
             </li>
           </ul>
 
-          <p className={`text-xs ${c.textFaint} mt-5`}>Free for 7 days · Cancel in two clicks · Your data stays yours</p>
+          <p className={`text-xs ${c.textFaint} mt-5`}>Credit card required · Cancel anytime · No lock-in</p>
         </div>
       </Fade>
       </main>

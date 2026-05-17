@@ -67,8 +67,9 @@ export default function DashboardSettings() {
     business_name: "", email: "", location: "", industry: "", website_url: "", description: "", phone: "",
     target_audience: "", brand_tone: "", marketing_goal: "", competitors: "", daily_budget: 0,
   });
-  const [currentPlan, setCurrentPlan] = useState<PlanKey>("free");
+  const [currentPlan, setCurrentPlan] = useState<PlanKey>("growth");
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
   const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>(defaultNotifs);
   const [autopilot, setAutopilot] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -92,10 +93,13 @@ export default function DashboardSettings() {
         marketing_goal: data.marketing_goal ?? "", competitors: data.competitors ?? "",
         daily_budget: data.daily_budget ?? 0,
       });
+      // Plan narrowing: legacy "free" / "starter" rows in the DB still
+      // exist for older accounts, but the canonical PlanKey type is
+      // now "growth" | "agency" only. Treat anything not-"agency" as
+      // "growth" (the default tier) — the actual billing source of
+      // truth is Paddle, not this dropdown.
       const p = data.plan as string;
-      setCurrentPlan(
-        p === "growth" || p === "agency" || p === "starter" ? p : "free"
-      );
+      setCurrentPlan(p === "agency" ? "agency" : "growth");
       setAutopilot(!!data.autopilot_enabled);
       if (data.notification_preferences) {
         try {
@@ -128,7 +132,7 @@ export default function DashboardSettings() {
   };
 
   const handleUpgrade = async (planKey: PlanKey) => {
-    if (planKey === "free" || !user?.id) return;
+    if (!user?.id) return;
     setCheckoutLoading(planKey);
     analytics.subscriptionUpgradeStarted(planKey);
     try {
@@ -139,6 +143,31 @@ export default function DashboardSettings() {
       toast.error(err instanceof Error ? err.message : ERROR_MESSAGES.SAVE_FAILED);
     }
     setCheckoutLoading(null);
+  };
+
+  /* Cancel my plan — no retention modal, no upsell. Cancellation takes
+   * effect at the end of the current billing cycle; current month is
+   * non-refundable per the public pricing policy. Backend handles the
+   * actual Paddle subscription teardown. */
+  const handleCancelPlan = async () => {
+    if (!user?.id) return;
+    const ok = window.confirm(
+      "Cancel your subscription? You'll keep access through the end of the current billing cycle, then convert to read-only. No refund for the current month."
+    );
+    if (!ok) return;
+    setCancelLoading(true);
+    try {
+      const res = await fetch("/api/billing/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: user.id }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      toast.success("Cancelled. Access ends at the end of this billing cycle.");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Cancellation failed — email hello@maroa.ai.");
+    }
+    setCancelLoading(false);
   };
 
   const handleToggleNotif = async (key: string, checked: boolean) => {
@@ -273,21 +302,45 @@ export default function DashboardSettings() {
         {activeTab === "Billing" && (
           <div className="space-y-4">
             <div className="rounded-xl border border-border bg-card p-5">
-              <p className="text-sm text-muted-foreground">You are on the <strong className="text-foreground capitalize">{PLANS[currentPlan].name}</strong> plan{PLANS[currentPlan].monthlyPrice > 0 ? ` — €${PLANS[currentPlan].monthlyPrice}/month` : ""}</p>
+              <p className="text-sm text-muted-foreground">
+                You are on the <strong className="text-foreground capitalize">{PLANS[currentPlan].name}</strong> plan — ${PLANS[currentPlan].monthlyPrice}/month
+              </p>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               {CANONICAL_PLANS.map((plan) => (
                 <div key={plan.key} className={`relative rounded-xl border-2 p-5 flex flex-col ${currentPlan === plan.key ? "border-primary bg-primary/5" : "border-border bg-card"}`}>
                   {plan.popular && <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-semibold text-primary-foreground">Popular</span>}
                   <h4 className="font-bold text-foreground">{plan.name}</h4>
-                  <p className="mt-1 text-2xl font-bold text-foreground">{plan.monthlyPrice === 0 ? "Free" : `€${plan.monthlyPrice}`}{plan.monthlyPrice > 0 && <span className="text-sm font-normal text-muted-foreground">/mo</span>}</p>
+                  <p className="mt-1 text-2xl font-bold text-foreground">
+                    ${plan.monthlyPrice}<span className="text-sm font-normal text-muted-foreground">/mo</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">or ${plan.annualTotal.toLocaleString("en-US")}/yr — save ${plan.annualSavings.toLocaleString("en-US")}</p>
                   <ul className="mt-3 space-y-1.5 flex-1">{plan.features.map(f => <li key={f} className="flex items-start gap-2 text-xs text-muted-foreground"><Check className="h-3 w-3 mt-0.5 text-success shrink-0" />{f}</li>)}</ul>
                   <Button variant={currentPlan === plan.key ? "outline" : "default"} size="sm" className="mt-4 w-full"
-                    disabled={currentPlan === plan.key || !!checkoutLoading || plan.key === "free"} onClick={() => handleUpgrade(plan.key)}>
-                    {checkoutLoading === plan.key ? "Opening checkout..." : currentPlan === plan.key ? "Current Plan" : plan.key === "free" ? (currentPlan === "free" ? "Current Plan" : "Included") : `Upgrade to ${plan.name}`}
+                    disabled={currentPlan === plan.key || !!checkoutLoading} onClick={() => handleUpgrade(plan.key)}>
+                    {checkoutLoading === plan.key ? "Opening checkout..." : currentPlan === plan.key ? "Current plan" : `Switch to ${plan.name}`}
                   </Button>
                 </div>
               ))}
+            </div>
+
+            {/* Cancel my plan — no retention modal, no upsell. Confirms
+                once via window.confirm, then calls /api/billing/cancel.
+                Cancellation takes effect at end of cycle; no refund. */}
+            <div className="rounded-xl border border-border bg-card p-5">
+              <h4 className="font-semibold text-foreground">Cancel my plan</h4>
+              <p className="text-xs text-muted-foreground mt-1 mb-3">
+                Stops every future charge immediately. You keep access through the end of the current billing cycle, then your account converts to read-only and your data stays exportable. No refund on the current month.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCancelPlan}
+                disabled={cancelLoading}
+                className="text-destructive border-destructive/40 hover:bg-destructive/10"
+              >
+                {cancelLoading ? "Cancelling..." : "Cancel my plan"}
+              </Button>
             </div>
           </div>
         )}
