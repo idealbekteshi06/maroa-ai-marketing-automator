@@ -44,9 +44,9 @@ export default function KPIGrid(p: KPIGridProps) {
       />
       <KPICard
         label="Ad spend"
-        value={`€${p.adSpend.toLocaleString()}`}
+        value={`$${p.adSpend.toLocaleString()}`}
         numericValue={p.adSpend}
-        valuePrefix="€"
+        valuePrefix="$"
         delta={p.adSpendDelta || "—"}
         deltaContext="daily budget"
         trend={p.adSpend > 0 ? "up" : "neutral"}
@@ -56,9 +56,9 @@ export default function KPIGrid(p: KPIGridProps) {
       />
       <KPICard
         label="Revenue · 30d"
-        value={`€${p.revenue.toLocaleString()}`}
+        value={`$${p.revenue.toLocaleString()}`}
         numericValue={p.revenue}
-        valuePrefix="€"
+        valuePrefix="$"
         delta={p.revenueDelta || "—"}
         deltaContext="vs last month"
         trend={p.revenue > 0 ? "up" : "neutral"}

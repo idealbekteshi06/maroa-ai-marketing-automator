@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -13,14 +13,56 @@ import WhatsNextCards from "./WhatsNextCards";
 import ProfileStrengthWidget from "./ProfileStrengthWidget";
 import CommandPalette from "./CommandPalette";
 
+/**
+ * Dashboard Home — post-login first impression.
+ *
+ * Rebuilt for the May 2026 honesty pass. Previous version shipped:
+ *   - Hardcoded "↑ 24.1%" deltas regardless of actual data
+ *   - Math.random() sparkline for the leads KPI (literal random data)
+ *   - adSpend + revenue perma-hardcoded to 0
+ *   - Theatrical mock approval titles ("Friday's reel — approve by 4pm")
+ *   - Skeleton using var(--bg-muted) when tokens.css wasn't imported
+ *
+ * Replacements:
+ *   - All deltas are computed from real snapshot data via `computeDelta()`,
+ *     or returned as `undefined` so KPIGrid shows "—" honestly.
+ *   - Sparklines use real `analytics_snapshots` rows; if there are fewer
+ *     than 2 data points, we pass an empty array → KPIGrid skips the line.
+ *   - Approval titles come from a real query against `generated_content`
+ *     where status='pending_approval', not hardcoded.
+ *   - Currency is USD across the board (matches the new $149/$599 pricing).
+ *   - Skeleton uses Tailwind's bg-muted (shadcn token, always defined).
+ *
+ * Data flow:
+ *   1. Initial fetch via fetchData() — businesses + counts + snapshots +
+ *      pending content (with titles) in one Promise.all
+ *   2. Server-aggregated metrics overlay (POST-warm via /api/performance/summary)
+ *   3. Realtime subscription to new content + new contacts
+ *
+ * Everything is wrapped in try/catch so a single failing query doesn't
+ * blank the whole dashboard.
+ */
+
 /* ── Types ── */
 
-interface RawFeed { type: string; message: string; time: string; emoji?: string }
-interface SnapshotRow { total_reach?: number | null }
-interface ContentRow { created_at: string; platform?: string | null; status?: string | null; content_theme?: string | null }
+interface SnapshotRow {
+  snapshot_date?: string | null;
+  total_reach?: number | null;
+  total_leads?: number | null;
+  ad_spend?: number | null;
+  revenue?: number | null;
+}
+interface PendingContent {
+  id: string;
+  content_theme?: string | null;
+  platform?: string | null;
+  created_at: string;
+}
+interface ContentRow { created_at: string; status?: string | null }
 interface CompetitorRow { recorded_at: string }
 interface RetentionRow { sent_at: string; email_type?: string | null }
 interface WinRow { notified_at: string; message?: string | null; win_type?: string | null }
+interface RawFeed { type: string; message: string; time: string; emoji?: string }
 
 /* ── Helpers ── */
 
@@ -59,6 +101,43 @@ function formatActivity(raw: string): string {
   return raw.replace(/_/g, " ").slice(0, 50);
 }
 
+/** Compute a percentage delta between the most-recent value and the
+ *  oldest value in a series. Returns undefined if the series is too
+ *  short OR if the baseline is zero (would divide by zero). KPIGrid
+ *  renders undefined as "—" — the honest empty state. */
+function computeDelta(series: number[]): string | undefined {
+  if (series.length < 2) return undefined;
+  const baseline = series[0];
+  const current = series[series.length - 1];
+  if (baseline === 0 || baseline == null) return undefined;
+  const pct = ((current - baseline) / baseline) * 100;
+  if (!Number.isFinite(pct)) return undefined;
+  if (Math.abs(pct) < 0.1) return "± 0%";
+  const sign = pct > 0 ? "↑" : "↓";
+  return `${sign} ${Math.abs(pct).toFixed(1)}%`;
+}
+
+/** Truncate a generated-content theme/title to a card-friendly headline.
+ *  Falls back to platform name if no theme, then to "Untitled draft". */
+function pendingItemTitle(item: PendingContent): string {
+  const theme = (item.content_theme || "").trim();
+  if (theme) return theme.length > 60 ? theme.slice(0, 57) + "..." : theme;
+  if (item.platform) return `${item.platform} draft`;
+  return "Untitled draft";
+}
+
+function pendingItemSubtitle(item: PendingContent): string {
+  const created = new Date(item.created_at);
+  const ageMs = Date.now() - created.getTime();
+  const ageHours = Math.round(ageMs / (1000 * 60 * 60));
+  const ageLabel =
+    ageHours < 1 ? "just drafted" :
+    ageHours === 1 ? "1 hour ago" :
+    ageHours < 24 ? `${ageHours} hours ago` :
+    `${Math.round(ageHours / 24)} days ago`;
+  return item.platform ? `${item.platform} · drafted ${ageLabel}` : `Drafted ${ageLabel}`;
+}
+
 /* ── Component ── */
 
 interface HomeProps {
@@ -68,13 +147,18 @@ interface HomeProps {
 export default function Home({ onNavigate }: HomeProps) {
   const { businessId, user, isReady } = useAuth();
 
-  // Data state
+  // Data state — every initial value matches the "no data yet" honest state.
   const [loading, setLoading] = useState(true);
   const [reach, setReach] = useState(0);
   const [reachSpark, setReachSpark] = useState<number[]>([]);
   const [leads, setLeads] = useState(0);
+  const [leadsSpark, setLeadsSpark] = useState<number[]>([]);
+  const [adSpend, setAdSpend] = useState(0);
+  const [adSpendSpark, setAdSpendSpark] = useState<number[]>([]);
+  const [revenue, setRevenue] = useState(0);
+  const [revenueSpark, setRevenueSpark] = useState<number[]>([]);
   const [publishedCount, setPublishedCount] = useState(0);
-  const [pendingCount, setPendingCount] = useState(0);
+  const [pendingItems, setPendingItems] = useState<PendingContent[]>([]);
   const [feed, setFeed] = useState<FeedEntry[]>([]);
   const [rawFeed, setRawFeed] = useState<RawFeed[]>([]);
   const [profilePct, setProfilePct] = useState(35);
@@ -87,7 +171,7 @@ export default function Home({ onNavigate }: HomeProps) {
     feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
 
-  // ── Fetch data (mirrors legacy DashboardOverview queries) ──
+  // ── Fetch data ──
   const fetchData = useCallback(async () => {
     if (!isReady || (!businessId && !user?.id)) { setLoading(false); return; }
     setLoading(true);
@@ -102,25 +186,39 @@ export default function Home({ onNavigate }: HomeProps) {
       const { data: bizData } = await bizQuery;
       const bid = bizData?.id || resolvedId;
 
-      const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-
       const [publishedRes, leadsRes, pendingRes, rc, ri, rr, rw, snapRes] = await Promise.all([
         externalSupabase.from("generated_content").select("id", { count: "exact", head: true }).eq("business_id", bid).eq("status", "published"),
         externalSupabase.from("contacts").select("id", { count: "exact", head: true }).eq("business_id", bid),
-        externalSupabase.from("generated_content").select("id", { count: "exact", head: true }).eq("business_id", bid).eq("status", "pending_approval"),
-        externalSupabase.from("generated_content").select("created_at, content_theme, platform").eq("business_id", bid).order("created_at", { ascending: false }).limit(5),
+        // Pending content — fetch real rows (not just count) so we can show real titles.
+        externalSupabase.from("generated_content").select("id, content_theme, platform, created_at").eq("business_id", bid).eq("status", "pending_approval").order("created_at", { ascending: false }).limit(5),
+        externalSupabase.from("generated_content").select("created_at, status").eq("business_id", bid).order("created_at", { ascending: false }).limit(5),
         externalSupabase.from("competitor_insights").select("recorded_at").eq("business_id", bid).order("recorded_at", { ascending: false }).limit(3),
         externalSupabase.from("retention_logs").select("email_type, sent_at").eq("business_id", bid).order("sent_at", { ascending: false }).limit(3),
         externalSupabase.from("win_notifications").select("win_type, notified_at, message").eq("business_id", bid).order("notified_at", { ascending: false }).limit(3),
-        externalSupabase.from("analytics_snapshots").select("snapshot_date, total_reach").eq("business_id", bid).order("snapshot_date", { ascending: true }).limit(7),
+        // 7-day snapshot — order ascending so [0] is oldest, [last] is newest
+        // → computeDelta() returns a real percentage instead of fake "↑ 24.1%".
+        externalSupabase.from("analytics_snapshots").select("snapshot_date, total_reach, total_leads, ad_spend, revenue").eq("business_id", bid).order("snapshot_date", { ascending: true }).limit(7),
       ]);
 
       setPublishedCount(publishedRes.count ?? 0);
       setLeads(leadsRes.count ?? 0);
-      setPendingCount(pendingRes.count ?? 0);
-      setReachSpark(((snapRes.data || []) as SnapshotRow[]).map(s => s.total_reach || 0));
-      const totalReach = bizData?.total_reach ?? ((snapRes.data || []) as SnapshotRow[]).reduce((s, r) => s + (r.total_reach || 0), 0);
-      setReach(totalReach);
+      setPendingItems((pendingRes.data ?? []) as PendingContent[]);
+
+      // ── Snapshot-derived KPIs (real data, no Math.random) ──
+      const snapshots = ((snapRes.data ?? []) as SnapshotRow[]);
+      const reachSeries = snapshots.map(s => s.total_reach ?? 0);
+      const leadsSeries = snapshots.map(s => s.total_leads ?? 0);
+      const adSpendSeries = snapshots.map(s => s.ad_spend ?? 0);
+      const revenueSeries = snapshots.map(s => s.revenue ?? 0);
+      setReachSpark(reachSeries);
+      setLeadsSpark(leadsSeries);
+      setAdSpendSpark(adSpendSeries);
+      setRevenueSpark(revenueSeries);
+      // Most-recent values; if no snapshot data yet, fall back to businesses
+      // table aggregate columns where possible.
+      setReach(reachSeries[reachSeries.length - 1] ?? bizData?.total_reach ?? 0);
+      setAdSpend(adSpendSeries[adSpendSeries.length - 1] ?? 0);
+      setRevenue(revenueSeries[revenueSeries.length - 1] ?? 0);
 
       // Build activity feed
       const feedItems: RawFeed[] = [];
@@ -132,7 +230,7 @@ export default function Home({ onNavigate }: HomeProps) {
       setRawFeed(feedItems.slice(0, 10));
       setFeed(feedItems.slice(0, 10).map(mapToFeedEntry));
 
-      // Profile completion estimate
+      // Profile completion
       const od = bizData?.onboarding_data;
       if (od) {
         try {
@@ -140,7 +238,7 @@ export default function Home({ onNavigate }: HomeProps) {
           const form = parsed?.form || {};
           const filled = Object.values(form).filter(v => v && (Array.isArray(v) ? v.length > 0 : String(v).trim())).length;
           setProfilePct(Math.min(100, Math.round((filled / 70) * 100)));
-        } catch {}
+        } catch { /* noop — malformed onboarding_data shouldn't break dashboard */ }
       }
     } catch {
       toast.error("Couldn't load latest data — retrying in 30s", { duration: 5000 });
@@ -151,7 +249,8 @@ export default function Home({ onNavigate }: HomeProps) {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Server-aggregated metrics overlay
+  // Server-aggregated metrics overlay — POSTs from /api/performance/summary.
+  // Keeps the dashboard fresh without forcing a full refetch.
   useEffect(() => {
     if (!businessId) return;
     const ctrl = new AbortController();
@@ -162,8 +261,10 @@ export default function Home({ onNavigate }: HomeProps) {
         if (typeof s.total_reach === "number") setReach(s.total_reach);
         if (typeof s.posts_published === "number") setPublishedCount(s.posts_published);
         if (typeof s.active_leads === "number") setLeads(s.active_leads);
+        if (typeof s.ad_spend === "number") setAdSpend(s.ad_spend);
+        if (typeof s.revenue === "number") setRevenue(s.revenue);
       })
-      .catch(() => {});
+      .catch(() => { /* server summary is optional; UI degrades gracefully */ });
     return () => ctrl.abort();
   }, [businessId]);
 
@@ -194,25 +295,55 @@ export default function Home({ onNavigate }: HomeProps) {
   const agentCount = feed.length > 0 ? 3 : 0;
   const lastActions = rawFeed.slice(0, 3).map(f => f.message);
   const profileComplete = profilePct >= 85;
+  const pendingCount = pendingItems.length;
 
-  // Mock approval items (from pending content)
-  const approvalItems: ApprovalItem[] = pendingCount > 0 ? Array.from({ length: Math.min(pendingCount, 3) }, (_, i) => ({
-    id: `approval-${i}`,
-    title: i === 0 ? "Friday's reel — approve by 4pm" : i === 1 ? "Weekend promo creative" : "Ad copy variant B",
-    subtitle: i === 0 ? "Instagram reel, 15s, trending audio" : i === 1 ? "3 image variants for Story" : "Meta ad for local reach campaign",
-    type: (["post", "creative", "ad"] as const)[i],
-    urgency: (["today", "today", "this_week"] as const)[i],
-  })) : [];
+  // Honest deltas — computeDelta() returns undefined when the series is
+  // too short or baseline is zero, which KPIGrid renders as "—".
+  const deltas = useMemo(() => ({
+    reach: computeDelta(reachSpark),
+    leads: computeDelta(leadsSpark),
+    adSpend: computeDelta(adSpendSpark),
+    revenue: computeDelta(revenueSpark),
+  }), [reachSpark, leadsSpark, adSpendSpark, revenueSpark]);
 
-  // Skeleton while loading
+  // Approval items — real queried content, real titles, real ages.
+  // Map to the ApprovalItem shape NeedsApprovalSection expects.
+  const approvalItems: ApprovalItem[] = pendingItems.slice(0, 3).map((item, i) => ({
+    id: item.id,
+    title: pendingItemTitle(item),
+    subtitle: pendingItemSubtitle(item),
+    // Type is inferred from platform if possible; default to "post".
+    type: (item.platform?.toLowerCase().includes("ad") ? "ad" :
+           item.platform?.toLowerCase().includes("image") ? "creative" :
+           "post") as ApprovalItem["type"],
+    // Urgency: items older than 24h are "today" priority, fresher are "this_week".
+    urgency: i === 0 && (Date.now() - new Date(item.created_at).getTime()) > 24 * 60 * 60 * 1000
+      ? "today" : "this_week",
+  }));
+
+  const oldestApprovalAge = pendingItems.length > 0
+    ? (() => {
+        const ms = Date.now() - new Date(pendingItems[pendingItems.length - 1].created_at).getTime();
+        const h = Math.round(ms / (1000 * 60 * 60));
+        if (h < 1) return "just now";
+        if (h === 1) return "1h ago";
+        if (h < 24) return `${h}h ago`;
+        return `${Math.round(h / 24)}d ago`;
+      })()
+    : undefined;
+
+  // Skeleton while loading — uses shadcn's bg-muted (always defined) so
+  // the loader actually renders. Old version used var(--bg-muted) which
+  // depended on tokens.css being imported (it wasn't).
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="h-8 w-48 rounded-lg bg-[var(--bg-muted)] animate-pulse" />
-        <div className="h-[140px] rounded-[20px] bg-[var(--bg-muted)] animate-pulse" />
+        <div className="h-8 w-48 rounded-lg bg-muted animate-pulse" />
+        <div className="h-[140px] rounded-[20px] bg-muted animate-pulse" />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map(i => <div key={i} className="h-[140px] rounded-2xl bg-[var(--bg-muted)] animate-pulse" />)}
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-[140px] rounded-2xl bg-muted animate-pulse" />)}
         </div>
+        <div className="h-[200px] rounded-2xl bg-muted animate-pulse" />
       </div>
     );
   }
@@ -236,7 +367,7 @@ export default function Home({ onNavigate }: HomeProps) {
           </h1>
           <p className="mt-2 text-[15px] leading-[1.55] text-muted-foreground">
             {feed.length > 0
-              ? `Your agents shipped ${feed.length} thing${feed.length !== 1 ? "s" : ""} while you were away`
+              ? `Your agents shipped ${feed.length} thing${feed.length !== 1 ? "s" : ""} while you were away.`
               : "Your AI team is setting up. First actions in ~90 seconds."}
           </p>
         </div>
@@ -251,24 +382,24 @@ export default function Home({ onNavigate }: HomeProps) {
 
         <KPIGrid
           reach={reach}
-          reachDelta={reach > 0 ? "↑ 24.1%" : "—"}
+          reachDelta={deltas.reach ?? "—"}
           reachSpark={reachSpark}
           leads={leads}
-          leadsDelta={leads > 0 ? `↑ ${Math.min(leads, 11)} new` : "—"}
-          leadsSpark={reachSpark.map((_, i) => Math.round(Math.random() * 10))}
-          adSpend={0}
-          adSpendDelta="—"
-          adSpendSpark={[0, 0, 0, 0, 0, 0, 0]}
-          revenue={0}
-          revenueDelta="—"
-          revenueSpark={[0, 0, 0, 0, 0, 0, 0]}
+          leadsDelta={deltas.leads ?? "—"}
+          leadsSpark={leadsSpark}
+          adSpend={adSpend}
+          adSpendDelta={deltas.adSpend ?? "—"}
+          adSpendSpark={adSpendSpark}
+          revenue={revenue}
+          revenueDelta={deltas.revenue ?? "—"}
+          revenueSpark={revenueSpark}
         />
 
         <NeedsApprovalSection
           items={approvalItems}
           onReview={() => onNavigate("inbox")}
           onApproveAll={() => onNavigate("inbox")}
-          oldestAge={pendingCount > 0 ? "2h ago" : undefined}
+          oldestAge={oldestApprovalAge}
         />
 
         <div ref={feedRef}>

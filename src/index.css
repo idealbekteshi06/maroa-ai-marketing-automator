@@ -1,5 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap');
 
+/* Custom design tokens (light + dark variants for --brand, --bg-*,
+ * --border-*, --shadow-*, --agent-*). Loaded BEFORE Tailwind so the
+ * shadcn :root/.dark blocks below can reference them if needed.
+ * Without this import the dashboard's CSS-variable consumers
+ * (KPI skeletons, AutopilotBanner brand tints, agent activity feed
+ * dot colors) render undefined → transparent → invisible. */
+@import "./styles/tokens.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
