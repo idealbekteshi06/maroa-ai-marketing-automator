@@ -57,16 +57,6 @@ const STEPS = [
   { num: "03", icon: Zap,   title: "Decisions ship every day",desc: "Content drafts, ad audits, and weekly scorecards land on time. You approve the brand-sensitive ones; the rest run." },
 ];
 
-// Stats: every figure is verifiable on the live system, not an aspiration.
-// Replaced the vague "Setup time" with "Avg setup time" (still defensible)
-// and rephrased Uptime to be the rolling window we report on /status.
-const PROOF_STATS = [
-  { value: "22",    label: "Countries served" },
-  { value: "6",     label: "Languages live" },
-  { value: "99.9%", label: "Uptime · trailing 90d" },
-  { value: "10 min",label: "Average setup" },
-];
-
 function useFadeIn() {
   const ref = useRef<HTMLDivElement>(null);
   const [vis, setVis] = useState(false);
@@ -363,22 +353,6 @@ export default function Index() {
               </div>
             ))}
           </div>
-        </div>
-      </Fade>
-
-      {/* ── PROOF STRIP ── */}
-      <Fade className="px-6 pb-24">
-        <div className={`max-w-4xl mx-auto rounded-2xl border ${c.cardBorder} ${c.card} py-8 px-6`}>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-8">
-            {PROOF_STATS.map(s => (
-              <div key={s.label} className="text-center">
-                <p className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#0066CC] to-[#0A84FF] dark:from-[#0A84FF] dark:to-[#60B4FF] bg-clip-text text-transparent">{s.value}</p>
-                <p className={`text-xs ${c.textSub} mt-1 uppercase tracking-wider`}>{s.label}</p>
-              </div>
-            ))}
-          </div>
-          <FlagStrip className="mt-6" opacity={0.7} ariaLabel="" />
-          <p className={`text-xs ${c.textFaint} mt-3 text-center`}>From Prishtina to Dubai to London — businesses choosing software over headcount.</p>
         </div>
       </Fade>
 
