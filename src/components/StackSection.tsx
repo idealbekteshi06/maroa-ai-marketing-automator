@@ -1,31 +1,33 @@
 /**
  * StackSection — "Built on the best of the stack."
  *
- * Premium-tier pattern: monochrome logos at rest, full colour on hover.
+ * Marquee variant: two rows of brand logos sliding right-to-left at
+ * different speeds, looping seamlessly. The classic Stripe / Vercel /
+ * Linear premium-page treatment.
  *
- * Why this beats the "always in colour" treatment:
- *   - Every brand's saturation level is different (Meta blue is loud,
- *     Anthropic black is quiet, Instagram gradient is louder still).
- *     A row of mixed-saturation logos reads as "SaaS landing page."
- *   - One uniform monochrome tint at rest reads as "respected brand
- *     library." Stripe, Vercel, Linear, Apple "Works with" all use this.
- *   - The hover reveal still gives the playfulness the user asked for —
- *     it just stops competing for attention when nobody's touching it.
+ * Implementation notes
+ *  - Seamless loop: the logos array is duplicated, and the track
+ *    translates from 0 to -50%. When the animation reaches -50%, the
+ *    duplicate is exactly where the original started, so the visitor
+ *    never sees a "jump." Width: max-content so the track sizes to its
+ *    contents regardless of viewport.
+ *  - Edge fade: a horizontal mask-image fades the leftmost and
+ *    rightmost ~8% of the row to transparent, so logos appear to
+ *    enter/exit the strip cleanly rather than getting clipped.
+ *  - Pause on hover: the track is inside a group with hover →
+ *    animation-play-state: paused so a curious visitor can read the
+ *    full row without chasing it.
+ *  - Reduced-motion: when prefers-reduced-motion is set, the animation
+ *    is removed and the row falls back to a centred wrap layout (same
+ *    info, no movement). Required for accessibility.
+ *  - Two rows scroll at slightly different durations (38s + 48s) so the
+ *    page feels alive without being distracting.
  *
- * Layout:
- *   - Section sits inside a soft frosted container (hairline border,
- *     subtle inner bg) so the logos read as one curated set, not a
- *     loose row floating on the page.
- *   - Two grouped rows separated by a hairline divider:
- *       1. AI engines & infrastructure (5 marks)
- *       2. Ad platforms (3) + Social channels (7) — the role caption
- *          above the second row tells you which is which without
- *          per-logo chips.
- *   - 32px logo height. Uniform vertical baseline via flex-align.
- *
- * Logos missing from cdn.simpleicons.org (Higgsfield, Inngest, LinkedIn)
- * use a typographic wordmark — same height as the icon logos so the row
- * baseline stays flat.
+ * Logos: monochrome (grayscale + 70% opacity) at rest, full brand
+ * colour on hover. Same pattern as the previous version — Stripe /
+ * Vercel / Linear / Apple "Works with" all use it. Monochrome-dark
+ * marks (Anthropic, TikTok, X, Threads) use brightness-0 + invert so
+ * they stay legible on true black in dark mode.
  */
 
 type LogoRef =
@@ -41,11 +43,9 @@ const ENGINES: LogoRef[] = [
 ];
 
 const CHANNELS: LogoRef[] = [
-  // Paid ad management (Ads). Order: Google → Meta → TikTok.
   { kind: "icon", slug: "googleads", name: "Google Ads", role: "Ads", href: "https://ads.google.com" },
   { kind: "icon", slug: "meta", name: "Meta Ads", role: "Ads", href: "https://www.facebook.com/business/ads" },
   { kind: "icon", slug: "tiktok", name: "TikTok Ads", role: "Ads", href: "https://ads.tiktok.com" },
-  // Organic publishing via Ayrshare + Meta Graph (Publishing).
   { kind: "icon", slug: "instagram", name: "Instagram", role: "Publishing", href: "https://instagram.com" },
   { kind: "icon", slug: "facebook", name: "Facebook", role: "Publishing", href: "https://facebook.com" },
   { kind: "wordmark", text: "LinkedIn", name: "LinkedIn", role: "Publishing", href: "https://linkedin.com" },
@@ -65,16 +65,6 @@ function Logo({ logo }: { logo: LogoRef }) {
         height={32}
         loading="lazy"
         decoding="async"
-        // Rest state: grayscale + 70% opacity, then a slight brightness
-        // bump in dark mode so the silhouette doesn't get crushed against
-        // the black surface. Hover: lift to full colour (grayscale-0,
-        // opacity-100).
-        //
-        // For coloured logos this means: at rest you see a tasteful grey
-        // silhouette; on hover you see the brand colour.
-        // For monochrome-dark logos (Anthropic, TikTok, X, Threads) the
-        // dark:invert + dark:brightness-0 pipeline still applies so they
-        // stay legible on true black even at the grey rest state.
         className="h-8 w-auto max-w-[110px] object-contain"
       />
     ) : (
@@ -83,16 +73,15 @@ function Logo({ logo }: { logo: LogoRef }) {
       </span>
     );
 
-  // Force monochrome-dark icons to white in dark mode at rest, and keep
-  // them white on hover (since their "brand colour" is just black/white,
-  // there's no colour to reveal). Coloured icons use the grayscale →
-  // colour reveal.
+  // Monochrome-dark marks: their "brand colour" is just black. Use
+  // brightness-0 + invert in dark mode so the silhouette stays white
+  // on true black; in light mode the natural black already reads fine.
   const isMonoDark =
     logo.kind === "icon" &&
     (logo.slug === "anthropic" || logo.slug === "tiktok" || logo.slug === "x" || logo.slug === "threads");
 
-  const monoTint = isMonoDark
-    ? "dark:brightness-0 dark:invert"
+  const filters = isMonoDark
+    ? "dark:brightness-0 dark:invert opacity-80 hover:opacity-100"
     : "grayscale opacity-70 hover:grayscale-0 hover:opacity-100";
 
   const wrap = (
@@ -101,10 +90,10 @@ function Logo({ logo }: { logo: LogoRef }) {
       aria-label={logo.role ? `${logo.name}, ${logo.role}` : logo.name}
       className={`
         inline-flex items-center justify-center
-        h-8 px-2
-        transition-[filter,opacity,transform] duration-200
+        h-8
+        transition-[filter,opacity] duration-300
         text-[#1d1d1f] dark:text-[#f5f5f7]
-        ${monoTint}
+        ${filters}
       `}
     >
       {inner}
@@ -113,20 +102,35 @@ function Logo({ logo }: { logo: LogoRef }) {
 
   if (logo.href) {
     return (
-      <a href={logo.href} target="_blank" rel="noopener noreferrer" className="inline-flex">
+      <a href={logo.href} target="_blank" rel="noopener noreferrer" className="inline-flex flex-shrink-0">
         {wrap}
       </a>
     );
   }
-  return wrap;
+  return <span className="inline-flex flex-shrink-0">{wrap}</span>;
 }
 
-function LogoRow({ logos }: { logos: LogoRef[] }) {
+function Marquee({
+  logos,
+  durationSeconds,
+}: {
+  logos: LogoRef[];
+  durationSeconds: number;
+}) {
+  // Duplicate the logo list. The track translates from 0 → -50%, so
+  // when the animation reaches -50% the duplicate is exactly where the
+  // original started — seamless loop with no jump.
+  const items = [...logos, ...logos];
   return (
-    <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-5 sm:gap-x-12">
-      {logos.map((logo) => (
-        <Logo key={logo.name} logo={logo} />
-      ))}
+    <div className="maroa-marquee group/marquee">
+      <div
+        className="maroa-marquee-track flex items-center gap-x-12 sm:gap-x-16"
+        style={{ animationDuration: `${durationSeconds}s` }}
+      >
+        {items.map((logo, i) => (
+          <Logo key={`${logo.name}-${i}`} logo={logo} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -141,30 +145,71 @@ export default function StackSection() {
         We don&apos;t reinvent the model — we orchestrate the best ones into one system that ships every day.
       </p>
 
-      {/* Frosted container — hairline border + subtle bg + generous
-          padding. Makes the section read as a curated brand library,
-          not a row of decoupled logos floating in space. */}
-      <div className="mt-12 rounded-3xl border border-black/[0.06] dark:border-white/[0.08] bg-[#fafafa]/60 dark:bg-white/[0.02] px-6 py-10 sm:px-10 sm:py-12">
-        {/* Engines + infra */}
-        <LogoRow logos={ENGINES} />
+      {/* Frosted container — soft bg + hairline border. */}
+      <div className="mt-12 rounded-3xl border border-black/[0.06] dark:border-white/[0.08] bg-[#fafafa]/60 dark:bg-white/[0.02] py-10 sm:py-12 overflow-hidden">
+        {/* Engines + infra — 38s, fewer logos, slightly faster cadence */}
+        <Marquee logos={ENGINES} durationSeconds={38} />
 
-        {/* Hairline divider — picks up the same translucent value as
-            the container border so it sits inside the same system. */}
-        <div className="my-10 h-px bg-black/[0.06] dark:bg-white/[0.08]" aria-hidden="true" />
+        <div className="my-8 h-px bg-black/[0.06] dark:bg-white/[0.08] mx-6 sm:mx-10" aria-hidden="true" />
 
-        {/* Channels — small caption above so the Ads/Publishing
-            distinction lands without needing a chip on every logo. */}
-        <p className="text-center text-[10px] uppercase tracking-[0.2em] text-[#86868b] dark:text-[#6e6e73] font-medium mb-6">
+        {/* Caption above the channels row — same as the static version. */}
+        <p className="text-center text-[10px] uppercase tracking-[0.2em] text-[#86868b] dark:text-[#6e6e73] font-medium mb-6 px-6">
           Ad platforms <span className="text-[#0066CC] dark:text-[#0A84FF]">we manage</span>
           <span className="mx-2.5 text-[#d2d2d7] dark:text-[#3a3a3c]">·</span>
           Social channels <span className="text-[#86868b]">we publish</span>
         </p>
-        <LogoRow logos={CHANNELS} />
+
+        {/* Channels — 48s, more logos, slower cadence so the row feels
+            organic alongside the engines row above it. */}
+        <Marquee logos={CHANNELS} durationSeconds={48} />
       </div>
 
       <p className="mt-6 text-center text-[10px] text-[#86868b]/70 dark:text-[#6e6e73]/70">
         Trademarks are the property of their respective owners.
       </p>
+
+      {/* ── Marquee CSS — kept inline so the component is self-contained
+          and the keyframes live next to the markup that uses them.
+          See file header for the design rationale. */}
+      <style>{`
+        .maroa-marquee {
+          position: relative;
+          overflow: hidden;
+          /* Edge fade: logos appear to enter/exit the strip cleanly
+             instead of getting hard-clipped at the container edge. */
+          -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+                  mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+        }
+        .maroa-marquee-track {
+          width: max-content;
+          will-change: transform;
+          animation-name: maroa-marquee-scroll;
+          animation-timing-function: linear;
+          animation-iteration-count: infinite;
+          padding-inline: 1.5rem;
+        }
+        @keyframes maroa-marquee-scroll {
+          from { transform: translateX(0); }
+          to   { transform: translateX(-50%); }
+        }
+        /* Pause on hover so a curious visitor can read the full row. */
+        .maroa-marquee:hover .maroa-marquee-track {
+          animation-play-state: paused;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .maroa-marquee {
+            -webkit-mask-image: none;
+                    mask-image: none;
+          }
+          .maroa-marquee-track {
+            animation: none;
+            width: 100%;
+            flex-wrap: wrap;
+            justify-content: center;
+            row-gap: 1.25rem;
+          }
+        }
+      `}</style>
     </div>
   );
 }
