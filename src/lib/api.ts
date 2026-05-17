@@ -40,6 +40,56 @@ export const getContentPieces = (params: Record<string, string>) =>
 export const approveContentPiece = (data: Record<string, unknown>) =>
   post("/webhook/content-approve", data);
 
+// ─── Approval-flow extensions (DashboardApprovals page) ──────
+// Mirror the existing approveContentPiece contract: { content_id,
+// user_id, business_id, ... }. Rejection + change-request webhooks
+// feed the same decision-log pipeline so the reasoning-trace audit
+// trail captures every operator decision, not just approvals.
+
+export type ApprovalDecisionPayload = {
+  content_id: string;
+  user_id: string;
+  business_id: string;
+  /** Optional operator note attached to the decision (audit trail). */
+  note?: string;
+};
+
+export const rejectContentPiece = (data: ApprovalDecisionPayload) =>
+  post<{ ok: true }>("/webhook/content-reject", data);
+
+export const requestContentChanges = (data: ApprovalDecisionPayload) =>
+  post<{ ok: true }>("/webhook/content-request-changes", data);
+
+/** Mint a tokenized magic-link URL the operator can send to a client
+ *  for stand-alone review (no Maroa account required on the recipient
+ *  side). Backend issues a single-use, time-limited token. */
+export const generateContentMagicLink = (data: {
+  content_id: string;
+  business_id: string;
+  /** TTL in hours; backend may clamp. Default 72h. */
+  ttl_hours?: number;
+}) => post<{ url: string; expires_at: string }>("/webhook/content-magic-link", data);
+
+/** Batch decisions — used by the "Approve all green-band" /
+ *  "Reject all spam" shortcuts. Same payload shape, just an array
+ *  of content_ids. Backend processes serially and returns per-item
+ *  results so partial-success states render cleanly in the UI. */
+export type BatchDecisionResult = {
+  results: Array<{ content_id: string; ok: boolean; error?: string }>;
+};
+
+export const batchApproveContent = (data: {
+  business_id: string;
+  user_id: string;
+  content_ids: string[];
+}) => post<BatchDecisionResult>("/webhook/content-batch-approve", data);
+
+export const batchRejectContent = (data: {
+  business_id: string;
+  user_id: string;
+  content_ids: string[];
+}) => post<BatchDecisionResult>("/webhook/content-batch-reject", data);
+
 // ─── Campaigns / Ads ─────────────────────────────────────────
 export const createCampaigns = (data: Record<string, unknown>) =>
   post("/webhook/create-campaigns", data);

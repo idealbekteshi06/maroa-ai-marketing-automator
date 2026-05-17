@@ -65,6 +65,7 @@ const DashboardOnboardingCRO = lazy(() => import("@/components/dashboard/Dashboa
 const DashboardUpgradeCRO = lazy(() => import("@/components/dashboard/DashboardUpgradeCRO"));
 const DashboardSignupCRO = lazy(() => import("@/components/dashboard/DashboardSignupCRO"));
 const DashboardOrchestrator = lazy(() => import("@/components/dashboard/DashboardOrchestrator"));
+const DashboardApprovals = lazy(() => import("@/components/dashboard/DashboardApprovals"));
 
 /* ── v2 workflow pages (MAROA_15_WORKFLOWS_V2) ── */
 const WF1DailyContentEngine = lazy(() => import("@/pages/workflows/DailyContentEngine"));
@@ -95,6 +96,11 @@ type WorkflowGroup = { label: string; items: NavItem[] };
 
 const primaryNav: NavItem[] = [
   { key: "overview", label: "Home", icon: Home },
+  // Approvals sits second per Miller's 7±2 — it's the brand promise
+  // ("Marketing that asks before it ships. Not after.") and the most
+  // load-bearing operator surface. ShieldCheck mark matches the
+  // landing-page differentiator card icon for visual continuity.
+  { key: "approvals", label: "Approvals", icon: Scale },
   { key: "inbox", label: "Inbox", icon: Inbox },
   { key: "studio", label: "Studio", icon: Palette },
   { key: "insights", label: "Insights", icon: BarChart3 },
@@ -144,11 +150,15 @@ const allNavItems: NavItem[] = [
   { key: "settings", label: "Settings", icon: Settings },
 ];
 
-/* Mobile bottom tab bar — 5 items per REFACTOR_BRIEF_V2 section 2.7 */
+/* Mobile bottom tab bar — 5 items per REFACTOR_BRIEF_V2 section 2.7.
+ * Approvals replaced Content here — approvals is the load-bearing
+ * brand-promise surface and outranks the workflow-#1 content link
+ * for mobile-thumb access. Content remains reachable via the
+ * Workflows accordion in the desktop sidebar. */
 const mobileNav: NavItem[] = [
   { key: "overview", label: "Home", icon: Home },
+  { key: "approvals", label: "Approvals", icon: Scale },
   { key: "inbox", label: "Inbox", icon: Inbox },
-  { key: "wf1-daily-content", label: "Content", icon: FileText },
   { key: "studio", label: "Studio", icon: Palette },
   { key: "ai-brain", label: "Ask", icon: Sparkles },
 ];
@@ -156,6 +166,7 @@ const mobileNav: NavItem[] = [
 /* Page titles and subtitles — keyed by nav key */
 const pageMeta: Record<string, { title: string; subtitle: string }> = {
   overview: { title: "Mission Control", subtitle: "Your AI is running your marketing" },
+  approvals: { title: "Approvals", subtitle: "Nothing publishes without you" },
   inbox: { title: "Unified Inbox", subtitle: "Every conversation, one queue" },
   studio: { title: "Studio", subtitle: "Cinematic creative generation" },
   insights: { title: "Insights", subtitle: "Reports, briefs, analytics" },
@@ -270,6 +281,7 @@ export default function Dashboard() {
     const page = (() => {
       switch (active) {
         case "overview": return <HomeOverview onNavigate={setActive} />;
+        case "approvals": return <DashboardApprovals />;
         case "content": return <DashboardContent />;
         case "campaigns": return <DashboardAds />;
         case "social": return <DashboardSocial oauthCode={oauthCode} />;

@@ -357,7 +357,7 @@ export default function Home({ onNavigate }: HomeProps) {
           agentCount={agentCount}
           onOpenPalette={() => setCmdOpen(true)}
           onScrollToFeed={scrollToFeed}
-          onOpenApprovals={() => onNavigate("inbox")}
+          onOpenApprovals={() => onNavigate("approvals")}
         />
 
         {/* Greeting */}
@@ -397,8 +397,8 @@ export default function Home({ onNavigate }: HomeProps) {
 
         <NeedsApprovalSection
           items={approvalItems}
-          onReview={() => onNavigate("inbox")}
-          onApproveAll={() => onNavigate("inbox")}
+          onReview={() => onNavigate("approvals")}
+          onApproveAll={() => onNavigate("approvals")}
           oldestAge={oldestApprovalAge}
         />
 
