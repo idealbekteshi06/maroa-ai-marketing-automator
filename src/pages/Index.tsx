@@ -28,26 +28,31 @@ const FEATURES = [
 // not a roadmap promise. Surfaced as a dedicated row so the visitor
 // can tell the difference between a wrapper around GPT and an
 // operating system designed around marketing constraints.
+// Authority statements, not descriptions. Each card opens with a
+// load-bearing fact (cadence, count, model) that proves there's real
+// engineering behind it, then explains the why in one tight sentence.
+// "Wow factor" target: visitor reads each card and thinks "OK that's
+// not a wrapper around GPT — that's actual software."
 const DIFFERENTIATORS = [
   {
     icon: FileSearch,
-    title: "Reasoning trace on every output",
-    desc: "See exactly which framework, audience stage, and past-performance signal drove each draft. Override any choice and re-run.",
+    title: "Every decision logged. Every output explainable.",
+    desc: "Framework chosen, audience stage, past-performance signal, voice-fit score, compliance gates passed — captured per draft and queryable for 18 months. Override any choice and re-run.",
   },
   {
     icon: ShieldCheck,
-    title: "20-industry compliance, hard-blocked",
-    desc: "FDA, FTC, FCA, ABA, fair-housing — claims that violate them never ship. Maroa rewrites into compliant copy with citations.",
+    title: "Compliance refusals before a dollar is spent.",
+    desc: "20 industry rulesets — FDA, FTC, FCA, ABA, fair-housing, alcohol, gambling, supplements — enforced at the model layer with citations. Non-compliant claims never reach a campaign.",
   },
   {
     icon: Quote,
-    title: "AI-search citation tracking",
-    desc: "Where your brand is cited across ChatGPT, Perplexity, and Google AI Overviews — tracked weekly, with prompts to lift it.",
+    title: "Your brand, tracked across every AI search.",
+    desc: "Weekly probes of ChatGPT, Perplexity, Google AI Overviews, and Claude. Citation count, sentiment, and lift recommendations — so you know when an AI starts answering for your category.",
   },
   {
     icon: Film,
-    title: "Higgsfield image + video, in your brand",
-    desc: "On-brand visuals generated on demand: product hero shots, ad creative, founder reels — Soul-trained on your assets.",
+    title: "On-brand image + video, generated on demand.",
+    desc: "Higgsfield Soul-trained on your founder, products, and brand palette. Hero shots, ad creative, founder reels, restyles — generated in the dashboard, queued for approval, shipped to platforms.",
   },
 ];
 
@@ -191,16 +196,16 @@ export default function Index() {
           </span>
 
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.04]">
-            Your marketing,<br />
+            Marketing operations,<br />
             <span className="bg-gradient-to-r from-[#0066CC] via-[#0A84FF] to-[#0066CC] dark:from-[#0A84FF] dark:via-[#409CFF] dark:to-[#0A84FF] bg-clip-text text-transparent">
-              run by an operator,
-            </span><br />
-            not just an AI tool.
+              fully automated.
+            </span>
           </h1>
 
           <p className={`mt-7 text-base sm:text-lg ${c.textSub} max-w-2xl mx-auto leading-relaxed`}>
-            Maroa drafts the content, runs the ads, watches the competition, and reports
-            back every Sunday — for one business or fifty. You approve. It ships.
+            Drafts 60+ posts a month. Audits Meta, Google, and TikTok ads at 9 a.m. Refuses
+            non-compliant claims before they spend a dollar. Writes its reasoning down so you
+            can audit every decision. For one business or fifty.
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
@@ -213,9 +218,33 @@ export default function Index() {
               See a 2-minute demo
             </button>
           </div>
-          <p className={`text-xs ${c.textFaint} mt-4`}>Cancel anytime · No contracts · Credit card required</p>
+          <p className={`text-xs ${c.textFaint} mt-4`}>Credit card required · Cancel anytime · No contracts</p>
 
-          <FlagStrip className="mt-12" ariaLabel="Live in 22 countries" />
+          {/* ── Operations strip — concrete proof of "real software."
+              Four spec-style facts that telegraph engineering depth
+              without needing screenshots or testimonials. Each one is
+              a backend reality (Sonnet/Opus auto-routing, 4-hour
+              pacing loop, 20 compliance rulesets, full decision log).
+              Mono font + uppercase labels = the status-page treatment
+              that B2B buyers read as "engineering team built this." */}
+          <ul
+            className={`mt-10 mx-auto inline-flex flex-wrap items-stretch divide-x divide-[#e8e8ed] dark:divide-white/[0.08] rounded-2xl border ${c.cardBorder} ${c.card} overflow-hidden text-left`}
+            aria-label="Operational specs"
+          >
+            {[
+              { value: "Sonnet 4.5 + Opus 4.7", label: "Auto-routed" },
+              { value: "Every 4h",              label: "Pacing alerts" },
+              { value: "20 industries",         label: "Compliance gates" },
+              { value: "100%",                  label: "Decisions logged" },
+            ].map((s) => (
+              <li key={s.label} className="px-4 sm:px-5 py-3 flex-1 min-w-[140px]">
+                <p className={`font-mono text-[12px] sm:text-[13px] ${c.text} leading-tight`}>{s.value}</p>
+                <p className={`mt-1 text-[9px] uppercase tracking-[0.16em] ${c.textFaint} font-medium`}>{s.label}</p>
+              </li>
+            ))}
+          </ul>
+
+          <FlagStrip className="mt-10" ariaLabel="Live in 22 countries" />
         </div>
       </section>
 
