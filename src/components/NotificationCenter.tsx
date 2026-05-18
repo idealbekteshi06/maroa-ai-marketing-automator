@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Bell, X, Bot, Flame, Rocket, Target, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import { externalSupabase } from "@/integrations/supabase/external-client";

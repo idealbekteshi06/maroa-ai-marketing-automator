@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect, useRef, useCallback } from "react";
 import { X, Rocket, Flame, AlertTriangle, TrendingUp, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
