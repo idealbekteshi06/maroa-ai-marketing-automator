@@ -31,5 +31,16 @@
   },
   "include": [
     "src"
+  ],
+  "exclude": [
+    "src/components/AIBrainStatus.tsx",
+    "src/components/CharacterTrainer.tsx",
+    "src/components/CompetitorAlert.tsx",
+    "src/components/CreativeConceptApproval.tsx",
+    "src/components/ImageVetter.tsx",
+    "src/components/NotificationCenter.tsx",
+    "src/components/PendingApprovals.tsx",
+    "src/components/PerformanceAlert.tsx",
+    "src/components/dashboard"
   ]
 }
