@@ -64,6 +64,7 @@ const App = () => (
               <Route path="/social-callback" element={<SocialCallback />} />
               <Route path="/compare" element={<Compare />} />
               <Route path="/strategy" element={<ProtectedRoute><Strategy /></ProtectedRoute>} />
+              <Route path="/app/*" element={<ProtectedRoute><MaroaRoutes /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
