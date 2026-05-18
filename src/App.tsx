@@ -10,6 +10,8 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import AnalyticsRouteListener from "@/components/AnalyticsRouteListener";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import { MaroaRoutes } from "@/v2/router";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 const SignUp = lazy(() => import("./pages/SignUp"));
 const Login = lazy(() => import("./pages/Login"));
