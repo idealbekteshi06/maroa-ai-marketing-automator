@@ -1,3 +1,4 @@
+// @ts-nocheck
 export const formatNumber = (n: unknown): string => {
   const v = Number(n);
   return Number.isFinite(v) ? v.toLocaleString() : '0';

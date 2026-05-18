@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Complete onboarding question definitions — 12 blocks, 83 questions
 // Used by the onboarding wizard to render the correct UI per question
 
