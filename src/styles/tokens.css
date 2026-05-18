@@ -132,3 +132,76 @@
   --shadow-lg: 0 10px 15px rgba(0,0,0,0.6);
   --shadow-xl: 0 20px 25px rgba(0,0,0,0.7);
 }
+
+/* ============================================================
+   MAROA — Apple HIG tokens (§2). Prefixed --m- to avoid clash.
+   ============================================================ */
+:root {
+  /* Surfaces */
+  --m-background: 0 0% 100%;
+  --m-surface: 0 0% 98%;
+  --m-surface-elevated: 0 0% 100%;
+  --m-surface-glass: 0 0% 100% / 0.72;
+  --m-border: 240 6% 90%;
+  --m-border-subtle: 240 6% 94%;
+  --m-foreground: 240 10% 6%;
+  --m-muted-foreground: 240 4% 46%;
+  /* Brand */
+  --m-accent: 211 100% 50%;
+  --m-accent-foreground: 0 0% 100%;
+  --m-success: 142 71% 45%;
+  --m-warning: 38 92% 50%;
+  --m-destructive: 4 90% 58%;
+  --m-info: 199 89% 48%;
+  --m-purple: 280 79% 60%;
+  --m-pink: 343 89% 60%;
+  --m-teal: 174 72% 41%;
+  /* Elevation */
+  --m-shadow-sm: 0 1px 2px hsl(240 6% 10% / 0.04);
+  --m-shadow-md: 0 4px 16px hsl(240 6% 10% / 0.06), 0 1px 2px hsl(240 6% 10% / 0.04);
+  --m-shadow-lg: 0 20px 60px hsl(240 6% 10% / 0.12), 0 4px 12px hsl(240 6% 10% / 0.06);
+  /* Motion */
+  --m-ease: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.dark {
+  --m-background: 240 5% 6%;
+  --m-surface: 240 6% 9%;
+  --m-surface-elevated: 240 5% 12%;
+  --m-surface-glass: 240 5% 12% / 0.65;
+  --m-border: 240 4% 18%;
+  --m-border-subtle: 240 4% 14%;
+  --m-foreground: 0 0% 98%;
+  --m-muted-foreground: 240 4% 64%;
+  --m-accent: 211 100% 60%;
+}
+
+/* Apple glass utility */
+.m-glass {
+  background: hsl(var(--m-surface-glass));
+  backdrop-filter: saturate(180%) blur(24px);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  border: 1px solid hsl(var(--m-border-subtle));
+}
+@supports not (backdrop-filter: blur(1px)) {
+  .m-glass { background: hsl(var(--m-surface-elevated)); }
+}
+
+/* KPI tabular numbers */
+.m-tnum { font-variant-numeric: tabular-nums; }
+
+/* Apple type scale */
+.text-display { font-size: 56px; line-height: 60px; font-weight: 700; letter-spacing: -0.02em; }
+.text-title-1 { font-size: 34px; line-height: 40px; font-weight: 700; letter-spacing: -0.022em; }
+.text-title-2 { font-size: 28px; line-height: 34px; font-weight: 600; letter-spacing: -0.02em; }
+.text-title-3 { font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: -0.017em; }
+.text-headline { font-size: 17px; line-height: 22px; font-weight: 600; letter-spacing: -0.015em; }
+.text-body { font-size: 15px; line-height: 22px; font-weight: 400; letter-spacing: -0.005em; }
+.text-callout { font-size: 14px; line-height: 20px; font-weight: 500; }
+.text-subhead { font-size: 13px; line-height: 18px; font-weight: 500; }
+.text-footnote { font-size: 12px; line-height: 16px; font-weight: 400; letter-spacing: 0.005em; }
+.text-caption { font-size: 11px; line-height: 14px; font-weight: 500; letter-spacing: 0.01em; }
+
+@media (prefers-reduced-motion: reduce) {
+  .m-glass, .m-tnum, * { animation: none !important; transition: none !important; }
+}

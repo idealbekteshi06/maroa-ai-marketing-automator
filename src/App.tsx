@@ -10,6 +10,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import AnalyticsRouteListener from "@/components/AnalyticsRouteListener";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import { MaroaRoutes } from "@/v2/router";
 
 const SignUp = lazy(() => import("./pages/SignUp"));
 const Login = lazy(() => import("./pages/Login"));
@@ -63,6 +64,7 @@ const App = () => (
               <Route path="/social-callback" element={<SocialCallback />} />
               <Route path="/compare" element={<Compare />} />
               <Route path="/strategy" element={<ProtectedRoute><Strategy /></ProtectedRoute>} />
+              <Route path="/app/*" element={<ProtectedRoute><MaroaRoutes /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
