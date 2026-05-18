@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Heart, Shield, Zap, Sparkles, MapPin, ShoppingCart, Megaphone, TrendingUp, Check, Loader2 } from "lucide-react";

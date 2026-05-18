@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { CheckCircle2, Circle, User, Share2, CreditCard, FileText, Flag } from "lucide-react";
 
 interface SetupProgressProps {

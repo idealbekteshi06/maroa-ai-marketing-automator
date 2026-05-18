@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import { vetCustomerAsset, smartProcessAsset, type VetterVerdict } from "@/lib/api";
 

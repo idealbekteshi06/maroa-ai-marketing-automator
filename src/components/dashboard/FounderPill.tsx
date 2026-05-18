@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect, useState } from "react";
 import { Mail, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";

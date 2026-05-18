@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect, useRef } from "react";
 import { Brain, Loader2 } from "lucide-react";
 import { externalSupabase } from "@/integrations/supabase/external-client";

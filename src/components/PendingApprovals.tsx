@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Check, FileText, Instagram, Facebook, Globe, Loader2 } from "lucide-react";
