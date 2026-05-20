@@ -6,7 +6,7 @@
  * §10.2 auth: Authorization: Bearer <supabase JWT>
  *             /webhook/* additionally needs x-webhook-secret (server-side proxy in prod)
  */
-import { supabase } from "@/integrations/supabase/client";
+import { externalSupabase } from "@/integrations/supabase/external-client";
 
 export interface ApiError {
   status: number;
@@ -15,12 +15,15 @@ export interface ApiError {
   details?: unknown;
 }
 
+// Use the same backend the rest of the app uses (Railway via VITE_API_BASE).
+// Fall back to VITE_API_BASE_URL for forward-compat, then the production host.
 const BASE_URL =
+  (import.meta.env.VITE_API_BASE as string | undefined) ??
   (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
-  "https://api.maroa.ai";
+  "https://maroa-api-production.up.railway.app";
 
 async function authHeader(): Promise<Record<string, string>> {
-  const { data } = await supabase.auth.getSession();
+  const { data } = await externalSupabase.auth.getSession();
   const token = data.session?.access_token;
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
