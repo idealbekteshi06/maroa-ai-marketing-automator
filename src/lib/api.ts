@@ -1223,7 +1223,7 @@ export const wf9DraftReply = (data: { businessId: string; threadId: string; tria
   post("/webhook/wf9-draft-reply", data);
 
 export const wf10JobsList = (businessId: string, status?: string) =>
-  get("/webhook/wf10-jobs-list", { business_id: businessId, ...(status ? { status } : {} });
+  get("/webhook/wf10-jobs-list", { business_id: businessId, ...(status ? { status } : {}) });
 
 export const wf10CreateJob = (data: { businessId: string; request: Record<string, unknown> }) =>
   post("/webhook/wf10-create-job", data);
