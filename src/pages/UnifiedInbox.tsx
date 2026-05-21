@@ -1,300 +1,257 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Instagram, Facebook, Mail, MessageCircle, Search, Send,
-  Sparkles, User, Phone, ShoppingBag, Tag, Clock, ArrowLeft,
-} from "lucide-react";
+import { Loader2, Instagram, Facebook, Mail, MessageCircle, Search, Send, Sparkles } from "lucide-react";
+import { toast } from "sonner";
+import { wf9DraftReply, wf9ThreadsList, wf11EscalationsList, wf11Metrics } from "@/lib/api";
 
-// TODO: wire to real API
-type Channel = "instagram" | "facebook" | "email" | "whatsapp";
+type Channel = "instagram" | "facebook" | "email" | "whatsapp" | string;
 
-interface Conversation {
+type InboxThread = {
   id: string;
   name: string;
-  avatar?: string;
   channel: Channel;
   lastMessage: string;
   timestamp: string;
   unread: number;
-}
+  urgency?: string;
+  specialist?: string;
+  status?: string;
+};
 
-interface Message {
-  id: string;
-  text: string;
-  sent: boolean;
-  time: string;
-}
-
-const channelIcon: Record<Channel, typeof Instagram> = {
+const channelIcon: Record<string, typeof Instagram> = {
   instagram: Instagram,
   facebook: Facebook,
   email: Mail,
   whatsapp: MessageCircle,
 };
 
-const channelColor: Record<Channel, string> = {
-  instagram: "text-pink-500",
-  facebook: "text-blue-500",
-  email: "text-orange-500",
-  whatsapp: "text-green-500",
-};
-
-const conversations: Conversation[] = [
-  { id: "1", name: "Arta Krasniqi", channel: "instagram", lastMessage: "Hi! Can I order 5 cases of 1.5L for an event this Saturday?", timestamp: "2 min", unread: 2 },
-  { id: "2", name: "Driton Berisha", channel: "whatsapp", lastMessage: "Do you deliver to Prizren? I need 10 packs.", timestamp: "18 min", unread: 1 },
-  { id: "3", name: "Lindita Gashi", channel: "facebook", lastMessage: "Love the new packaging! Where can I buy in Prishtina?", timestamp: "1h", unread: 0 },
-  { id: "4", name: "Besnik Hoxha", channel: "email", lastMessage: "RE: Wholesale pricing request for HoReCa partnership", timestamp: "2h", unread: 3 },
-  { id: "5", name: "Teuta Shala", channel: "instagram", lastMessage: "Your spring campaign video is amazing. Collab?", timestamp: "3h", unread: 0 },
-  { id: "6", name: "Faton Rugova", channel: "whatsapp", lastMessage: "Received the order, thank you! Quality is great.", timestamp: "5h", unread: 0 },
-  { id: "7", name: "Vlora Mehmeti", channel: "facebook", lastMessage: "Is the glass bottle available in 0.5L?", timestamp: "1d", unread: 0 },
-  { id: "8", name: "Alban Kastrati", channel: "email", lastMessage: "Following up on the invoice for order #4821", timestamp: "2d", unread: 1 },
-];
-
-const activeThread: Message[] = [
-  { id: "m1", text: "Hi there! I saw your new Uje Karadaku premium collection on Instagram.", sent: false, time: "10:23 AM" },
-  { id: "m2", text: "Can I order 5 cases of 1.5L for an event this Saturday?", sent: false, time: "10:23 AM" },
-  { id: "m3", text: "Hello Arta! Of course. We have the 1.5L premium still in stock. 5 cases = 30 bottles, correct?", sent: true, time: "10:25 AM" },
-  { id: "m4", text: "Yes exactly! What's the price for that quantity?", sent: false, time: "10:28 AM" },
-  { id: "m5", text: "For 5 cases, that would be EUR 45.00 total (EUR 1.50 per bottle). We can deliver Friday evening if that works?", sent: true, time: "10:30 AM" },
-  { id: "m6", text: "Perfect, Friday evening works great. I'll send you the address!", sent: false, time: "10:32 AM" },
-];
-
-const customerDetails = {
-  name: "Arta Krasniqi",
-  email: "arta.krasniqi@email.com",
-  phone: "+383 44 123 456",
-  totalOrders: 8,
-  lifetimeValue: "EUR 312.50",
-  tags: ["VIP", "Event Planner", "Prishtina"],
-};
-
-const aiReplies = [
-  "Great! I'll schedule the delivery for Friday at 6 PM. Could you please share your address?",
-  "We also have a 10% discount for orders over EUR 50 if you'd like to add another case!",
-  "I'll send you a confirmation email with the order details and delivery time.",
-];
-
-const channelCounts: Record<string, number> = {
-  all: 7,
-  instagram: 2,
-  facebook: 2,
-  email: 2,
-  whatsapp: 1,
-};
+function formatRelative(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins || 1} min`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 48) return `${hrs}h`;
+  return `${Math.floor(hrs / 24)}d`;
+}
 
 export default function UnifiedInbox() {
-  const [activeConvo, setActiveConvo] = useState(conversations[0]);
-  const [channelFilter, setChannelFilter] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [messageInput, setMessageInput] = useState("");
-  const [showThread, setShowThread] = useState(false);
+  const { businessId, isReady } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [threads, setThreads] = useState<InboxThread[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [filter, setFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [draftBody, setDraftBody] = useState("");
+  const [metrics, setMetrics] = useState<{ threadCount?: number; escalationCount?: number } | null>(null);
+  const [escalationCount, setEscalationCount] = useState(0);
 
-  const filtered = conversations.filter((c) => {
-    const matchesChannel = channelFilter === "all" || c.channel === channelFilter;
-    const matchesSearch =
-      !searchQuery ||
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.lastMessage.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesChannel && matchesSearch;
+  const load = useCallback(async () => {
+    if (!businessId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const [listRes, metricsRes, escRes] = await Promise.all([
+        wf9ThreadsList(businessId),
+        wf11Metrics(businessId).catch(() => null),
+        wf11EscalationsList(businessId).catch(() => ({ items: [] })),
+      ]);
+      const mapped: InboxThread[] = (listRes.items || []).map((t) => ({
+        id: String(t.id),
+        name: String(t.from_handle || t.subject || "Unknown"),
+        channel: (t.channel as Channel) || "email",
+        lastMessage: String(t.body || "").slice(0, 120),
+        timestamp: formatRelative(String(t.created_at || new Date().toISOString())),
+        unread: t.status === "new" ? 1 : 0,
+        urgency: t.urgency ? String(t.urgency) : undefined,
+        specialist: t.specialist_role ? String(t.specialist_role) : undefined,
+        status: t.status ? String(t.status) : undefined,
+      }));
+      setThreads(mapped);
+      if (!activeId && mapped[0]) setActiveId(mapped[0].id);
+      setMetrics(metricsRes as { threadCount?: number; escalationCount?: number } | null);
+      setEscalationCount(Array.isArray(escRes.items) ? escRes.items.length : 0);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to load inbox");
+      setThreads([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [businessId, activeId]);
+
+  useEffect(() => {
+    if (isReady) load();
+  }, [isReady, load]);
+
+  const active = threads.find((t) => t.id === activeId);
+  const filtered = threads.filter((t) => {
+    if (filter === "urgent" && t.urgency !== "immediate" && t.urgency !== "high") return false;
+    if (filter === "escalated" && t.status !== "escalated") return false;
+    if (search && !t.name.toLowerCase().includes(search.toLowerCase()) && !t.lastMessage.toLowerCase().includes(search.toLowerCase())) {
+      return false;
+    }
+    return true;
   });
 
+  const handleDraft = async () => {
+    if (!businessId || !activeId) return;
+    try {
+      const res = await wf9DraftReply({ businessId, threadId: activeId });
+      const body = (res as { reply?: { body?: string } }).reply?.body
+        || (res as { body?: string }).body
+        || "";
+      setDraftBody(body);
+      toast.success("AI draft ready");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Draft failed");
+    }
+  };
+
+  if (!isReady || loading) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center text-muted-foreground">
+        <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading inbox…
+      </div>
+    );
+  }
+
+  if (!businessId) {
+    return (
+      <div className="p-8 text-center text-muted-foreground">
+        Connect your business profile to use the unified inbox.
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col h-[calc(100vh-10rem)]">
-      {/* Top bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
-        <Tabs value={channelFilter} onValueChange={setChannelFilter} className="w-full sm:w-auto">
-          <TabsList className="bg-muted/50">
-            {Object.entries(channelCounts).map(([key, count]) => (
-              <TabsTrigger key={key} value={key} className="text-xs sm:text-sm capitalize">
-                {key === "all" ? "All" : key}
-                <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px]">{count}</Badge>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search conversations..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9"
-          />
+    <div className="flex h-[calc(100vh-8rem)] flex-col gap-4 p-4 md:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Unified Inbox</h1>
+          <p className="text-sm text-muted-foreground">
+            WF9 inbox + WF11 smart routing · {metrics?.threadCount ?? threads.length} threads · {escalationCount} open escalations
+          </p>
         </div>
+        <Button variant="outline" size="sm" onClick={load}>Refresh</Button>
       </div>
 
-      {/* 3-column layout */}
-      <div className="flex flex-1 gap-0 border border-border rounded-lg overflow-hidden bg-card min-h-0">
-        {/* Left — Conversation list */}
-        <div className={`w-full md:w-80 md:block border-r border-border flex-shrink-0 ${showThread ? "hidden" : "block"}`}>
-          <ScrollArea className="h-full">
-            {filtered.map((convo) => {
-              const Icon = channelIcon[convo.channel];
-              const isActive = convo.id === activeConvo.id;
-              return (
-                <button
-                  key={convo.id}
-                  onClick={() => { setActiveConvo(convo); setShowThread(true); }}
-                  className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50 border-b border-border ${isActive ? "bg-muted/70" : ""}`}
-                >
-                  <Avatar className="h-10 w-10 flex-shrink-0">
-                    <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                      {convo.name.split(" ").map((n) => n[0]).join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className={`text-sm font-medium truncate ${convo.unread ? "text-foreground" : "text-muted-foreground"}`}>
-                        {convo.name}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground ml-2 flex-shrink-0">{convo.timestamp}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <Icon className={`h-3 w-3 flex-shrink-0 ${channelColor[convo.channel]}`} />
-                      <span className="text-xs text-muted-foreground truncate">{convo.lastMessage}</span>
-                    </div>
-                  </div>
-                  {convo.unread > 0 && (
-                    <Badge className="h-5 w-5 rounded-full p-0 flex items-center justify-center text-[10px] flex-shrink-0 bg-primary text-primary-foreground">
-                      {convo.unread}
-                    </Badge>
-                  )}
-                </button>
-              );
-            })}
-          </ScrollArea>
-        </div>
-
-        {/* Center — Thread */}
-        <div className={`flex-1 flex flex-col min-w-0 ${!showThread ? "hidden md:flex" : "flex"}`}>
-          {/* Thread header */}
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
-            <Button variant="ghost" size="icon" className="md:hidden h-8 w-8" onClick={() => setShowThread(false)}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                {activeConvo.name.split(" ").map((n) => n[0]).join("")}
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0">
-              <p className="text-sm font-medium truncate">{activeConvo.name}</p>
-              <div className="flex items-center gap-1">
-                {(() => { const Icon = channelIcon[activeConvo.channel]; return <Icon className={`h-3 w-3 ${channelColor[activeConvo.channel]}`} />; })()}
-                <span className="text-[11px] text-muted-foreground capitalize">{activeConvo.channel}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Messages */}
-          <ScrollArea className="flex-1 px-4 py-4">
-            <div className="space-y-3">
-              <p className="text-center text-[11px] text-muted-foreground">Today, 10:23 AM</p>
-              {activeThread.map((msg) => (
-                <div key={msg.id} className={`flex ${msg.sent ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${msg.sent ? "bg-primary text-primary-foreground rounded-br-md" : "bg-muted text-foreground rounded-bl-md"}`}>
-                    <p className="text-sm leading-relaxed">{msg.text}</p>
-                    <p className={`text-[10px] mt-1 ${msg.sent ? "text-primary-foreground/70" : "text-muted-foreground"}`}>{msg.time}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
-
-          {/* Compose */}
-          <div className="border-t border-border px-4 py-3">
-            <div className="flex items-center gap-2">
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[320px_1fr]">
+        <Card className="flex min-h-0 flex-col">
+          <CardHeader className="pb-2">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Type a message..."
-                value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-                className="flex-1 h-9"
-                onKeyDown={(e) => { if (e.key === "Enter") { /* TODO: wire to real API */ } }}
+                placeholder="Search conversations…"
+                className="pl-8"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
               />
-              <Button size="icon" className="h-9 w-9 flex-shrink-0">
-                <Send className="h-4 w-4" />
-              </Button>
             </div>
-          </div>
-        </div>
-
-        {/* Right — Customer details (hidden on mobile) */}
-        <div className="hidden lg:flex w-72 flex-col border-l border-border flex-shrink-0">
-          <ScrollArea className="flex-1">
-            <div className="p-4 space-y-5">
-              {/* Profile */}
-              <div className="flex flex-col items-center text-center">
-                <Avatar className="h-16 w-16 mb-3">
-                  <AvatarFallback className="text-lg bg-primary/10 text-primary">AK</AvatarFallback>
-                </Avatar>
-                <h3 className="text-sm font-semibold">{customerDetails.name}</h3>
-                <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                  <Mail className="h-3 w-3" />{customerDetails.email}
-                </div>
-                <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
-                  <Phone className="h-3 w-3" />{customerDetails.phone}
-                </div>
-              </div>
-
-              {/* Stats */}
-              <div className="grid grid-cols-2 gap-3">
-                <Card className="bg-muted/30">
-                  <CardContent className="p-3 text-center">
-                    <ShoppingBag className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-                    <p className="text-lg font-bold">{customerDetails.totalOrders}</p>
-                    <p className="text-[10px] text-muted-foreground">Orders</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/30">
-                  <CardContent className="p-3 text-center">
-                    <Clock className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-                    <p className="text-lg font-bold">{customerDetails.lifetimeValue}</p>
-                    <p className="text-[10px] text-muted-foreground">LTV</p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Tags */}
-              <div>
-                <div className="flex items-center gap-1.5 mb-2">
-                  <Tag className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs font-medium text-muted-foreground">Tags</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {customerDetails.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-[11px]">{tag}</Badge>
-                  ))}
-                </div>
-              </div>
-
-              {/* AI Suggested Replies */}
-              <div>
-                <div className="flex items-center gap-1.5 mb-2">
-                  <Sparkles className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-xs font-medium">AI Suggested Replies</span>
-                </div>
-                <div className="space-y-2">
-                  {aiReplies.map((reply, i) => (
-                    <Button
-                      key={i}
-                      variant="outline"
-                      className="w-full h-auto text-left text-xs py-2 px-3 whitespace-normal leading-relaxed"
-                      onClick={() => setMessageInput(reply)}
+            <Tabs value={filter} onValueChange={setFilter} className="mt-2">
+              <TabsList className="w-full">
+                <TabsTrigger value="all" className="flex-1">All</TabsTrigger>
+                <TabsTrigger value="urgent" className="flex-1">Urgent</TabsTrigger>
+                <TabsTrigger value="escalated" className="flex-1">Escalated</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </CardHeader>
+          <CardContent className="min-h-0 flex-1 p-0">
+            <ScrollArea className="h-[calc(100%-1rem)]">
+              {filtered.length === 0 ? (
+                <p className="p-4 text-center text-sm text-muted-foreground">No conversations yet.</p>
+              ) : (
+                filtered.map((c) => {
+                  const Icon = channelIcon[c.channel] || Mail;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setActiveId(c.id)}
+                      className={`flex w-full gap-3 border-b px-4 py-3 text-left transition hover:bg-muted/50 ${
+                        activeId === c.id ? "bg-muted/80" : ""
+                      }`}
                     >
-                      {reply}
-                    </Button>
-                  ))}
+                      <Avatar className="h-9 w-9">
+                        <AvatarFallback>{c.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="truncate font-medium text-sm">{c.name}</span>
+                          <span className="shrink-0 text-xs text-muted-foreground">{c.timestamp}</span>
+                        </div>
+                        <p className="truncate text-xs text-muted-foreground">{c.lastMessage}</p>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          <Icon className="h-3 w-3 text-muted-foreground" />
+                          {c.specialist && (
+                            <Badge variant="secondary" className="text-[10px] px-1 py-0">{c.specialist}</Badge>
+                          )}
+                          {c.unread > 0 && <Badge className="text-[10px] px-1 py-0">{c.unread}</Badge>}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
+
+        <Card className="flex min-h-0 flex-col">
+          {active ? (
+            <>
+              <CardHeader className="border-b pb-3">
+                <CardTitle className="text-lg">{active.name}</CardTitle>
+                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                  <Badge variant="outline">{active.channel}</Badge>
+                  {active.specialist && <Badge variant="secondary">{active.specialist}</Badge>}
+                  {active.urgency && <Badge>{active.urgency}</Badge>}
+                  {active.status && <Badge variant="outline">{active.status}</Badge>}
                 </div>
-              </div>
-            </div>
-          </ScrollArea>
-        </div>
+              </CardHeader>
+              <CardContent className="flex min-h-0 flex-1 flex-col gap-3 pt-4">
+                <ScrollArea className="flex-1 rounded-md border p-4">
+                  <p className="text-sm whitespace-pre-wrap">{active.lastMessage}</p>
+                </ScrollArea>
+                <div className="flex gap-2">
+                  <Button variant="secondary" className="gap-2" onClick={handleDraft}>
+                    <Sparkles className="h-4 w-4" /> AI draft
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Edit reply before sending…"
+                    value={draftBody}
+                    onChange={(e) => setDraftBody(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && draftBody.trim()) {
+                        toast.message("Send via connected channel", { description: "Connect Meta/email in Connections to publish." });
+                      }
+                    }}
+                  />
+                  <Button
+                    size="icon"
+                    disabled={!draftBody.trim()}
+                    onClick={() => toast.message("Connect channel to send", { description: "OAuth for Instagram, WhatsApp, or email required." })}
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </>
+          ) : (
+            <CardContent className="flex flex-1 items-center justify-center text-muted-foreground text-sm">
+              Select a conversation
+            </CardContent>
+          )}
+        </Card>
       </div>
     </div>
   );

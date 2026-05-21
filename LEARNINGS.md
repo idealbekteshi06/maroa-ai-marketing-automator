@@ -6,12 +6,13 @@ _Started 2026-04-13. Maintained continuously per execution order in MAROA_15_WOR
 
 ## 0. Structural reality of this repo (critical context)
 
-This repo (`maroa-ai-marketing-automator`) is **not** a monolith. Audit confirmed:
+This repo (`maroa-ai-marketing-automator`) is the **Vite/React customer app**. The **backend monolith** lives in `~/Desktop/Maroa.ai` (Express `server.js`, 17 skills, WF1–15, Inngest crons, 80 migrations). Production API: `https://maroa-api-production.up.railway.app`.
 
-- **Stack**: Vite 5 + React 18 + React Router 6 + TypeScript (non-strict) + Tailwind + shadcn. Not Next.js.
-- **Backend is out-of-repo**: All workflow logic, orchestration, scheduled jobs, AI prompt execution, API credentials, and Supabase migrations live on a Railway service at `https://maroa-api-production.up.railway.app` and are triggered via ~72 fire-and-forget or req/res webhook endpoints defined in `src/lib/api.ts`.
-- **Supabase is external**: `src/integrations/supabase/external-client.ts` points at a hardcoded project (`zqhyrbttuqkvmdewiytf.supabase.co`). No migrations, no schema.sql, no Drizzle/Prisma in this repo. `types.ts` is empty.
-- **Edge functions in repo** are limited to: `stripe-webhook`, `chat`, `check-subscription`, `create-checkout`, `meta-oauth-callback`, `customer-portal`. None of the 15 workflows live here.
+- **Stack**: Vite 5 + React 18 + React Router 6 + TypeScript + Tailwind + shadcn.
+- **Backend**: `Maroa.ai` — workflows, skills, `quality_gate_runs`, WF11 smart routing (May 2026).
+- **WF15 memory**: Postgres `brain_memory` (not Pinecone) — sufficient for per-business SMB context.
+- **Supabase**: external project via `src/integrations/supabase/external-client.ts`; schema migrations run from `Maroa.ai/migrations/`.
+- **Edge functions in this repo**: stripe-webhook, chat, check-subscription, create-checkout, meta-oauth-callback, customer-portal.
 
 **Implication for this build-out**: "implementing a workflow" in this repo means:
 1. **Strategic framework prompt modules** in `src/lib/prompts/` — the exact AI prompts with the 8 foundation principles, industry playbooks, and Cialdini/JTBD/Kahneman/StoryBrand psychology layer the spec mandates. These are the durable strategic asset. The frontend calls the backend, which loads these prompt modules at runtime (requires a minor backend change to read them from the client-shipped bundle or a shared package; alternative: duplicate in backend repo — logged below as handoff delta).
@@ -37,7 +38,7 @@ I will NOT build shell backend code in this frontend repo — it would run nowhe
 | 8 | Customer Insights | **Partial** | `DashboardResearch.tsx` | `researchRun` | No JTBD interview engine, no review mining, no persona generation |
 | 9 | Unified Inbox | **Missing** | — | — | No multi-channel aggregation, no conversation threading, no assignment |
 | 10 | Higgsfield Studio | **Missing** | — | — | No Segmind client, no generation queue, no variant UI, no brand guardrails |
-| 11 | Smart Routing | **Missing** | — | — | No routing rules, no SLA tracking, no escalation |
+| 11 | Smart Routing | **Implemented (backend)** | `UnifiedInbox.tsx` | `wf11-*` webhooks | 7 specialists, SLA cron, escalations; channel OAuth still on you |
 | 12 | Launch Orchestrator | **Partial** | `DashboardLaunch.tsx` | `launchCampaign` | No pre-launch/launch/post-launch phases, no dependency graph |
 | 13 | Weekly Strategy Brief | **Missing** | — | — | No weekly report generation, no KPI narrative, no action items |
 | 14 | Budget/ROI Optimizer | **Partial** | `DashboardHealthScore.tsx` | `healthScore` | No budget forecasting, no channel ROI comparison, no reallocation engine |

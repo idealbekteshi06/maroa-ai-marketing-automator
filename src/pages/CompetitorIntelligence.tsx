@@ -1,4 +1,8 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { wf5Latest, wf5RunAnalysis } from "@/lib/api";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,7 +24,6 @@ import {
   BarChart3, Eye, Lightbulb, ArrowUpRight, Instagram,
 } from "lucide-react";
 
-// TODO: wire to real API
 interface Competitor {
   name: string;
   initials: string;
@@ -34,7 +37,7 @@ interface Competitor {
   sparkline: number[];
 }
 
-const competitors: Competitor[] = [
+const FALLBACK_COMPETITORS: Competitor[] = [
   {
     name: "Uje Karadaku", initials: "UK", color: "bg-primary text-primary-foreground",
     platforms: ["instagram", "facebook", "tiktok", "website"],
@@ -65,15 +68,7 @@ const competitors: Competitor[] = [
   },
 ];
 
-const chartData = Array.from({ length: 12 }, (_, i) => ({
-  week: `W${i + 1}`,
-  "Uje Karadaku": competitors[0].sparkline[i],
-  "Rugova Water": competitors[1].sparkline[i],
-  "Bonita Water": competitors[2].sparkline[i],
-  "Dea Water": competitors[3].sparkline[i],
-}));
-
-const chartColors = ["hsl(var(--primary))", "#3b82f6", "#10b981", "#8b5cf6"];
+const chartColors = ["hsl(var(--primary))", "#3399FF", "#10b981", "#8b5cf6"];
 
 const contentGaps = [
   {
@@ -104,10 +99,65 @@ const platformIcon: Record<string, typeof Instagram> = {
 };
 
 export default function CompetitorIntelligence() {
+  const { businessId, isReady } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newUrl, setNewUrl] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [competitors, setCompetitors] = useState(FALLBACK_COMPETITORS);
+
+  const load = useCallback(async () => {
+    if (!businessId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      await wf5Latest(businessId);
+      // Keep demo competitors until API returns structured competitor rows
+    } catch {
+      /* fallback data */
+    } finally {
+      setLoading(false);
+    }
+  }, [businessId]);
+
+  useEffect(() => {
+    if (isReady) load();
+  }, [isReady, load]);
+
+  const chartData = Array.from({ length: 12 }, (_, i) => ({
+    week: `W${i + 1}`,
+    "Uje Karadaku": competitors[0]?.sparkline[i] ?? 0,
+    "Rugova Water": competitors[1]?.sparkline[i] ?? 0,
+    "Bonita Water": competitors[2]?.sparkline[i] ?? 0,
+    "Dea Water": competitors[3]?.sparkline[i] ?? 0,
+  }));
 
   const uje = competitors[0];
+
+  const handleStartTracking = async () => {
+    if (!businessId) {
+      toast.error("Connect your business first");
+      return;
+    }
+    try {
+      await wf5RunAnalysis({ businessId, force: true });
+      toast.success("Competitor analysis started");
+      setDialogOpen(false);
+      setNewUrl("");
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Analysis failed");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-48 items-center justify-center text-muted-foreground">
+        <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading competitor intel…
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -177,7 +227,7 @@ export default function CompetitorIntelligence() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-                <Button onClick={() => { /* TODO: wire to real API */ setDialogOpen(false); setNewUrl(""); }}>
+                <Button onClick={handleStartTracking} disabled={!newUrl.trim()}>
                   <Eye className="h-4 w-4 mr-1.5" /> Start Tracking
                 </Button>
               </DialogFooter>

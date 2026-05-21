@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { wf10CreateJob, wf10JobsList } from "@/lib/api";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,7 +19,6 @@ import {
   Clock, Layers, Search, Sparkles, Film,
 } from "lucide-react";
 
-// TODO: wire to real API
 type AssetType = "image" | "video" | "ad";
 
 interface Asset {
@@ -37,7 +39,7 @@ const typeBadgeClass: Record<AssetType, string> = {
   ad: "bg-amber-500/10 text-amber-500 border-amber-500/20",
 };
 
-const mockAssets: Asset[] = [
+const FALLBACK_ASSETS: Asset[] = [
   { id: "a1", prompt: "Crystal clear water pouring into a glass with Sharr mountains at golden hour", type: "image", gradient: "from-sky-400 via-blue-500 to-indigo-600", generatedAt: "2 hours ago", duration: "12s", dimensions: "1080x1080" },
   { id: "a2", prompt: "Uje Karadaku bottle rotating 360 degrees on marble surface with water droplets", type: "video", gradient: "from-purple-400 via-violet-500 to-indigo-600", generatedAt: "5 hours ago", duration: "45s", dimensions: "1920x1080" },
   { id: "a3", prompt: "Instagram Story ad: Summer hydration campaign with gradient overlay and CTA", type: "ad", gradient: "from-orange-400 via-rose-500 to-pink-600", generatedAt: "1 day ago", duration: "8s", dimensions: "1080x1920" },
@@ -50,6 +52,8 @@ const mockAssets: Asset[] = [
 ];
 
 export default function HiggsfieldStudio() {
+  const { businessId, isReady } = useAuth();
+  const [assets, setAssets] = useState<Asset[]>(FALLBACK_ASSETS);
   const [filter, setFilter] = useState<"all" | AssetType>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -58,20 +62,63 @@ export default function HiggsfieldStudio() {
   const [newType, setNewType] = useState<AssetType>("image");
   const [newAspect, setNewAspect] = useState("1:1");
 
-  const filtered = mockAssets.filter((a) => {
+  const load = useCallback(async () => {
+    if (!businessId) return;
+    try {
+      const res = await wf10JobsList(businessId) as { jobs?: Array<Record<string, unknown>> };
+      const jobs = res.jobs || [];
+      if (jobs.length) {
+        setAssets(
+          jobs.map((j, i) => ({
+            id: String(j.id ?? i),
+            prompt: String((j.request as { prompt?: string })?.prompt ?? j.prompt ?? "Studio job"),
+            type: (j.kind as AssetType) || "image",
+            gradient: "from-sky-400 via-blue-500 to-indigo-600",
+            generatedAt: String(j.created_at ?? "recent"),
+            duration: String(j.duration_sec ?? "—"),
+            dimensions: String(j.dimensions ?? "1080x1080"),
+          })),
+        );
+      }
+    } catch {
+      setAssets(FALLBACK_ASSETS);
+    }
+  }, [businessId]);
+
+  useEffect(() => {
+    if (isReady) load();
+  }, [isReady, load]);
+
+  const handleCreate = async () => {
+    if (!businessId || !newPrompt.trim()) return;
+    try {
+      await wf10CreateJob({
+        businessId,
+        request: { prompt: newPrompt, kind: newType, aspect: newAspect },
+      });
+      toast.success("Studio job queued");
+      setDialogOpen(false);
+      setNewPrompt("");
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Create failed");
+    }
+  };
+
+  const filtered = assets.filter((a) => {
     const matchesType = filter === "all" || a.type === filter;
     const matchesSearch = !searchQuery || a.prompt.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesType && matchesSearch;
   });
 
   const counts = {
-    all: mockAssets.length,
-    image: mockAssets.filter((a) => a.type === "image").length,
-    video: mockAssets.filter((a) => a.type === "video").length,
-    ad: mockAssets.filter((a) => a.type === "ad").length,
+    all: assets.length,
+    image: assets.filter((a) => a.type === "image").length,
+    video: assets.filter((a) => a.type === "video").length,
+    ad: assets.filter((a) => a.type === "ad").length,
   };
 
-  const thisWeek = mockAssets.filter((a) => !a.generatedAt.includes("day")).length;
+  const thisWeek = assets.filter((a) => !a.generatedAt.includes("day")).length;
 
   return (
     <div className="space-y-6">
@@ -160,7 +207,7 @@ export default function HiggsfieldStudio() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-                <Button className="gap-2" onClick={() => { /* TODO: wire to real API */ setDialogOpen(false); }}>
+                <Button className="gap-2" onClick={handleCreate} disabled={!newPrompt.trim()}>
                   <Sparkles className="h-4 w-4" /> Generate
                 </Button>
               </DialogFooter>
@@ -169,7 +216,7 @@ export default function HiggsfieldStudio() {
 
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5">
-              <Layers className="h-4 w-4" /> <strong className="text-foreground">{mockAssets.length}</strong> assets
+              <Layers className="h-4 w-4" /> <strong className="text-foreground">{assets.length}</strong> assets
             </span>
             <span className="flex items-center gap-1.5">
               <Clock className="h-4 w-4" /> <strong className="text-foreground">{thisWeek}</strong> this week

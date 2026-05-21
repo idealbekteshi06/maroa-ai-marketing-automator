@@ -89,7 +89,7 @@ const ProfileEnhancement = lazy(() => import("@/pages/ProfileEnhancement"));
  *   they produce — Content, Ads, Email, Audience, SEO, CRO, Insights,
  *   Reputation.
  * Bottom: Settings + Sign-out are anchored in the sidebar footer.
- * Stubs (LocalPresence, EmailLifecycle, CompetitorIntel, etc.) stay
+ * WF pages call live APIs (wf6/wf8/wf12 wired); EmailLifecycle partial.
  * out of nav until their pages are wired to real data.
  *
  * `to` is set for items that navigate to a separate route (e.g. /strategy)

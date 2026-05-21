@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { externalSupabase } from "@/integrations/supabase/external-client";
+import { Loader2 } from "lucide-react";
 import {
   Card, CardHeader, CardTitle, CardDescription, CardContent,
 } from "@/components/ui/card";
@@ -39,7 +42,7 @@ interface Sequence {
   steps: SequenceEmail[];
 }
 
-const sequences: Sequence[] = [
+const FALLBACK_SEQUENCES: Sequence[] = [
   {
     id: "welcome",
     name: "Welcome Series",
@@ -141,14 +144,55 @@ function SequenceTimeline({ steps }: { steps: SequenceEmail[] }) {
 /* ── Component ── */
 
 export default function EmailLifecycle() {
+  const { businessId, isReady } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [sequences, setSequences] = useState(FALLBACK_SEQUENCES);
   const [selected, setSelected] = useState<string>("welcome");
   const [toggleState, setToggleState] = useState<Record<string, boolean>>(
-    Object.fromEntries(sequences.map((s) => [s.id, s.active]))
+    Object.fromEntries(FALLBACK_SEQUENCES.map((s) => [s.id, s.active]))
   );
 
-  // TODO: wire to real API — fetch sequences, subscriber counts, performance metrics
+  const load = useCallback(async () => {
+    if (!businessId) { setLoading(false); return; }
+    setLoading(true);
+    try {
+      const { data } = await externalSupabase
+        .from("email_sequences")
+        .select("*")
+        .eq("business_id", businessId)
+        .order("created_at", { ascending: false });
+      if (data?.length) {
+        const mapped: Sequence[] = data.map((row) => ({
+          id: String(row.id),
+          name: String(row.name || row.sequence_name || "Sequence"),
+          emails: Number(row.email_count || row.steps?.length || 3),
+          openRate: Number(row.open_rate || 0),
+          active: row.status !== "paused",
+          status: row.status === "paused" ? "paused" : "live",
+          steps: [],
+        }));
+        setSequences(mapped);
+        setSelected(mapped[0]?.id || "welcome");
+        setToggleState(Object.fromEntries(mapped.map((s) => [s.id, s.active])));
+      }
+    } catch {
+      /* fallback */
+    } finally {
+      setLoading(false);
+    }
+  }, [businessId]);
 
-  const selectedSequence = sequences.find((s) => s.id === selected)!;
+  useEffect(() => { if (isReady) load(); }, [isReady, load]);
+
+  const selectedSequence = sequences.find((s) => s.id === selected) || sequences[0];
+
+  if (loading) {
+    return (
+      <div className="flex h-48 items-center justify-center text-muted-foreground">
+        <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading email sequences…
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

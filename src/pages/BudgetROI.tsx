@@ -8,6 +8,11 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useCallback, useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { wf14LatestRun, wf14Run } from "@/lib/api";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import {
   DollarSign, TrendingUp, TrendingDown, PieChart as PieChartIcon,
   ArrowUpRight, ArrowDownRight, Lightbulb, Target, Zap,
@@ -19,14 +24,9 @@ import {
 } from "recharts";
 import Sparkline from "@/components/Sparkline";
 
-/* ── Mock data ── */
-// TODO: wire to real API
+const DEFAULT_BUDGET = 5000;
 
-const totalSpend = 4280;
-const totalBudget = 5000;
-const roi = 287;
-
-const channels = [
+const FALLBACK_CHANNELS = [
   {
     name: "Meta Ads",
     spend: 2100,
@@ -69,9 +69,7 @@ const channels = [
   },
 ];
 
-const donutData = channels.map((c) => ({ name: c.name, value: c.spend }));
-
-const trendData = Array.from({ length: 30 }, (_, i) => {
+const FALLBACK_TREND = Array.from({ length: 30 }, (_, i) => {
   const day = i + 1;
   const spend = 100 + Math.round(Math.sin(i / 4) * 30 + Math.random() * 20);
   const revenue = Math.round(spend * (2.2 + Math.random() * 1.5));
@@ -79,6 +77,63 @@ const trendData = Array.from({ length: 30 }, (_, i) => {
 });
 
 export default function BudgetROI() {
+  const { businessId, isReady } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [channels, setChannels] = useState(FALLBACK_CHANNELS);
+  const [totalSpend, setTotalSpend] = useState(4280);
+  const [roi, setRoi] = useState(287);
+  const [trendData, setTrendData] = useState(FALLBACK_TREND);
+
+  const load = useCallback(async () => {
+    if (!businessId) { setLoading(false); return; }
+    setLoading(true);
+    try {
+      const data = await wf14LatestRun(businessId) as { snapshot?: { channels?: Array<{ channel: string; spend: number; roas: number }> } } | null;
+      const snap = data?.snapshot;
+      const ch = snap?.channels;
+      if (ch?.length) {
+        const colors = ["#3399FF", "#f59e0b", "#10b981", "#8b5cf6", "#ec4899"];
+        const mapped = ch.map((c, i) => {
+          const spend = Math.round(c.spend || 0);
+          const roasPct = Math.round((c.roas || 0) * 100);
+          const revenue = Math.round(spend * (c.roas || 1));
+          return {
+            name: c.channel === "meta" ? "Meta Ads" : c.channel === "google" ? "Google Ads" : c.channel,
+            spend,
+            revenue,
+            roi: roasPct,
+            cpa: 0,
+            pct: 0,
+            color: colors[i % colors.length],
+            sparkline: [spend],
+          };
+        });
+        const spendSum = mapped.reduce((s, x) => s + x.spend, 0);
+        mapped.forEach((m) => { m.pct = spendSum ? Math.round((m.spend / spendSum) * 100) : 0; });
+        setChannels(mapped);
+        setTotalSpend(spendSum);
+        const revSum = mapped.reduce((s, x) => s + x.revenue, 0);
+        setRoi(spendSum ? Math.round(((revSum - spendSum) / spendSum) * 100) : 0);
+      }
+    } catch {
+      /* keep fallback */
+    } finally {
+      setLoading(false);
+    }
+  }, [businessId]);
+
+  useEffect(() => { if (isReady) load(); }, [isReady, load]);
+
+  const donutData = channels.map((c) => ({ name: c.name, value: c.spend }));
+
+  if (loading) {
+    return (
+      <div className="flex h-48 items-center justify-center text-muted-foreground">
+        <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading budget data…
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       {/* ── Hero ── */}
@@ -92,9 +147,9 @@ export default function BudgetROI() {
             <p className="text-3xl font-bold text-foreground">
               €{totalSpend.toLocaleString()}
             </p>
-            <Progress value={(totalSpend / totalBudget) * 100} className="h-2 mt-2" />
+            <Progress value={(totalSpend / DEFAULT_BUDGET) * 100} className="h-2 mt-2" />
             <p className="text-xs text-muted-foreground mt-1">
-              of €{totalBudget.toLocaleString()} monthly budget ({Math.round((totalSpend / totalBudget) * 100)}%)
+              of €{DEFAULT_BUDGET.toLocaleString()} monthly budget ({Math.round((totalSpend / DEFAULT_BUDGET) * 100)}%)
             </p>
           </CardContent>
         </Card>

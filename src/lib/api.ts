@@ -1039,11 +1039,8 @@ export type CreativeConceptDecisionArgs = {
   decision: "approve" | "reject";
 };
 
-const CC_NOT_IMPLEMENTED =
-  "Creative-concept API not wired yet. Implement /webhook/creative-concept-{list,develop,decision} on the backend and replace this stub.";
-
 export async function listCreativeConcepts(
-  _args: ListCreativeConceptsArgs,
+  args: ListCreativeConceptsArgs,
 ): Promise<{ items: Array<{
   id: string;
   content_goal: string;
@@ -1056,19 +1053,43 @@ export async function listCreativeConcepts(
   status: string;
   created_at: string;
 }> }> {
-  throw new Error(CC_NOT_IMPLEMENTED);
+  const res = await get<{ concepts: Array<Record<string, unknown>> }>(
+    "/webhook/creative-concepts-list",
+    { business_id: args.businessId, limit: String(args.limit ?? 25) },
+  );
+  const items = (res.concepts || []).map((c) => ({
+    id: String(c.id),
+    content_goal: String(c.content_goal ?? ""),
+    idea_level: String(c.idea_level ?? ""),
+    insight: String(c.insight ?? ""),
+    top_concept: (c.top_concept as CreativeConcept["top_concept"]) ?? {},
+    weighted_score: Number(c.weighted_score ?? 0),
+    humankind_score: Number(c.humankind_score ?? 0),
+    pattern: String(c.pattern ?? ""),
+    status: String(c.status ?? ""),
+    created_at: String(c.created_at ?? ""),
+  }));
+  return { items };
 }
 
 export async function developCreativeConcept(
-  _args: DevelopCreativeConceptArgs,
-): Promise<{ ok: true }> {
-  throw new Error(CC_NOT_IMPLEMENTED);
+  args: DevelopCreativeConceptArgs,
+): Promise<{ ok: true; conceptId?: string }> {
+  return post("/webhook/develop-creative-concept", {
+    businessId: args.businessId,
+    contentGoal: args.contentGoal,
+    ideaLevel: args.ideaLevel,
+  });
 }
 
 export async function creativeConceptDecision(
-  _args: CreativeConceptDecisionArgs,
+  args: CreativeConceptDecisionArgs,
 ): Promise<{ ok: true }> {
-  throw new Error(CC_NOT_IMPLEMENTED);
+  return post("/webhook/creative-concept-decision", {
+    businessId: args.businessId,
+    conceptId: args.conceptId,
+    decision: args.decision,
+  });
 }
 
 // ─── Soul ID character training (Strategy page) ───────────────
@@ -1086,31 +1107,53 @@ export type BusinessCharacter = {
   reference_id?: string | null;
 };
 
-const CHAR_NOT_IMPLEMENTED =
-  "Soul ID character API not wired yet. Implement /webhook/character-{create,train,list,set-default} on the backend and replace this stub.";
-
 export async function charactersList(
-  _args: { businessId: string },
+  args: { businessId: string },
 ): Promise<{ characters: BusinessCharacter[] }> {
-  throw new Error(CHAR_NOT_IMPLEMENTED);
+  const res = await get<{ characters: Array<Record<string, unknown>> }>(
+    "/webhook/characters-list",
+    { business_id: args.businessId },
+  );
+  const characters = (res.characters || []).map((c) => ({
+    id: String(c.id),
+    character_type: (c.character_type as BusinessCharacter["character_type"]) || "founder",
+    name: String(c.name ?? ""),
+    is_default: !!c.is_default,
+    training_status: (c.training_status as BusinessCharacter["training_status"]) || "queued",
+    trained_at: c.trained_at ? String(c.trained_at) : null,
+    reference_id: c.higgsfield_character_id ? String(c.higgsfield_character_id) : null,
+  }));
+  return { characters };
 }
 
 export async function characterCreate(
-  _args: { businessId: string; name: string; characterType: BusinessCharacter["character_type"]; imageUrls: string[] },
+  args: { businessId: string; name: string; characterType: BusinessCharacter["character_type"]; imageUrls: string[] },
 ): Promise<{ characterId: string }> {
-  throw new Error(CHAR_NOT_IMPLEMENTED);
+  const res = await post<{ characterId: string }>("/webhook/character-create", {
+    businessId: args.businessId,
+    name: args.name,
+    type: args.characterType,
+    sourceImageUrls: args.imageUrls,
+  });
+  return { characterId: res.characterId };
 }
 
 export async function characterTrain(
-  _args: { businessId: string; characterId: string },
+  args: { businessId: string; characterId: string },
 ): Promise<{ ok: true }> {
-  throw new Error(CHAR_NOT_IMPLEMENTED);
+  return post("/webhook/character-train", {
+    businessId: args.businessId,
+    characterId: args.characterId,
+  });
 }
 
 export async function characterSetDefault(
-  _args: { businessId: string; characterId: string },
+  args: { businessId: string; characterId: string },
 ): Promise<{ ok: true }> {
-  throw new Error(CHAR_NOT_IMPLEMENTED);
+  return post("/webhook/character-set-default", {
+    businessId: args.businessId,
+    characterId: args.characterId,
+  });
 }
 
 // ─── Customer-asset image vetting (Strategy page) ─────────────
@@ -1127,17 +1170,86 @@ export type VetterVerdict = {
   hard_gates_fired: string[];
 };
 
-const VET_NOT_IMPLEMENTED =
-  "Asset vetter API not wired yet. Implement /webhook/asset-{vet,smart-process} on the backend and replace this stub.";
-
 export async function vetCustomerAsset(
-  _args: { businessId: string; imageUrl: string; contentTheme?: string },
+  args: { businessId: string; imageUrl: string; contentTheme?: string },
 ): Promise<VetterVerdict> {
-  throw new Error(VET_NOT_IMPLEMENTED);
+  return post<VetterVerdict>("/webhook/vet-customer-asset", {
+    businessId: args.businessId,
+    imageUrl: args.imageUrl,
+    contentTheme: args.contentTheme,
+  });
 }
 
 export async function smartProcessAsset(
-  _args: { businessId: string; imageUrl: string; contentTheme?: string },
+  args: { businessId: string; imageUrl: string; contentTheme?: string },
 ): Promise<{ verdict: VetterVerdict; generated: string[]; path: string }> {
-  throw new Error(VET_NOT_IMPLEMENTED);
+  return post("/webhook/smart-process-asset", {
+    businessId: args.businessId,
+    imageUrl: args.imageUrl,
+    contentTheme: args.contentTheme,
+  });
 }
+
+// ─── WF5–WF14 batch workflow APIs ─────────────────────────────
+export const wf5RunAnalysis = (data: { businessId: string; force?: boolean }) =>
+  post("/webhook/wf5-run-analysis", data);
+
+export const wf5Latest = (businessId: string) =>
+  get("/webhook/wf5-latest", { business_id: businessId });
+
+export const wf6RunAudit = (data: { businessId: string; auditInput?: Record<string, unknown> }) =>
+  post("/webhook/wf6-run-audit", data);
+
+export const wf6LatestAudit = (businessId: string) =>
+  get("/webhook/wf6-latest-audit", { business_id: businessId });
+
+export const wf7DesignSequence = (data: { businessId: string; segmentId: string }) =>
+  post("/webhook/wf7-design-sequence", data);
+
+export const wf8LatestReport = (businessId: string) =>
+  get("/webhook/wf8-latest-report", { business_id: businessId });
+
+export const wf8GenerateReport = (data: { businessId: string }) =>
+  post("/webhook/wf8-generate-report", data);
+
+export const wf9ThreadsList = (businessId: string, status?: string, urgency?: string) =>
+  get<{ items: Array<Record<string, unknown>> }>("/webhook/wf9-threads-list", {
+    business_id: businessId,
+    ...(status ? { status } : {}),
+    ...(urgency ? { urgency } : {}),
+  });
+
+export const wf9DraftReply = (data: { businessId: string; threadId: string; triage?: Record<string, unknown> }) =>
+  post("/webhook/wf9-draft-reply", data);
+
+export const wf10JobsList = (businessId: string, status?: string) =>
+  get("/webhook/wf10-jobs-list", { business_id: businessId, ...(status ? { status } : {} });
+
+export const wf10CreateJob = (data: { businessId: string; request: Record<string, unknown> }) =>
+  post("/webhook/wf10-create-job", data);
+
+export const wf11Metrics = (businessId: string) =>
+  get("/webhook/wf11-metrics", { business_id: businessId });
+
+export const wf11EscalationsList = (businessId: string) =>
+  get("/webhook/wf11-escalations-list", { business_id: businessId });
+
+export const wf12PlanLaunch = (data: { businessId: string; request: Record<string, unknown> }) =>
+  post("/webhook/wf12-plan-launch", data);
+
+export const wf12LaunchesList = (businessId: string) =>
+  get<{ items: Array<Record<string, unknown>> }>("/webhook/wf12-launches-list", {
+    business_id: businessId,
+  });
+
+export const wf12LaunchDetail = (businessId: string, launchId: string) =>
+  get("/webhook/wf12-launch-detail", { business_id: businessId, launch_id: launchId });
+
+export const wf12ActivityUpdate = (data: {
+  businessId: string;
+  activityId: string;
+  status: string;
+}) => post("/webhook/wf12-activity-update", data);
+
+export const wf14LatestRun = (businessId: string) =>
+  get("/webhook/wf14-latest", { business_id: businessId });

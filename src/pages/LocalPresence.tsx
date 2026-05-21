@@ -1,3 +1,8 @@
+import { useCallback, useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { wf6LatestAudit, wf6RunAudit } from "@/lib/api";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import {
   Card, CardHeader, CardTitle, CardDescription, CardContent,
 } from "@/components/ui/card";
@@ -11,34 +16,13 @@ import {
   TrendingUp, TrendingDown, Search, Globe, Building2,
 } from "lucide-react";
 
-/* ── Mock Data ── */
-
-const healthScore = 78;
-
-const tiles = [
-  { label: "Profile Completeness", value: "85%", icon: Building2, color: "text-primary" },
-  { label: "Review Velocity", value: "+4/week", icon: Star, color: "text-amber-500" },
-  { label: "Local Pack Ranking", value: "#3", icon: MapPin, color: "text-emerald-500" },
-  { label: "Photo Freshness", value: "3 days ago", icon: Camera, color: "text-violet-500" },
-];
-
-const actions = [
-  { id: 1, title: "Update holiday hours for Eid al-Fitr", priority: "high", icon: Clock },
-  { id: 2, title: "Respond to 2 pending Google reviews", priority: "high", icon: Star },
-  { id: 3, title: "Add 3 new product photos to GMB listing", priority: "medium", icon: Camera },
-  { id: 4, title: "Update business description with spring campaign keywords", priority: "low", icon: Building2 },
-];
-
-const keywords = [
-  { keyword: "natural spring water Kosovo", position: 3, change: 2, volume: 1_200, url: "/products/spring-water" },
-  { keyword: "uje karadaku", position: 1, change: 0, volume: 880, url: "/" },
-  { keyword: "best water brand Pristina", position: 5, change: -1, volume: 720, url: "/about" },
-  { keyword: "mineral water delivery Kosovo", position: 8, change: 3, volume: 590, url: "/delivery" },
-  { keyword: "alkaline water Balkans", position: 12, change: 1, volume: 440, url: "/products/alkaline" },
-  { keyword: "healthy drinking water near me", position: 4, change: 2, volume: 1_050, url: "/products" },
-  { keyword: "water subscription Kosovo", position: 6, change: -2, volume: 380, url: "/subscribe" },
-  { keyword: "premium bottled water", position: 15, change: 4, volume: 2_100, url: "/products/premium" },
-];
+type PresenceAudit = {
+  overall_score?: number;
+  gbp?: Record<string, unknown>;
+  local_rank?: { keywords?: Array<{ keyword: string; position: number; change?: number; volume?: number; url?: string }> };
+  remediation_plan?: Array<{ title: string; priority?: string }>;
+  quick_wins?: string[];
+};
 
 const priorityColor: Record<string, "destructive" | "default" | "secondary"> = {
   high: "destructive",
@@ -46,36 +30,24 @@ const priorityColor: Record<string, "destructive" | "default" | "secondary"> = {
   low: "secondary",
 };
 
-/* ── Circular Progress Ring ── */
-
-function HealthRing({ score, size = 140 }: { score: number; size?: number }) {
-  const stroke = 10;
-  const radius = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (score / 100) * circumference;
-
+function HealthRing({ score, size = 120 }: { score: number; size?: number }) {
+  const r = (size - 12) / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = circ - (score / 100) * circ;
   return (
     <div className="relative" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="hsl(var(--muted))" strokeWidth="8" />
         <circle
           cx={size / 2}
           cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="hsl(var(--border))"
-          strokeWidth={stroke}
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
+          r={r}
           fill="none"
           stroke="hsl(var(--primary))"
-          strokeWidth={stroke}
-          strokeDasharray={circumference}
+          strokeWidth="8"
+          strokeDasharray={circ}
           strokeDashoffset={offset}
           strokeLinecap="round"
-          className="transition-all duration-700"
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -86,33 +58,105 @@ function HealthRing({ score, size = 140 }: { score: number; size?: number }) {
   );
 }
 
-/* ── Component ── */
-
 export default function LocalPresence() {
-  // TODO: wire to real API — fetch GMB data, keyword rankings, action items
+  const { businessId, isReady } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [running, setRunning] = useState(false);
+  const [audit, setAudit] = useState<PresenceAudit | null>(null);
+
+  const load = useCallback(async () => {
+    if (!businessId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const row = (await wf6LatestAudit(businessId)) as PresenceAudit | null;
+      setAudit(row);
+    } catch {
+      setAudit(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [businessId]);
+
+  useEffect(() => {
+    if (isReady) load();
+  }, [isReady, load]);
+
+  const runAudit = async () => {
+    if (!businessId) {
+      toast.error("Connect your business first");
+      return;
+    }
+    setRunning(true);
+    try {
+      const result = await wf6RunAudit({ businessId });
+      setAudit(result as PresenceAudit);
+      toast.success("Presence audit complete");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Audit failed");
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const score = Math.round(Number(audit?.overall_score) || 0);
+  const gbp = (audit?.gbp || {}) as Record<string, unknown>;
+  const keywords = audit?.local_rank?.keywords || [];
+  const actions = (audit?.remediation_plan || []).map((item, i) => ({
+    id: i + 1,
+    title: item.title,
+    priority: (item.priority || "medium").toLowerCase(),
+    icon: item.priority === "high" ? AlertTriangle : Clock,
+  }));
+
+  const tiles = [
+    { label: "Profile Completeness", value: gbp.completeness ? `${gbp.completeness}%` : "—", icon: Building2, color: "text-primary" },
+    { label: "Review Velocity", value: gbp.review_velocity ? String(gbp.review_velocity) : "—", icon: Star, color: "text-amber-500" },
+    { label: "Local Pack Ranking", value: gbp.local_pack_rank ? `#${gbp.local_pack_rank}` : "—", icon: MapPin, color: "text-emerald-500" },
+    { label: "Photo Freshness", value: gbp.photo_freshness ? String(gbp.photo_freshness) : "—", icon: Camera, color: "text-violet-500" },
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex h-48 items-center justify-center text-muted-foreground">
+        <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading local presence…
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Hero — GMB Health Score */}
+      <div className="flex justify-end">
+        <Button onClick={runAudit} disabled={running || !businessId}>
+          {running ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          Run presence audit
+        </Button>
+      </div>
+
       <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-transparent">
         <CardContent className="flex flex-col md:flex-row items-center gap-6 pt-6">
-          <HealthRing score={healthScore} size={140} />
+          <HealthRing score={score || 0} size={140} />
           <div className="text-center md:text-left">
             <h2 className="text-lg font-semibold text-foreground">Google Business Profile Health</h2>
             <p className="text-sm text-muted-foreground max-w-md mt-1">
-              Your GMB listing for Uje Karadaku is performing well but has room to improve.
-              Complete the 4 action items below to reach <span className="font-medium text-primary">90+</span>.
+              {audit
+                ? "Scores and actions from your latest Maroa presence audit."
+                : "Run an audit to score your GBP listing and get remediation steps."}
             </p>
-            <div className="flex gap-2 mt-3 justify-center md:justify-start">
-              <Badge variant="outline"><Globe className="mr-1 h-3 w-3" /> Verified</Badge>
-              <Badge variant="outline"><Star className="mr-1 h-3 w-3" /> 4.6 avg rating</Badge>
-              <Badge variant="outline"><CheckCircle className="mr-1 h-3 w-3" /> 127 reviews</Badge>
+            <div className="flex gap-2 mt-3 justify-center md:justify-start flex-wrap">
+              {gbp.verified != null && (
+                <Badge variant="outline"><Globe className="mr-1 h-3 w-3" /> {gbp.verified ? "Verified" : "Unverified"}</Badge>
+              )}
+              {gbp.rating != null && (
+                <Badge variant="outline"><Star className="mr-1 h-3 w-3" /> {String(gbp.rating)} avg</Badge>
+              )}
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* 4-Tile Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {tiles.map((t) => {
           const Icon = t.icon;
@@ -132,117 +176,86 @@ export default function LocalPresence() {
         })}
       </div>
 
-      {/* Action Needed */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-amber-500" /> Action Needed
           </CardTitle>
-          <CardDescription>Complete these items to improve your local presence score</CardDescription>
+          <CardDescription>From your remediation plan</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {actions.map((a) => {
-            const Icon = a.icon;
-            return (
-              <div
-                key={a.id}
-                className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-lg border border-border p-4"
-              >
-                <div className="flex items-center gap-3">
-                  <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-sm font-medium text-foreground">{a.title}</span>
-                  <Badge variant={priorityColor[a.priority]} className="text-xs capitalize shrink-0">
-                    {a.priority}
-                  </Badge>
+          {actions.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No actions yet — run an audit.</p>
+          ) : (
+            actions.map((a) => {
+              const Icon = a.icon;
+              return (
+                <div
+                  key={a.id}
+                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-lg border border-border p-4"
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="text-sm font-medium text-foreground">{a.title}</span>
+                    <Badge variant={priorityColor[a.priority] || "secondary"} className="text-xs capitalize shrink-0">
+                      {a.priority}
+                    </Badge>
+                  </div>
                 </div>
-                <Button size="sm" variant="outline" className="shrink-0">
-                  <CheckCircle className="mr-1 h-3 w-3" /> Resolve
-                </Button>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </CardContent>
       </Card>
 
-      {/* Keyword Rankings */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Search className="h-5 w-5" /> Keyword Rankings
           </CardTitle>
-          <CardDescription>Tracked local SEO keywords for Uje Karadaku</CardDescription>
+          <CardDescription>From local rank analysis</CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Keyword</TableHead>
-                <TableHead className="text-center">Position</TableHead>
-                <TableHead className="text-center">Change</TableHead>
-                <TableHead className="text-right hidden sm:table-cell">Search Volume</TableHead>
-                <TableHead className="hidden md:table-cell">URL</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {keywords.map((k) => (
-                <TableRow key={k.keyword}>
-                  <TableCell className="font-medium">{k.keyword}</TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant={k.position <= 3 ? "default" : k.position <= 10 ? "secondary" : "outline"}>
-                      #{k.position}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {k.change > 0 ? (
-                      <span className="inline-flex items-center text-emerald-500 text-sm font-medium">
-                        <TrendingUp className="mr-1 h-3 w-3" />+{k.change}
-                      </span>
-                    ) : k.change < 0 ? (
-                      <span className="inline-flex items-center text-destructive text-sm font-medium">
-                        <TrendingDown className="mr-1 h-3 w-3" />{k.change}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right hidden sm:table-cell">{k.volume.toLocaleString()}</TableCell>
-                  <TableCell className="hidden md:table-cell text-muted-foreground text-sm">{k.url}</TableCell>
+          {keywords.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No keyword data in the latest audit.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Keyword</TableHead>
+                  <TableHead className="text-center">Position</TableHead>
+                  <TableHead className="text-center">Change</TableHead>
+                  <TableHead className="text-right hidden sm:table-cell">Volume</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Map Placeholder */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5" /> Service Area
-          </CardTitle>
-          <CardDescription>Uje Karadaku distribution coverage in Kosovo</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="relative h-[200px] rounded-lg bg-gradient-to-br from-primary/10 via-primary/5 to-muted overflow-hidden flex items-center justify-center">
-            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_40%_50%,hsl(var(--primary)),transparent_70%)]" />
-            <div className="text-center z-10">
-              <MapPin className="h-8 w-8 text-primary mx-auto mb-2" />
-              <p className="text-sm font-medium text-foreground">Pristina, Kosovo</p>
-              <p className="text-xs text-muted-foreground mt-1">Serving 12 municipalities across Kosovo</p>
-            </div>
-            {/* Decorative dots for map feel */}
-            {[
-              { top: "25%", left: "30%" }, { top: "40%", left: "55%" },
-              { top: "60%", left: "40%" }, { top: "35%", left: "70%" },
-              { top: "55%", left: "25%" }, { top: "70%", left: "60%" },
-            ].map((pos, i) => (
-              <div
-                key={i}
-                className="absolute w-2 h-2 rounded-full bg-primary/40"
-                style={{ top: pos.top, left: pos.left }}
-              />
-            ))}
-          </div>
+              </TableHeader>
+              <TableBody>
+                {keywords.map((k) => (
+                  <TableRow key={k.keyword}>
+                    <TableCell className="font-medium">{k.keyword}</TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant={k.position <= 3 ? "default" : "secondary"}>#{k.position}</Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {(k.change ?? 0) > 0 ? (
+                        <span className="inline-flex items-center text-emerald-500 text-sm">
+                          <TrendingUp className="mr-1 h-3 w-3" />+{k.change}
+                        </span>
+                      ) : (k.change ?? 0) < 0 ? (
+                        <span className="inline-flex items-center text-destructive text-sm">
+                          <TrendingDown className="mr-1 h-3 w-3" />{k.change}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right hidden sm:table-cell">
+                      {k.volume != null ? k.volume.toLocaleString() : "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>
