@@ -335,13 +335,13 @@ export default function Index() {
       <Fade className="px-6 pb-24">
         <div className="max-w-6xl mx-auto">
           <p className={`text-xs uppercase tracking-[0.2em] ${c.primary} text-center mb-3`}>Pricing</p>
-          <h2 className="text-3xl sm:text-4xl font-bold text-center tracking-tight">Two plans. Cancel anytime. No contracts.</h2>
+          <h2 className="text-3xl sm:text-4xl font-bold text-center tracking-tight">Three plans. Cancel anytime. No contracts.</h2>
           <p className={`text-center ${c.textSub} mt-3 text-sm`}>Replace your agency at 10% the cost.</p>
 
           {/* Tablet (md): 2 columns so Growth + Agency sit side-by-side
               and Enterprise wraps below full-width. iPad-portrait was
               showing 3 cramped columns under the old breakpoint. */}
-          <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3 items-stretch">
+          <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-4 items-stretch">
             {PLANS.map(p => (
               <div key={p.key}
                 className={`relative group rounded-2xl border p-7 transition-all duration-300 flex flex-col ${
@@ -512,7 +512,7 @@ export default function Index() {
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link to="/signup?plan=growth"
               className={`inline-flex items-center gap-2 rounded-xl ${c.primaryBg} px-8 py-3.5 text-sm font-semibold text-white ${c.primaryBgHover} transition-all shadow-sm`}>
-              Start with Growth — $149/mo <ArrowRight className="h-4 w-4" />
+              Start with Growth — $59/mo <ArrowRight className="h-4 w-4" />
             </Link>
             <button onClick={scrollToForm}
               className={`inline-flex items-center gap-2 rounded-xl border ${c.cardBorder} px-6 py-3.5 text-sm font-medium ${c.text} ${c.cardHover} transition-all`}>

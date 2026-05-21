@@ -55,13 +55,11 @@ export default function SignUp() {
     firstName: "", lastName: "", email: "", password: "",
   });
 
-  // Plan-aware sign-up. Read ?plan=growth / ?plan=agency from the URL.
-  // No free tier exists — if the user lands without a valid plan param,
-  // default to Growth (the most-popular tier). Backend rejects unknown
-  // plans at /webhook/new-user-signup, so this is purely a UX default.
+  // Plan-aware sign-up. Read ?plan=starter|growth|agency from the URL.
   const selectedPlan = useMemo<PlanKey>(() => {
     const raw = searchParams.get("plan");
-    return raw === "agency" || raw === "growth" ? raw : "growth";
+    if (raw === "starter" || raw === "agency" || raw === "growth") return raw;
+    return "growth";
   }, [searchParams]);
   const plan = PLAN_BY_KEY[selectedPlan];
 

@@ -10,15 +10,14 @@
  * keys, prices, and tier limits — keep in sync on every change.
  *
  * Pricing model:
- *   - Two paid tiers (Growth $149/mo, Agency $599/mo), USD.
- *   - Annual billing = ~30% off the monthly rate (paid up front).
+ *   - Three paid tiers (Starter $29, Growth $59, Agency $99/mo), USD.
+ *   - Annual billing matches backend catalog (paid up front).
  *   - Enterprise is contact-only — no posted number.
- *   - NO free tier. NO 7-day trial. NO money-back guarantee.
- *   - Risk-reversal: cancel-anytime monthly billing. Current month is
- *     non-refundable; no future charge. That's the whole guarantee.
+ *   - NO free tier. NO 7-day trial.
+ *   - Cancel anytime — no contracts.
  */
 
-export type PlanKey = "growth" | "agency";
+export type PlanKey = "starter" | "growth" | "agency";
 
 export interface Plan {
   key: PlanKey;
@@ -39,24 +38,43 @@ export interface Plan {
 
 export const PLANS: readonly Plan[] = [
   {
+    key: "starter",
+    name: "Starter",
+    monthlyPrice: 29,
+    annualPrice: 24,
+    annualTotal: 290,
+    annualSavings: 58,
+    currency: "USD",
+    desc: "Essential AI marketing for one business getting started.",
+    features: [
+      "1 platform",
+      "1 brand",
+      "20 AI images / month",
+      "AI brain 1×/day",
+      "Content calendar",
+      "Email support",
+      "Cancel anytime — no contracts",
+    ],
+    popular: false,
+    ctaLabel: "Start with Starter",
+  },
+  {
     key: "growth",
     name: "Growth",
-    monthlyPrice: 149,
-    annualPrice: 104,
-    annualTotal: 1250,
-    annualSavings: 538,
+    monthlyPrice: 59,
+    annualPrice: 49,
+    annualTotal: 590,
+    annualSavings: 118,
     currency: "USD",
-    desc: "Full agency-grade AI marketing for one business.",
+    desc: "Full AI marketing for one business — ads, video, and analytics.",
     features: [
-      "1 business",
-      "60 AI posts / month",
-      "Daily ad audit — Meta + Google",
-      "Compliance refusal + reasoning trace",
-      "Voice signature + cultural calendar",
-      "Approval gate with magic-link client review",
-      "60 images + 25 Kling + 5 Sora videos / month",
-      "Pacing alerts every 4h",
-      "Sonnet 4.5 + Opus 4.7 routing",
+      "3 platforms",
+      "1 brand",
+      "60 AI images / month",
+      "25 Kling + 5 Sora videos / month",
+      "AI brain 3×/day",
+      "Paid ads + competitor tracking",
+      "Analytics + pacing alerts",
       "Priority support, 12h response",
       "Cancel anytime — no contracts",
     ],
@@ -66,21 +84,19 @@ export const PLANS: readonly Plan[] = [
   {
     key: "agency",
     name: "Agency",
-    monthlyPrice: 599,
-    annualPrice: 419,
-    annualTotal: 5030,
-    annualSavings: 2158,
+    monthlyPrice: 99,
+    annualPrice: 83,
+    annualTotal: 990,
+    annualSavings: 198,
     currency: "USD",
-    desc: "Multi-brand operators and agencies, up to 5 brands.",
+    desc: "Multi-brand operators — up to 3 brands, white-label, API.",
     features: [
-      "Up to 5 brands",
-      "Everything in Growth, per brand",
-      "White-label weekly reports + custom domain",
-      "Opus 4.7 reasoning on every strategic call",
-      "Multi-locale (ES, IT, SQ — beta)",
-      "Competitor war room dashboard",
-      "Slack channel handoffs per brand",
-      "API access",
+      "Unlimited platforms",
+      "Up to 3 brands",
+      "120 AI images / month",
+      "50 Kling + 15 Sora videos / month",
+      "AI brain 5×/day",
+      "White-label + API access",
       "Dedicated success rep",
       "Priority support, 4h response",
       "Cancel anytime — no contracts",
@@ -90,9 +106,7 @@ export const PLANS: readonly Plan[] = [
   },
 ] as const;
 
-/** Enterprise is contact-only. Surfaced as the third card on the pricing
- *  page and as the sales hand-off everywhere SSO / BAA / 10+ brands /
- *  regulated industry comes up. No price is ever posted. */
+/** Enterprise is contact-only. Surfaced as the fourth card on the pricing page. */
 export const ENTERPRISE_CONTACT = {
   headline: "Need SSO, audit logs, BAA, or 10+ brands?",
   cta: "Talk to sales",
@@ -115,6 +129,9 @@ export const PLAN_BY_KEY: Record<PlanKey, Plan> = PLANS.reduce(
   (acc, p) => ({ ...acc, [p.key]: p }),
   {} as Record<PlanKey, Plan>,
 );
+
+/** Lowest monthly tier — for meta copy ("From $29/mo"). */
+export const STARTING_PRICE_USD = PLANS[0].monthlyPrice;
 
 /** Format a USD price for display. Always returns the symbol-prefixed form. */
 export function formatPrice(amountUsd: number): string {

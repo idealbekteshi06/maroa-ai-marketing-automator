@@ -11,7 +11,7 @@ import { PLANS, ENTERPRISE_CONTACT, type Plan } from "@/lib/constants/plans";
 import { useSEO } from "@/hooks/useSEO";
 
 /**
- * Pricing page — premium 2-tier + Enterprise.
+ * Pricing page — Starter / Growth / Agency + Enterprise.
  *
  * Three cards: Growth (popular, scaled + accent border + pill) /
  * Agency / Enterprise (contact-only, no price). No annual toggle —
@@ -24,9 +24,9 @@ import { useSEO } from "@/hooks/useSEO";
  */
 export default function Pricing() {
   useSEO({
-    title: "Pricing — $149 Growth / $599 Agency",
+    title: "Pricing — Starter $29 · Growth $59 · Agency $99",
     description:
-      "Two paid plans. Growth $149/mo for one business. Agency $599/mo for up to 5 brands. Annual saves ~30%. Cancel anytime — no contracts, no lock-in, no refunds needed.",
+      "Three paid plans. Starter $29/mo, Growth $59/mo for one business, Agency $99/mo for up to 3 brands. Cancel anytime — no contracts, no lock-in.",
     path: "/pricing",
   });
   const [loading, setLoading] = useState<string | null>(null);
@@ -68,7 +68,7 @@ export default function Pricing() {
           {/* Tablet (md): 2 columns so the popular Growth card and Agency
               card sit side-by-side; Enterprise wraps below full-width.
               lg+ goes back to 3 across. */}
-          <div className="mx-auto mt-16 grid max-w-6xl gap-6 md:grid-cols-2 lg:grid-cols-3 items-stretch">
+          <div className="mx-auto mt-16 grid max-w-6xl gap-6 md:grid-cols-2 lg:grid-cols-4 items-stretch">
             {PLANS.map((plan) => (
               <PlanCard
                 key={plan.key}

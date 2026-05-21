@@ -61,7 +61,7 @@ export default function NotFound() {
       {/* Recovery links — pick up the visit, don't waste it. */}
       <ul className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl w-full">
         {[
-          { icon: Tag, label: "Pricing", desc: "Growth $149 · Agency $599", href: "/pricing" },
+          { icon: Tag, label: "Pricing", desc: "Starter $29 · Growth $59 · Agency $99", href: "/pricing" },
           { icon: FileText, label: "Compare", desc: "Maroa vs agency, Buffer, Jasper", href: "/compare" },
           { icon: MessageCircle, label: "Contact", desc: "hello@maroa.ai", href: "mailto:hello@maroa.ai" },
         ].map((l) => {

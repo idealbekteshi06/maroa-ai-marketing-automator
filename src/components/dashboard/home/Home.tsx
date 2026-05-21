@@ -27,7 +27,7 @@ import CommandPalette from "./CommandPalette";
  *     than 2 data points, we pass an empty array → KPIGrid skips the line.
  *   - Approval titles come from a real query against `generated_content`
  *     where status='pending_approval', not hardcoded.
- *   - Currency is USD across the board (matches the new $149/$599 pricing).
+ *   - Currency is USD across the board (matches Starter $29 / Growth $59 / Agency $99).
  *   - Skeleton uses Tailwind's bg-muted (shadcn token, always defined).
  *
  * Data flow:

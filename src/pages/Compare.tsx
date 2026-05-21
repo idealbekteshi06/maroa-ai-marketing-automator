@@ -17,7 +17,7 @@ const features: { name: string; values: (boolean | string)[] }[] = [
   { name: "Competitor tracking", values: [true, true, false, false, false] },
   { name: "Weekly AI strategy", values: [true, false, false, false, false] },
   { name: "AI image generation", values: [true, false, false, false, true] },
-  { name: "Pricing per month", values: ["$49", "$800+", "$99", "$36", "$49"] },
+  { name: "Pricing per month", values: ["From $29", "$800+", "$99", "$36", "$49"] },
 ];
 
 function CellValue({ val }: { val: boolean | string }) {
@@ -40,7 +40,7 @@ export default function Compare() {
   useSEO({
     title: "Maroa vs agency, Hootsuite, Buffer & Jasper",
     description:
-      "Compare maroa.ai with marketing agencies, Hootsuite, Buffer, and Jasper across AI content, auto-posting, ad management, and price. Starts at $149/mo. Cancel anytime.",
+      "Compare maroa.ai with marketing agencies, Hootsuite, Buffer, and Jasper across AI content, auto-posting, ad management, and price. Starts at $29/mo. Cancel anytime.",
     path: "/compare",
   });
   useEffect(() => {
@@ -51,7 +51,7 @@ export default function Compare() {
       "@type": "WebPage",
       name: "Maroa vs marketing agencies, Hootsuite, Buffer & Jasper",
       description:
-        "Side-by-side comparison: AI content, auto-posting, ad management, A/B testing, competitor tracking, weekly strategy. Maroa from $149/mo vs $800+ agency retainers.",
+        "Side-by-side comparison: AI content, auto-posting, ad management, A/B testing, competitor tracking, weekly strategy. Maroa from $29/mo vs $800+ agency retainers.",
       url: "https://maroa.ai/compare",
     });
     document.head.appendChild(script);
@@ -101,7 +101,7 @@ export default function Compare() {
 
           <div className="mt-12 text-center">
             <Link to="/signup">
-              <Button variant="hero" size="xl">Start with Growth — $149/mo</Button>
+              <Button variant="hero" size="xl">Start with Growth — $59/mo</Button>
             </Link>
             <p className="mt-3 text-xs text-muted-foreground">Cancel anytime · No contracts</p>
           </div>

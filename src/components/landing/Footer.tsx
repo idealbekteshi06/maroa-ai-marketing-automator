@@ -17,10 +17,10 @@ export function Footer() {
           </p>
           <div className="mt-8 sm:mt-10 px-4 sm:px-0">
             <Link to="/signup?plan=growth" className="inline-block w-full sm:w-auto">
-              <Button variant="hero" size="xl" className="w-full sm:w-auto">Start with Growth — $149/mo</Button>
+              <Button variant="hero" size="xl" className="w-full sm:w-auto">Start with Growth — $59/mo</Button>
             </Link>
           </div>
-          <p className="mt-4 text-xs text-muted-foreground">From $149/mo · Cancel anytime · No contracts</p>
+          <p className="mt-4 text-xs text-muted-foreground">From $29/mo · Cancel anytime · No contracts</p>
         </div>
       </div>
 
