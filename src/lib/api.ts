@@ -1197,6 +1197,33 @@ export const wf5RunAnalysis = (data: { businessId: string; force?: boolean }) =>
 export const wf5Latest = (businessId: string) =>
   get("/webhook/wf5-latest", { business_id: businessId });
 
+export const wf5Dashboard = (businessId: string) =>
+  get<{
+    has_data: boolean;
+    business_name: string;
+    week_start: string | null;
+    summary: string | null;
+    competitors: Array<{
+      name: string;
+      initials: string;
+      color: string;
+      platforms: string[];
+      followers: string;
+      engagement: number;
+      engagementTrend: "up" | "down";
+      weeklyPosts: number;
+      topContent: string;
+      sparkline: number[];
+      threat_level?: string;
+    }>;
+    content_gaps: Array<{
+      topic: string;
+      description: string;
+      competitors: string[];
+      opportunity: string;
+    }>;
+  }>("/webhook/wf5-dashboard", { business_id: businessId });
+
 export const wf6RunAudit = (data: { businessId: string; auditInput?: Record<string, unknown> }) =>
   post("/webhook/wf6-run-audit", data);
 

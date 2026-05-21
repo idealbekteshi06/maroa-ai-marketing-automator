@@ -1,0 +1,102 @@
+import { useCallback, useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { apiGet } from "@/lib/apiClient";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CheckCircle2, Circle, Plug, Settings } from "lucide-react";
+
+interface IntegrationItem {
+  connected: boolean;
+  label: string;
+  detail: string;
+}
+
+interface IntegrationsPayload {
+  integrations: IntegrationItem[];
+  connected_count: number;
+}
+
+export default function IntegrationHealthCard({
+  onNavigateSettings,
+}: {
+  onNavigateSettings: () => void;
+}) {
+  const { businessId, isReady } = useAuth();
+  const [items, setItems] = useState<IntegrationItem[]>([]);
+  const [connectedCount, setConnectedCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    if (!businessId || !isReady) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const data = await apiGet<IntegrationsPayload>(`/api/business/${businessId}/integrations`);
+      setItems(data.integrations || []);
+      setConnectedCount(data.connected_count ?? 0);
+    } catch {
+      setItems([]);
+      setConnectedCount(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [businessId, isReady]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  if (loading) {
+    return <div className="h-28 rounded-2xl bg-muted animate-pulse" />;
+  }
+
+  const socialConnected = items
+    .filter((i) => ["Meta (Facebook & Instagram)", "Google Ads", "LinkedIn", "X / Twitter", "TikTok"].includes(i.label))
+    .some((i) => i.connected);
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Plug className="h-4 w-4 text-primary" />
+          Integrations
+        </CardTitle>
+        <CardDescription className="text-xs">
+          {connectedCount > 0
+            ? `${connectedCount} channel${connectedCount === 1 ? "" : "s"} connected — Maroa can pull live metrics and optimize ads.`
+            : "Connect at least Meta to unlock ads, analytics snapshots, and competitor signals."}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex flex-wrap gap-2">
+          {items.map((item) => (
+            <Badge
+              key={item.label}
+              variant={item.connected ? "default" : "outline"}
+              className="text-[10px] font-normal gap-1"
+            >
+              {item.connected ? (
+                <CheckCircle2 className="h-3 w-3" />
+              ) : (
+                <Circle className="h-3 w-3 opacity-40" />
+              )}
+              {item.label}
+            </Badge>
+          ))}
+        </div>
+        {!socialConnected && (
+          <p className="text-xs text-muted-foreground">
+            Paid ads and reach KPIs stay in learning mode until Meta or Google is connected.
+          </p>
+        )}
+        <Button size="sm" variant="outline" className="w-full text-xs" onClick={onNavigateSettings}>
+          <Settings className="mr-1.5 h-3.5 w-3.5" />
+          Open connection settings
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}

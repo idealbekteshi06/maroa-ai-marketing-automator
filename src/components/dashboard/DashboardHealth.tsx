@@ -101,14 +101,8 @@ export default function DashboardHealth() {
         }
       }
     } catch {
-      // Fallback to demo health data
-      try {
-        const { DEMO_HEALTH } = await import("@/lib/demoData");
-        setScore(DEMO_HEALTH.score);
-        setCategories(DEMO_HEALTH.categories.map(c => ({ label: c.name, score: c.score, max: c.max, tips: [c.tip] })));
-      } catch {
-        setScore(defaultCategories.reduce((sum, c) => sum + c.score, 0));
-      }
+      setScore(0);
+      setCategories(defaultCategories);
     } finally {
       setLoading(false);
     }

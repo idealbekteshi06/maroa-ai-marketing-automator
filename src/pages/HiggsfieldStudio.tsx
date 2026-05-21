@@ -39,21 +39,10 @@ const typeBadgeClass: Record<AssetType, string> = {
   ad: "bg-amber-500/10 text-amber-500 border-amber-500/20",
 };
 
-const FALLBACK_ASSETS: Asset[] = [
-  { id: "a1", prompt: "Crystal clear water pouring into a glass with Sharr mountains at golden hour", type: "image", gradient: "from-sky-400 via-blue-500 to-indigo-600", generatedAt: "2 hours ago", duration: "12s", dimensions: "1080x1080" },
-  { id: "a2", prompt: "Uje Karadaku bottle rotating 360 degrees on marble surface with water droplets", type: "video", gradient: "from-purple-400 via-violet-500 to-indigo-600", generatedAt: "5 hours ago", duration: "45s", dimensions: "1920x1080" },
-  { id: "a3", prompt: "Instagram Story ad: Summer hydration campaign with gradient overlay and CTA", type: "ad", gradient: "from-orange-400 via-rose-500 to-pink-600", generatedAt: "1 day ago", duration: "8s", dimensions: "1080x1920" },
-  { id: "a4", prompt: "Mountain spring source aerial view with brand watermark for social media", type: "image", gradient: "from-emerald-400 via-teal-500 to-cyan-600", generatedAt: "1 day ago", duration: "15s", dimensions: "1200x628" },
-  { id: "a5", prompt: "Water bottle unboxing experience stop-motion for TikTok Reels campaign", type: "video", gradient: "from-rose-400 via-pink-500 to-fuchsia-600", generatedAt: "2 days ago", duration: "38s", dimensions: "1080x1920" },
-  { id: "a6", prompt: "Facebook carousel ad: 5 reasons to choose natural mineral water from Kosovo", type: "ad", gradient: "from-amber-400 via-orange-500 to-red-500", generatedAt: "2 days ago", duration: "10s", dimensions: "1080x1080" },
-  { id: "a7", prompt: "Family picnic scene with Uje Karadaku bottles, Rugova Canyon background", type: "image", gradient: "from-lime-400 via-green-500 to-emerald-600", generatedAt: "3 days ago", duration: "18s", dimensions: "1080x1080" },
-  { id: "a8", prompt: "Product comparison infographic: mineral content vs competitors", type: "image", gradient: "from-cyan-400 via-blue-500 to-violet-600", generatedAt: "4 days ago", duration: "9s", dimensions: "1080x1350" },
-  { id: "a9", prompt: "Dynamic video ad: water source to bottle journey cinematic sequence", type: "video", gradient: "from-slate-400 via-gray-500 to-zinc-600", generatedAt: "5 days ago", duration: "52s", dimensions: "1920x1080" },
-];
-
 export default function HiggsfieldStudio() {
   const { businessId, isReady } = useAuth();
-  const [assets, setAssets] = useState<Asset[]>(FALLBACK_ASSETS);
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [filter, setFilter] = useState<"all" | AssetType>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -63,25 +52,28 @@ export default function HiggsfieldStudio() {
   const [newAspect, setNewAspect] = useState("1:1");
 
   const load = useCallback(async () => {
-    if (!businessId) return;
+    if (!businessId) {
+      setLoaded(true);
+      return;
+    }
     try {
       const res = await wf10JobsList(businessId) as { jobs?: Array<Record<string, unknown>> };
       const jobs = res.jobs || [];
-      if (jobs.length) {
-        setAssets(
-          jobs.map((j, i) => ({
-            id: String(j.id ?? i),
-            prompt: String((j.request as { prompt?: string })?.prompt ?? j.prompt ?? "Studio job"),
-            type: (j.kind as AssetType) || "image",
-            gradient: "from-sky-400 via-blue-500 to-indigo-600",
-            generatedAt: String(j.created_at ?? "recent"),
-            duration: String(j.duration_sec ?? "—"),
-            dimensions: String(j.dimensions ?? "1080x1080"),
-          })),
-        );
-      }
+      setAssets(
+        jobs.map((j, i) => ({
+          id: String(j.id ?? i),
+          prompt: String((j.request as { prompt?: string })?.prompt ?? j.prompt ?? "Studio job"),
+          type: (j.kind as AssetType) || "image",
+          gradient: "from-sky-400 via-blue-500 to-indigo-600",
+          generatedAt: String(j.created_at ?? "recent"),
+          duration: String(j.duration_sec ?? "—"),
+          dimensions: String(j.dimensions ?? "1080x1080"),
+        }))
+      );
     } catch {
-      setAssets(FALLBACK_ASSETS);
+      setAssets([]);
+    } finally {
+      setLoaded(true);
     }
   }, [businessId]);
 
@@ -119,6 +111,33 @@ export default function HiggsfieldStudio() {
   };
 
   const thisWeek = assets.filter((a) => !a.generatedAt.includes("day")).length;
+
+  if (!loaded) {
+    return (
+      <div className="flex h-48 items-center justify-center text-muted-foreground">
+        Loading studio jobs…
+      </div>
+    );
+  }
+
+  if (!assets.length) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="py-16 text-center">
+            <Sparkles className="mx-auto h-10 w-10 text-muted-foreground/40" />
+            <h3 className="mt-4 text-base font-semibold">No studio jobs yet</h3>
+            <p className="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
+              Create your first image or video. Jobs appear here once WF10 queues them on the API.
+            </p>
+            <Button className="mt-6" onClick={() => setDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" /> Create asset
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

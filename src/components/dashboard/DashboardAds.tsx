@@ -8,7 +8,8 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
-import { apiFireAndForget } from "@/lib/apiClient";
+import { apiFireAndForget, apiGet } from "@/lib/apiClient";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import DecisionNarrative, { type DecisionVerdict, type DecisionEvidence } from "@/components/DecisionNarrative";
 import { events as analytics } from "@/lib/analytics";
 import {
@@ -71,6 +72,20 @@ export default function DashboardAds() {
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [budgetValue, setBudgetValue] = useState([300]);
+  const [metaConnected, setMetaConnected] = useState<boolean | null>(null);
+  const [insufficientData, setInsufficientData] = useState(false);
+
+  useEffect(() => {
+    if (!businessId || !isReady) return;
+    apiGet<{ integrations?: Array<{ label: string; connected: boolean }> }>(
+      `/api/business/${businessId}/integrations`
+    )
+      .then((d) => {
+        const meta = (d.integrations || []).find((i) => i.label.startsWith("Meta"));
+        setMetaConnected(!!meta?.connected);
+      })
+      .catch(() => setMetaConnected(null));
+  }, [businessId, isReady]);
 
   useEffect(() => {
     if (!businessId || !isReady) { setLoading(false); return; }
@@ -83,6 +98,11 @@ export default function DashboardAds() {
         return { ...c, perf: perf as PerfLog | undefined };
       }));
       setCampaigns(withPerf);
+      const totalSpend = withPerf.reduce((s, c) => s + safeNum(c.perf?.spend), 0);
+      const totalConv = withPerf.reduce((s, c) => s + safeNum(c.perf?.conversions), 0);
+      setInsufficientData(
+        withPerf.length > 0 && (totalSpend < 50 || totalConv < 5)
+      );
       setLoading(false);
     })();
   }, [businessId, isReady]);
@@ -134,6 +154,23 @@ export default function DashboardAds() {
 
   return (
     <div className="space-y-4">
+      {metaConnected === false && (
+        <Alert>
+          <AlertTitle className="text-sm">Meta not connected</AlertTitle>
+          <AlertDescription className="text-xs">
+            Connect Meta in Settings so Maroa can audit campaigns and apply scale/pause decisions with real performance data.
+          </AlertDescription>
+        </Alert>
+      )}
+      {insufficientData && (
+        <Alert>
+          <AlertTitle className="text-sm">Learning phase — limited data</AlertTitle>
+          <AlertDescription className="text-xs">
+            We need roughly $50+ spend and a few conversions before scale or pause recommendations are statistically meaningful.
+            Maroa will keep monitoring and explain uncertainty in each decision card below.
+          </AlertDescription>
+        </Alert>
+      )}
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-lg border border-border bg-card p-4">
@@ -177,7 +214,15 @@ export default function DashboardAds() {
             }
             evidence={evidence}
             source="Ad Optimizer"
-            confidence={verdict === "scale" || verdict === "kill" ? 85 : verdict === "pause" ? 70 : 65}
+            confidence={
+              insufficientData
+                ? 45
+                : verdict === "scale" || verdict === "kill"
+                  ? 85
+                  : verdict === "pause"
+                    ? 70
+                    : 65
+            }
             defaultExpanded={false}
           />
         );

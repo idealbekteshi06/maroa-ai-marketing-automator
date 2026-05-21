@@ -10,7 +10,8 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { wf14LatestRun, wf14Run } from "@/lib/api";
+import { wf14LatestRun } from "@/lib/api";
+import { apiPost } from "@/lib/apiClient";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import {
@@ -26,63 +27,16 @@ import Sparkline from "@/components/Sparkline";
 
 const DEFAULT_BUDGET = 5000;
 
-const FALLBACK_CHANNELS = [
-  {
-    name: "Meta Ads",
-    spend: 2100,
-    revenue: 7140,
-    roi: 240,
-    cpa: 8.75,
-    pct: 49,
-    color: "#3399FF",
-    sparkline: [1600, 1750, 1900, 1980, 2050, 2100],
-  },
-  {
-    name: "Google Ads",
-    spend: 1200,
-    revenue: 2880,
-    roi: 140,
-    cpa: 14.20,
-    pct: 28,
-    color: "#f59e0b",
-    sparkline: [980, 1020, 1080, 1120, 1160, 1200],
-  },
-  {
-    name: "Email Marketing",
-    spend: 480,
-    revenue: 2160,
-    roi: 350,
-    cpa: 3.20,
-    pct: 11,
-    color: "#10b981",
-    sparkline: [320, 360, 400, 430, 460, 480],
-  },
-  {
-    name: "Influencer",
-    spend: 500,
-    revenue: 1100,
-    roi: 120,
-    cpa: 22.50,
-    pct: 12,
-    color: "#8b5cf6",
-    sparkline: [200, 280, 350, 400, 460, 500],
-  },
-];
-
-const FALLBACK_TREND = Array.from({ length: 30 }, (_, i) => {
-  const day = i + 1;
-  const spend = 100 + Math.round(Math.sin(i / 4) * 30 + Math.random() * 20);
-  const revenue = Math.round(spend * (2.2 + Math.random() * 1.5));
-  return { day: `Apr ${day}`, spend, revenue };
-});
-
 export default function BudgetROI() {
   const { businessId, isReady } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [channels, setChannels] = useState(FALLBACK_CHANNELS);
-  const [totalSpend, setTotalSpend] = useState(4280);
-  const [roi, setRoi] = useState(287);
-  const [trendData, setTrendData] = useState(FALLBACK_TREND);
+  const [channels, setChannels] = useState<Array<{
+    name: string; spend: number; revenue: number; roi: number; cpa: number; pct: number; color: string; sparkline: number[];
+  }>>([]);
+  const [totalSpend, setTotalSpend] = useState(0);
+  const [roi, setRoi] = useState(0);
+  const [trendData, setTrendData] = useState<Array<{ day: string; spend: number; revenue: number }>>([]);
+  const [hasData, setHasData] = useState(false);
 
   const load = useCallback(async () => {
     if (!businessId) { setLoading(false); return; }
@@ -114,9 +68,23 @@ export default function BudgetROI() {
         setTotalSpend(spendSum);
         const revSum = mapped.reduce((s, x) => s + x.revenue, 0);
         setRoi(spendSum ? Math.round(((revSum - spendSum) / spendSum) * 100) : 0);
+        setHasData(true);
+        setTrendData(
+          mapped.map((m, i) => ({
+            day: `D${i + 1}`,
+            spend: m.spend,
+            revenue: m.revenue,
+          }))
+        );
+      } else {
+        setHasData(false);
+        setChannels([]);
+        setTotalSpend(0);
+        setRoi(0);
+        setTrendData([]);
       }
     } catch {
-      /* keep fallback */
+      setHasData(false);
     } finally {
       setLoading(false);
     }
@@ -130,6 +98,34 @@ export default function BudgetROI() {
     return (
       <div className="flex h-48 items-center justify-center text-muted-foreground">
         <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading budget data…
+      </div>
+    );
+  }
+
+  if (!hasData) {
+    return (
+      <div className="space-y-6">
+        <Alert>
+          <AlertTitle>No budget snapshot yet</AlertTitle>
+          <AlertDescription>
+            WF14 aggregates channel spend from your ad campaigns and analytics. Run a budget analysis after
+            Meta or Google is connected and campaigns have logged spend.
+          </AlertDescription>
+        </Alert>
+        <Button
+          onClick={async () => {
+            if (!businessId) return;
+            try {
+              await apiPost("/webhook/wf14-run", { businessId });
+              toast.success("Budget analysis started");
+              load();
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Run failed");
+            }
+          }}
+        >
+          Run budget analysis
+        </Button>
       </div>
     );
   }

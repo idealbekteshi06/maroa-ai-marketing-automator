@@ -83,6 +83,20 @@ export async function apiPatch(
   if (!res.ok) throw new Error(`API error ${res.status}: ${endpoint}`);
 }
 
+export async function apiPatchJson<T>(
+  endpoint: string,
+  body: Record<string, unknown>
+): Promise<T> {
+  const auth = await getAuthHeaders();
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...auth },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`API error ${res.status}: ${endpoint}`);
+  return res.json() as Promise<T>;
+}
+
 export function createAbortController(): AbortController {
   return new AbortController();
 }

@@ -8,6 +8,7 @@ import HomeHeader from "./HomeHeader";
 import KPIGrid from "./KPIGrid";
 import WorkQueue, { type QueueApproval, type QueueActivity } from "./WorkQueue";
 import ProfileStrengthWidget from "./ProfileStrengthWidget";
+import IntegrationHealthCard from "./IntegrationHealthCard";
 import CommandPalette from "./CommandPalette";
 
 /**
@@ -388,7 +389,8 @@ export default function Home({ onNavigate }: HomeProps) {
           onViewAllActivity={() => onNavigate("approvals")}
         />
 
-        <aside className="xl:sticky xl:top-4 xl:self-start">
+        <aside className="xl:sticky xl:top-4 xl:self-start space-y-4">
+          <IntegrationHealthCard onNavigateSettings={() => onNavigate("settings")} />
           <ProfileStrengthWidget
             percentage={profilePct}
             sectionsRemaining={Math.max(0, Math.ceil((100 - profilePct) / 16))}
