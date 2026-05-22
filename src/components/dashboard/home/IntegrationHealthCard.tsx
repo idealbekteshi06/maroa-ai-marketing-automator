@@ -4,17 +4,19 @@ import { apiGet } from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, Circle, Plug, Settings } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Circle, Plug, Settings } from "lucide-react";
 
 interface IntegrationItem {
   connected: boolean;
   label: string;
   detail: string;
+  status?: "healthy" | "degraded" | "disconnected";
 }
 
 interface IntegrationsPayload {
   integrations: IntegrationItem[];
   connected_count: number;
+  recommended_action?: string | null;
 }
 
 export default function IntegrationHealthCard({
@@ -72,20 +74,27 @@ export default function IntegrationHealthCard({
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex flex-wrap gap-2">
-          {items.map((item) => (
-            <Badge
-              key={item.label}
-              variant={item.connected ? "default" : "outline"}
-              className="text-[10px] font-normal gap-1"
-            >
-              {item.connected ? (
-                <CheckCircle2 className="h-3 w-3" />
-              ) : (
-                <Circle className="h-3 w-3 opacity-40" />
-              )}
-              {item.label}
-            </Badge>
-          ))}
+          {items.map((item) => {
+            const degraded = item.status === "degraded";
+            const connected = item.connected && !degraded;
+            return (
+              <Badge
+                key={item.label}
+                variant={connected ? "default" : degraded ? "secondary" : "outline"}
+                className="text-[10px] font-normal gap-1"
+                title={item.detail}
+              >
+                {connected ? (
+                  <CheckCircle2 className="h-3 w-3" />
+                ) : degraded ? (
+                  <AlertTriangle className="h-3 w-3 text-amber-600" />
+                ) : (
+                  <Circle className="h-3 w-3 opacity-40" />
+                )}
+                {item.label}
+              </Badge>
+            );
+          })}
         </div>
         {!socialConnected && (
           <p className="text-xs text-muted-foreground">

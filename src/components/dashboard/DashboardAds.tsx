@@ -77,12 +77,17 @@ export default function DashboardAds() {
 
   useEffect(() => {
     if (!businessId || !isReady) return;
-    apiGet<{ integrations?: Array<{ label: string; connected: boolean }> }>(
-      `/api/business/${businessId}/integrations`
-    )
+    apiGet<{
+      can_run_ad_optimizer?: boolean;
+      integrations?: Array<{ label: string; connected: boolean; status?: string }>;
+    }>(`/api/business/${businessId}/integrations`)
       .then((d) => {
+        if (typeof d.can_run_ad_optimizer === "boolean") {
+          setMetaConnected(d.can_run_ad_optimizer);
+          return;
+        }
         const meta = (d.integrations || []).find((i) => i.label.startsWith("Meta"));
-        setMetaConnected(!!meta?.connected);
+        setMetaConnected(meta?.status === "healthy" || !!meta?.connected);
       })
       .catch(() => setMetaConnected(null));
   }, [businessId, isReady]);
