@@ -1069,7 +1069,7 @@ export async function listCreativeConcepts(
     status: String(c.status ?? ""),
     created_at: String(c.created_at ?? ""),
   }));
-  return { items };
+  return { items: items as unknown as CreativeConcept[] };
 }
 
 export async function developCreativeConcept(

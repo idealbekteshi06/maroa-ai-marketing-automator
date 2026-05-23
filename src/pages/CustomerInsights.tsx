@@ -72,7 +72,7 @@ export default function CustomerInsights() {
     }
   };
 
-  const personas = (report?.personas_detected || report?.personas || []).map((p, i) => ({
+  const personas = (report?.personas_detected || report?.personas || []).map((p: any, i: number) => ({
     name: p.name || `Persona ${i + 1}`,
     role: p.role || "Customer segment",
     avatar: p.avatar || "👤",
