@@ -37,31 +37,26 @@ export function CommandPalette({ open, onOpenChange }: Props) {
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput placeholder="Search or ask Maroa…" />
+      <CommandInput placeholder="Ask Maroa or jump to…" />
       <CommandList>
         <CommandEmpty>No results.</CommandEmpty>
-        <CommandGroup heading="Quick actions">
-          <CommandItem onSelect={() => go("/app/content")}>Generate posts</CommandItem>
-          <CommandItem onSelect={() => go("/app/ads")}>New campaign</CommandItem>
-          <CommandItem onSelect={() => go("/app/landing-pages")}>
-            Create landing page
-          </CommandItem>
-          <CommandItem onSelect={() => go("/app/reviews")}>Reply to reviews</CommandItem>
+        <CommandGroup heading="Ask Maroa">
+          <CommandItem onSelect={() => go("/app/brain")}>What should I post today?</CommandItem>
+          <CommandItem onSelect={() => go("/app/brain")}>Why did you recommend this?</CommandItem>
+          <CommandItem onSelect={() => go("/app/brain")}>What are my competitors doing?</CommandItem>
         </CommandGroup>
         <CommandSeparator />
-        {NAV.map((group) => (
-          <CommandGroup key={group.label} heading={`Go to · ${group.label}`}>
-            {group.items.map((item) => (
-              <CommandItem
-                key={item.label}
-                onSelect={() => go(`/app${item.to ? `/${item.to}` : ""}`)}
-              >
-                <item.icon size={14} strokeWidth={1.5} className="mr-2" />
-                {item.label}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        ))}
+        <CommandGroup heading="Navigate">
+          {NAV.map((item) => (
+            <CommandItem
+              key={item.label}
+              onSelect={() => go(`/app${item.to ? `/${item.to}` : ""}`)}
+            >
+              <item.icon size={14} strokeWidth={1.5} className="mr-2" />
+              {item.label}
+            </CommandItem>
+          ))}
+        </CommandGroup>
       </CommandList>
     </CommandDialog>
   );
