@@ -53,6 +53,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               {/* Legacy /dashboard → polished v2 shell (audit pass: single CTA, plain language, calmer UI) */}
+              {/* Legacy dashboard fully retired — /app is the only dashboard */}
               <Route path="/dashboard" element={<Navigate to="/app" replace />} />
               <Route path="/dashboard/*" element={<Navigate to="/app" replace />} />
               <Route path="/onboarding" element={<ProtectedRoute allowIncompleteOnboarding><Onboarding /></ProtectedRoute>} />
