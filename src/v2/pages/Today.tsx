@@ -251,7 +251,7 @@ export default function Today() {
                 {batchBusy ? "Approving…" : `Approve all ${totalToApprove} →`}
               </Btn>
               <Btn size="md" className="!h-10 !px-4 !text-[13px]" onClick={() => {
-                const first = pendingIds[0] ?? data?.approvals[0]?.id;
+                const first = pendingIds[0] ?? data?.approvals?.[0]?.id;
                 if (first) openReview(first);
               }}>
                 Review one by one
@@ -305,7 +305,7 @@ export default function Today() {
               </li>
             ))}
           </ul>
-        ) : !data || data.plan.length === 0 ? (
+        ) : !data || (data.plan?.length ?? 0) === 0 ? (
           <div className="px-5 py-10 text-center">
             <CheckCircle2 size={22} strokeWidth={1.5} className="mx-auto mb-2" style={{ color: "hsl(var(--m-success))" }} />
             <div className="text-[14px] font-medium">Nothing on your plate</div>
@@ -315,9 +315,9 @@ export default function Today() {
           </div>
         ) : (
           <ul>
-            {data.plan.map((item, idx) => {
+            {(data.plan ?? []).map((item, idx) => {
               const Icon = ICON_MAP[item.iconKey];
-              const last = idx === data.plan.length - 1;
+              const last = idx === (data.plan?.length ?? 0) - 1;
               const isApprovable = item.action === "Approve";
               return (
                 <li
@@ -420,10 +420,10 @@ export default function Today() {
                       <circle cx="18" cy="18" r="15.9" fill="none" stroke="hsl(var(--m-border-subtle))" strokeWidth="3" />
                       <circle
                         cx="18" cy="18" r="15.9" fill="none"
-                        stroke={healthTone(data.health.score)}
+                        stroke={healthTone(data.health.score ?? 0)}
                         strokeWidth="3"
                         strokeLinecap="round"
-                        strokeDasharray={`${data.health.score} 100`}
+                        strokeDasharray={`${data.health.score ?? 0} 100`}
                       />
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center text-[18px] font-semibold tabular-nums">
@@ -438,7 +438,7 @@ export default function Today() {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-2.5">
-                  {(Object.entries(data.health.dimensions) as [string, number][]).map(([k, v]) => (
+                  {(Object.entries(data.health.dimensions ?? {}) as [string, number][]).map(([k, v]) => (
                     <div key={k}>
                       <div className="flex items-center justify-between text-[11.5px] mb-1">
                         <span className="capitalize" style={{ color: "hsl(var(--m-muted-foreground))" }}>{k}</span>
@@ -460,13 +460,13 @@ export default function Today() {
                   <div key={i} className="h-4 rounded animate-pulse" style={{ background: "hsl(var(--m-border-subtle))" }} />
                 ))}
               </div>
-            ) : !data || data.recentActivity.length === 0 ? (
+            ) : !data || (data.recentActivity?.length ?? 0) === 0 ? (
               <p className="text-[12.5px]" style={{ color: "hsl(var(--m-muted-foreground))" }}>
                 Nothing yet today. We'll log things here as Maroa works.
               </p>
             ) : (
               <ul className="space-y-2">
-                {data.recentActivity.map((e) => (
+                {(data.recentActivity ?? []).map((e) => (
                   <li key={e.id} className="flex items-center gap-3">
                     <span className="h-1.5 w-1.5 rounded-full" style={{ background: "hsl(var(--m-info))" }} />
                     <span className="text-[13px] flex-1 truncate">{e.title}</span>
@@ -500,7 +500,7 @@ export default function Today() {
       </section>
 
       {/* Approval queue */}
-      {data && data.approvals.length > 0 && (
+      {data && (data.approvals?.length ?? 0) > 0 && (
         <Card
           title="Approval queue"
           padded={false}
@@ -513,11 +513,11 @@ export default function Today() {
           }
         >
           <ul>
-            {data.approvals.map((a, idx) => (
+            {(data.approvals ?? []).map((a, idx) => (
               <li
                 key={a.id}
                 className="px-5 py-4 flex items-start gap-4"
-                style={{ borderBottom: idx === data.approvals.length - 1 ? "none" : "1px solid hsl(var(--m-border-subtle))" }}
+                style={{ borderBottom: idx === (data.approvals?.length ?? 0) - 1 ? "none" : "1px solid hsl(var(--m-border-subtle))" }}
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">

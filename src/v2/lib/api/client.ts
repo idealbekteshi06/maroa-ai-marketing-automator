@@ -49,7 +49,7 @@ function buildUrl(path: string, query?: RequestOptions["query"]) {
   }
   const url = new URL(href);
   if (query) {
-    for (const [k, v] of Object.entries(query)) {
+    for (const [k, v] of Object.entries(query ?? {})) {
       if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
     }
   }

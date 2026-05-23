@@ -55,7 +55,7 @@ export default function ProfileScore({ businessId, userId }: ProfileScoreProps) 
           <p className="text-sm font-semibold text-foreground">Profile Completeness</p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {data.next_unlock
-              ? `Complete ${(data.thresholds[data.next_unlock]?.required || 0) - pct}% more to unlock ${featureLabels[data.next_unlock] || data.next_unlock}`
+              ? `Complete ${((data.thresholds ?? {})[data.next_unlock]?.required || 0) - pct}% more to unlock ${featureLabels[data.next_unlock] || data.next_unlock}`
               : "All features unlocked!"}
           </p>
         </div>

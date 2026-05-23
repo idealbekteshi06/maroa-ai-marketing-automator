@@ -37,7 +37,7 @@ const channelColors: Record<string, string> = {
 
 function getChannelStyle(channel: string) {
   const key = channel?.toLowerCase() || "";
-  for (const [k, v] of Object.entries(channelColors)) {
+  for (const [k, v] of Object.entries(channelColors ?? {})) {
     if (key.includes(k)) return v;
   }
   return channelColors.default;

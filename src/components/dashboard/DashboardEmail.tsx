@@ -181,7 +181,7 @@ export default function DashboardEmail() {
             <div>
               <label className="text-xs font-medium text-foreground block mb-1.5">When should this trigger?</label>
               <div className="grid grid-cols-2 gap-2">
-                {Object.entries(triggerBadge).map(([key, val]) => (
+                {Object.entries(triggerBadge ?? {}).map(([key, val]) => (
                   <button key={key} onClick={() => setFormTrigger(key)}
                     className={`rounded-lg border p-3 text-left transition-all ${formTrigger === key ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
                     <p className="text-sm font-medium text-foreground">{val.label}</p>

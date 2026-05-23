@@ -245,7 +245,7 @@ export default function ReviewsReputation() {
       <div className="flex flex-wrap gap-2">
         <FilterChip
           active={categoryFilter === "all"}
-          label={`All (${Object.values(counts).reduce((a, b) => a + b, 0)})`}
+          label={`All (${Object.values(counts ?? {}).reduce((a, b) => a + b, 0)})`}
           onClick={() => setCategoryFilter("all")}
         />
         {(["positive", "neutral", "negative", "critical"] as ReviewCategory[]).map((c) => (

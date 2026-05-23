@@ -214,7 +214,7 @@ export default function DailyContentEngine() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-3">
-            {(Object.keys(AUTONOMY_MODES) as AutonomyMode[]).map((mode) => {
+            {(Object.keys(AUTONOMY_MODES ?? {}) as AutonomyMode[]).map((mode) => {
               const def = AUTONOMY_MODES[mode];
               const active = autonomyMode === mode;
               return (

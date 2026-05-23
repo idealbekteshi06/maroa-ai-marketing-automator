@@ -860,7 +860,7 @@ function DeliverySettingsDialog({
           <div>
             <Label className="text-xs">Autonomy mode</Label>
             <div className="mt-1.5 grid gap-2">
-              {(Object.keys(WF13_AUTONOMY_MODES) as Wf13AutonomyMode[]).map((m) => {
+              {(Object.keys(WF13_AUTONOMY_MODES ?? {}) as Wf13AutonomyMode[]).map((m) => {
                 const def = WF13_AUTONOMY_MODES[m];
                 return (
                   <button

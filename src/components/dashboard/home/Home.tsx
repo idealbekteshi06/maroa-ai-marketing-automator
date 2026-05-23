@@ -236,8 +236,8 @@ export default function Home({ onNavigate }: HomeProps) {
       if (od) {
         try {
           const parsed = typeof od === "string" ? JSON.parse(od) : od;
-          const form = parsed?.form || {};
-          const filled = Object.values(form).filter(v => v && (Array.isArray(v) ? v.length > 0 : String(v).trim())).length;
+          const form = parsed?.form ?? {};
+          const filled = Object.values(form ?? {}).filter(v => v && (Array.isArray(v) ? v.length > 0 : String(v).trim())).length;
           setProfilePct(Math.min(100, Math.round((filled / 70) * 100)));
         } catch { /* noop — malformed onboarding_data shouldn't break dashboard */ }
       }

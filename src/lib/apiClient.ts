@@ -40,7 +40,7 @@ export function normalizeOnboardingScore(
   const thresholds: ProfileScoreUi["thresholds"] = {};
   const unlocked: string[] = [];
   const locked: string[] = [];
-  for (const [key, required] of Object.entries(FEATURE_UNLOCK_THRESHOLDS)) {
+  for (const [key, required] of Object.entries(FEATURE_UNLOCK_THRESHOLDS ?? {})) {
     const isUnlocked = raw.score >= required;
     thresholds[key] = { required, unlocked: isUnlocked };
     if (isUnlocked) unlocked.push(key);

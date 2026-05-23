@@ -199,7 +199,7 @@ export default function LeadScoring() {
           active={tierFilter === "all"}
           onClick={() => setTierFilter("all")}
           tier="all"
-          count={Object.values(counts).reduce((a, b) => a + b, 0)}
+          count={Object.values(counts ?? {}).reduce((a, b) => a + b, 0)}
           label="All leads"
         />
         {(["hot", "warm_high", "warm", "cool", "junk"] as LeadTier[]).map((t) => (

@@ -286,7 +286,7 @@ export default function DashboardPublish() {
       }).then(() => fetchHistory());
     }
 
-    const successCount = Object.values(results).filter(r => r === "success").length;
+    const successCount = Object.values(results ?? {}).filter(r => r === "success").length;
     if (successCount > 0) toast.success(`Posted to ${successCount} platform${successCount > 1 ? "s" : ""}!`);
     setPublishing(false);
   };
@@ -489,9 +489,9 @@ export default function DashboardPublish() {
             </div>
 
             {/* Publish results */}
-            {Object.keys(publishResults).length > 0 && (
+            {Object.keys(publishResults ?? {}).length > 0 && (
               <div className="space-y-1.5">
-                {Object.entries(publishResults).map(([pKey, result]) => (
+                {Object.entries(publishResults ?? {}).map(([pKey, result]) => (
                   <div key={pKey} className={cn("flex items-center gap-2 rounded-lg px-3 py-2 text-xs", result === "success" ? "bg-green-500/10 text-green-700 dark:text-green-400" : "bg-destructive/10 text-destructive")}>
                     {result === "success" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
                     {platforms.find(p => p.key === pKey)?.name}: {result === "success" ? "Posted successfully ✓" : "Failed to post"}

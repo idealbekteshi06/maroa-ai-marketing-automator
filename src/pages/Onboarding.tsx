@@ -160,7 +160,7 @@ export default function Onboarding() {
       if (!form.monthly_budget) e.monthly_budget = "Select a budget range";
     }
     setErrors(e);
-    return Object.keys(e).length === 0;
+    return Object.keys(e ?? {}).length === 0;
   };
 
   const handleNext = async () => {

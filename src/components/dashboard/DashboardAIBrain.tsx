@@ -114,7 +114,7 @@ export default function DashboardAIBrain() {
 
   const getLogType = (log: LogEntry) => {
     const t = (log.type || log.action || "default").toLowerCase();
-    for (const key of Object.keys(typeColors)) {
+    for (const key of Object.keys(typeColors ?? {})) {
       if (t.includes(key)) return typeColors[key];
     }
     return typeColors.default;
