@@ -50,7 +50,51 @@ export async function approveTodayPlan(): Promise<void> {
   const ctx = requireContext();
   if (!ctx) return stub("Approving today's plan", "Sign in to publish your approved items.");
   notify("Reviewing today's plan", "Opening items that need your approval.");
-  // No batch-approve-all endpoint yet; navigation handled by the page.
+}
+
+/** Batch-approve every pending content piece for the business. */
+export async function batchApproveToday(contentIds: string[]): Promise<void> {
+  const ctx = requireContext();
+  if (!ctx) return stub("Approved", `${contentIds.length} items queued.`);
+  if (contentIds.length === 0) {
+    notify("Nothing to approve", "Your queue is empty.");
+    return;
+  }
+  try {
+    const res = await api.batchApproveContent({
+      business_id: ctx.businessId,
+      user_id: ctx.userId,
+      content_ids: contentIds,
+    });
+    const ok = res.results.filter((r) => r.ok).length;
+    const failed = res.results.length - ok;
+    notify(
+      `Approved ${ok}${failed ? ` · ${failed} failed` : ""}`,
+      failed ? "We'll retry the failed ones automatically." : "All set — publishing now.",
+    );
+    invalidate([["content", ctx.businessId], ["calendar", ctx.businessId], ["dashboard-events", ctx.businessId]]);
+  } catch (e) {
+    notifyError("Couldn't approve batch", e);
+  }
+}
+
+/** Refresh every cache that powers the Today page. */
+export function refreshToday(): void {
+  const ctx = requireContext();
+  if (!ctx) {
+    notify("Refreshing…");
+    return;
+  }
+  invalidate([
+    ["health", ctx.userId],
+    ["dashboard-events", ctx.businessId],
+    ["opportunities", ctx.userId],
+    ["content", ctx.businessId],
+    ["ads", ctx.businessId],
+    ["competitors", ctx.businessId],
+    ["calendar", ctx.businessId],
+  ]);
+  notify("Refreshed", "Pulled the latest from your accounts.");
 }
 
 export function reviewApprovalItem(itemId: string): Promise<void> {
@@ -73,7 +117,7 @@ export async function approveApprovalItem(itemId: string): Promise<void> {
   }
 }
 
-export async function rejectApprovalItem(itemId: string): Promise<void> {
+export async function rejectApprovalItem(itemId: string, note?: string): Promise<void> {
   const ctx = requireContext();
   if (!ctx) return stub("Item rejected");
   try {
@@ -81,11 +125,29 @@ export async function rejectApprovalItem(itemId: string): Promise<void> {
       content_id: itemId,
       user_id: ctx.userId,
       business_id: ctx.businessId,
+      note,
     });
     notify("Rejected", "We won't publish this one.");
     invalidate([["content", ctx.businessId]]);
   } catch (e) {
     notifyError("Couldn't reject", e);
+  }
+}
+
+export async function requestApprovalChanges(itemId: string, note: string): Promise<void> {
+  const ctx = requireContext();
+  if (!ctx) return stub("Changes requested");
+  try {
+    await api.requestContentChanges({
+      content_id: itemId,
+      user_id: ctx.userId,
+      business_id: ctx.businessId,
+      note,
+    });
+    notify("Changes requested", "Maroa will rework it and ping you.");
+    invalidate([["content", ctx.businessId]]);
+  } catch (e) {
+    notifyError("Couldn't send changes", e);
   }
 }
 
