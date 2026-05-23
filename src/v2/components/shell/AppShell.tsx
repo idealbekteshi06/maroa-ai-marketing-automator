@@ -18,7 +18,7 @@ export function AppShell() {
       <div className="flex-1 min-w-0 flex flex-col">
         <Topbar onOpenPalette={() => setPaletteOpen(true)} />
         <main className="flex-1">
-          <div className="max-w-[1440px] mx-auto px-8 py-8">
+          <div className="max-w-[1200px] mx-auto px-6 lg:px-8 py-6 lg:py-8">
             <Outlet />
           </div>
         </main>

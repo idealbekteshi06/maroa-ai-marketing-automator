@@ -78,7 +78,7 @@ export default function UnifiedInbox() {
       setThreads(mapped);
       if (!activeId && mapped[0]) setActiveId(mapped[0].id);
       setMetrics(metricsRes as { threadCount?: number; escalationCount?: number } | null);
-      setEscalationCount(Array.isArray(escRes.items) ? escRes.items.length : 0);
+      setEscalationCount(Array.isArray((escRes as any)?.items) ? (escRes as any).items.length : 0);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to load inbox");
       setThreads([]);

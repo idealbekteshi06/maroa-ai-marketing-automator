@@ -1062,7 +1062,7 @@ export async function listCreativeConcepts(
     content_goal: String(c.content_goal ?? ""),
     idea_level: String(c.idea_level ?? ""),
     insight: String(c.insight ?? ""),
-    top_concept: (c.top_concept as CreativeConcept["top_concept"]) ?? {},
+    top_concept: ((c.top_concept as CreativeConcept["top_concept"]) ?? {}) as CreativeConcept["top_concept"],
     weighted_score: Number(c.weighted_score ?? 0),
     humankind_score: Number(c.humankind_score ?? 0),
     pattern: String(c.pattern ?? ""),
