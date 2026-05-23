@@ -52,7 +52,9 @@ const App = () => (
               <Route path="/signup" element={<SignUp />} />
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              {/* Legacy /dashboard → polished v2 shell (audit pass: single CTA, plain language, calmer UI) */}
+              <Route path="/dashboard" element={<Navigate to="/app" replace />} />
+              <Route path="/dashboard/*" element={<Navigate to="/app" replace />} />
               <Route path="/onboarding" element={<ProtectedRoute allowIncompleteOnboarding><Onboarding /></ProtectedRoute>} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/privacy" element={<Privacy />} />
