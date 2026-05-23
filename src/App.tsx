@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -52,7 +52,9 @@ const App = () => (
               <Route path="/signup" element={<SignUp />} />
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              {/* Legacy /dashboard → polished v2 shell (audit pass: single CTA, plain language, calmer UI) */}
+              <Route path="/dashboard" element={<Navigate to="/app" replace />} />
+              <Route path="/dashboard/*" element={<Navigate to="/app" replace />} />
               <Route path="/onboarding" element={<ProtectedRoute allowIncompleteOnboarding><Onboarding /></ProtectedRoute>} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/privacy" element={<Privacy />} />
