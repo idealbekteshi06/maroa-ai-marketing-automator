@@ -1062,14 +1062,14 @@ export async function listCreativeConcepts(
     content_goal: String(c.content_goal ?? ""),
     idea_level: String(c.idea_level ?? ""),
     insight: String(c.insight ?? ""),
-    top_concept: (c.top_concept as CreativeConcept["top_concept"]) ?? {},
+    top_concept: ((c.top_concept as CreativeConcept["top_concept"]) ?? {}) as CreativeConcept["top_concept"],
     weighted_score: Number(c.weighted_score ?? 0),
     humankind_score: Number(c.humankind_score ?? 0),
     pattern: String(c.pattern ?? ""),
     status: String(c.status ?? ""),
     created_at: String(c.created_at ?? ""),
   }));
-  return { items: items as unknown as CreativeConcept[] };
+  return { items };
 }
 
 export async function developCreativeConcept(
