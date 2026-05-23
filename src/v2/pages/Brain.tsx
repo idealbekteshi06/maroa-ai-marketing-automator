@@ -1,46 +1,45 @@
 import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { Card, Btn, Pill } from "@/v2/components/common/Card";
-import { useCurrentBusiness } from "@/v2/lib/api/hooks/useBusinesses";
-import { useDashboardEvents } from "@/v2/lib/api/hooks/useHome";
-import { useAiBrain } from "@/v2/lib/api/hooks/useModules";
-import { Brain, Send, Sparkles, ArrowUpRight } from "lucide-react";
-
-const SUGGESTED = [
-  "What should I post today?",
-  "Why did you recommend this ad change?",
-  "What are my competitors doing?",
-  "How can I get more bookings this week?",
-];
+import { Card, Btn } from "@/v2/components/common/Card";
+import {
+  useBrainChatData,
+  useBrainDecisionLogData,
+} from "@/v2/lib/data/usePageData";
+import { sendBrainMessage, explainBrainDecision } from "@/v2/lib/data/handlers";
+import type { BrainMessage } from "@/v2/lib/data/types";
+import { Brain, Send, Sparkles, ArrowUpRight, AlertCircle } from "lucide-react";
 
 type Tab = "chat" | "log";
 
 export default function BrainPage() {
-  const { user } = useAuth();
-  const { business } = useCurrentBusiness(user?.id);
-  const bid = business?.id;
-  const events = useDashboardEvents(bid);
-  const brain = useAiBrain(bid);
   const [tab, setTab] = useState<Tab>("chat");
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<{ role: "user" | "ai"; text: string }[]>([]);
+  const [messages, setMessages] = useState<BrainMessage[]>([]);
+  const [sending, setSending] = useState(false);
 
-  const send = (text: string) => {
+  const chat = useBrainChatData(messages);
+  const log = useBrainDecisionLogData();
+
+  const send = async (text: string) => {
     const t = text.trim();
-    if (!t) return;
-    setMessages((m) => [...m, { role: "user", text: t }]);
+    if (!t || sending) return;
+    setSending(true);
+    const userMsg: BrainMessage = {
+      id: `u-${Date.now()}`,
+      role: "user",
+      text: t,
+      createdAt: new Date().toISOString(),
+    };
+    setMessages((m) => [...m, userMsg]);
     setInput("");
-    // TODO(backend): wire to /api/brain/chat when available.
-    setTimeout(() => {
+    try {
+      const reply = await sendBrainMessage(t);
       setMessages((m) => [
         ...m,
-        {
-          role: "ai",
-          text:
-            "I'm thinking through this against your brand memory and recent performance. The full reply will appear once chat is wired to the AI Brain endpoint.",
-        },
+        { id: `a-${Date.now()}`, role: "ai", text: reply, createdAt: new Date().toISOString() },
       ]);
-    }, 400);
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -74,7 +73,7 @@ export default function BrainPage() {
         <Card padded={false}>
           <div className="flex flex-col" style={{ height: "calc(100vh - 240px)", minHeight: 480 }}>
             <div className="flex-1 overflow-y-auto p-5 space-y-3">
-              {messages.length === 0 ? (
+              {chat.data.messages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto">
                   <div
                     className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
@@ -83,14 +82,11 @@ export default function BrainPage() {
                     <Brain size={18} strokeWidth={1.75} />
                   </div>
                   <h2 className="text-[15px] font-semibold">Ask Maroa anything</h2>
-                  <p
-                    className="text-[12.5px] mt-1 mb-5"
-                    style={{ color: "hsl(var(--m-muted-foreground))" }}
-                  >
+                  <p className="text-[12.5px] mt-1 mb-5" style={{ color: "hsl(var(--m-muted-foreground))" }}>
                     Try one of these to start:
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
-                    {SUGGESTED.map((s) => (
+                    {chat.data.suggestedPrompts.map((s) => (
                       <button
                         key={s}
                         onClick={() => send(s)}
@@ -106,23 +102,14 @@ export default function BrainPage() {
                   </div>
                 </div>
               ) : (
-                messages.map((m, i) => (
-                  <div
-                    key={i}
-                    className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
-                  >
+                chat.data.messages.map((m) => (
+                  <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                     <div
                       className="max-w-[80%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed"
                       style={
                         m.role === "user"
-                          ? {
-                              background: "hsl(var(--m-foreground))",
-                              color: "hsl(var(--m-background))",
-                            }
-                          : {
-                              background: "hsl(var(--m-surface))",
-                              border: "1px solid hsl(var(--m-border-subtle))",
-                            }
+                          ? { background: "hsl(var(--m-foreground))", color: "hsl(var(--m-background))" }
+                          : { background: "hsl(var(--m-surface))", border: "1px solid hsl(var(--m-border-subtle))" }
                       }
                     >
                       {m.text}
@@ -132,10 +119,7 @@ export default function BrainPage() {
               )}
             </div>
             <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                send(input);
-              }}
+              onSubmit={(e) => { e.preventDefault(); send(input); }}
               className="p-3 flex items-center gap-2"
               style={{ borderTop: "1px solid hsl(var(--m-border-subtle))" }}
             >
@@ -143,13 +127,14 @@ export default function BrainPage() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Ask Maroa…"
+                disabled={sending}
                 className="flex-1 h-10 px-3 rounded-lg text-[13px] outline-none focus:ring-2"
                 style={{
                   background: "hsl(var(--m-surface))",
                   border: "1px solid hsl(var(--m-border-subtle))",
                 }}
               />
-              <Btn variant="primary" size="md" type="submit">
+              <Btn variant="primary" size="md" type="submit" disabled={sending}>
                 <Send size={13} />
                 Send
               </Btn>
@@ -158,20 +143,20 @@ export default function BrainPage() {
         </Card>
       ) : (
         <Card title="Decision log" padded={false}>
-          {events.isLoading || brain.isLoading ? (
+          {log.status === "error" ? (
+            <div className="p-5 flex items-start gap-3">
+              <AlertCircle size={16} style={{ color: "hsl(var(--m-destructive))" }} />
+              <div className="text-[13px]">We couldn't load the decision log. Please refresh.</div>
+            </div>
+          ) : log.status === "loading" ? (
             <div className="p-5 space-y-3">
               {[0, 1, 2].map((i) => (
                 <div key={i} className="h-14 rounded animate-pulse" style={{ background: "hsl(var(--m-border-subtle))" }} />
               ))}
             </div>
-          ) : !events.data || events.data.length === 0 ? (
+          ) : log.data.decisions.length === 0 ? (
             <div className="px-5 py-14 text-center">
-              <Brain
-                size={20}
-                strokeWidth={1.5}
-                className="mx-auto mb-2"
-                style={{ color: "hsl(var(--m-muted-foreground))" }}
-              />
+              <Brain size={20} strokeWidth={1.5} className="mx-auto mb-2" style={{ color: "hsl(var(--m-muted-foreground))" }} />
               <div className="text-[13px] font-medium">No decisions yet</div>
               <p className="text-[12px] mt-1" style={{ color: "hsl(var(--m-muted-foreground))" }}>
                 Every move Maroa makes will be logged here with full reasoning.
@@ -179,49 +164,29 @@ export default function BrainPage() {
             </div>
           ) : (
             <ul>
-              {events.data.map((d, idx) => (
+              {log.data.decisions.map((d, idx, arr) => (
                 <li
                   key={d.id}
                   className="px-5 py-4"
-                  style={{
-                    borderBottom:
-                      idx === events.data!.length - 1
-                        ? "none"
-                        : "1px solid hsl(var(--m-border-subtle))",
-                  }}
+                  style={{ borderBottom: idx === arr.length - 1 ? "none" : "1px solid hsl(var(--m-border-subtle))" }}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <Sparkles
-                          size={13}
-                          strokeWidth={1.75}
-                          style={{ color: "hsl(var(--m-accent))" }}
-                        />
+                        <Sparkles size={13} strokeWidth={1.75} style={{ color: "hsl(var(--m-accent))" }} />
                         <span className="text-[13px] font-medium">{d.title}</span>
                       </div>
-                      {d.narrative && (
-                        <p
-                          className="text-[12.5px] mt-1 leading-relaxed"
-                          style={{ color: "hsl(var(--m-muted-foreground))" }}
-                        >
-                          {d.narrative}
+                      {d.reasoning && (
+                        <p className="text-[12.5px] mt-1 leading-relaxed" style={{ color: "hsl(var(--m-muted-foreground))" }}>
+                          {d.reasoning}
                         </p>
                       )}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span
-                        className="text-[11px] font-mono tabular-nums"
-                        style={{ color: "hsl(var(--m-muted-foreground))" }}
-                      >
-                        {new Date(d.created_at).toLocaleString([], {
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                      <span className="text-[11px] font-mono tabular-nums" style={{ color: "hsl(var(--m-muted-foreground))" }}>
+                        {new Date(d.occurredAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                       </span>
-                      <Btn variant="ghost">
+                      <Btn variant="ghost" onClick={() => explainBrainDecision(d.id)}>
                         Explain <ArrowUpRight size={11} />
                       </Btn>
                     </div>
