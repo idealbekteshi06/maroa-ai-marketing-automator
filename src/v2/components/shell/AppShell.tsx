@@ -6,8 +6,10 @@ import { SubNav } from "./SubNav";
 import { BottomBar } from "./BottomBar";
 import { CommandPalette } from "./CommandPalette";
 import { FloatingBrain } from "./FloatingBrain";
+import { useSyncHandlerContext } from "@/v2/lib/data/useSyncHandlerContext";
 
 export function AppShell() {
+  useSyncHandlerContext();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [brainOpen, setBrainOpen] = useState(false);
   return (
