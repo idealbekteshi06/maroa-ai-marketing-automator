@@ -68,32 +68,40 @@ const defaultCategories: CategoryScore[] = [
 ];
 
 export default function DashboardHealth() {
-  const { businessId, isReady } = useAuth();
+  const { user, isReady } = useAuth();
   const [score, setScore] = useState(0);
   const [categories, setCategories] = useState<CategoryScore[]>(defaultCategories);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchHealth = useCallback(async (signal?: AbortSignal): Promise<void> => {
-    if (!businessId || !isReady) { setLoading(false); return; }
+    const userId = user?.id;
+    if (!userId || !isReady) { setLoading(false); return; }
     try {
-      const data = await apiGet<Record<string, unknown>>(`/api/health/${businessId}`, signal);
+      const data = await apiGet<Record<string, unknown>>(`/api/health/${userId}`, signal);
 
-      const totalScore = data.score ?? data.total_score ?? 0;
+      const totalScore = (data.total as number) ?? (data.score as number) ?? (data.total_score as number) ?? 0;
       setScore(totalScore);
 
       if (data.categories && Array.isArray(data.categories)) {
-        setCategories(data.categories.map((c: Record<string, unknown>, i: number) => ({
-          label: (c.label as string) || (c.name as string) || defaultCategories[i]?.label || `Category ${i + 1}`,
-          score: (c.score as number) ?? 0,
-          max: (c.max as number) ?? 20,
-          tips: (c.tips as string[]) || (c.recommendations as string[]) || defaultCategories[i]?.tips || [],
+        setCategories(data.categories.map((cat: Record<string, unknown>, i: number) => ({
+          label: (cat.label as string) || (cat.name as string) || defaultCategories[i]?.label || `Category ${i + 1}`,
+          score: (cat.score as number) ?? 0,
+          max: (cat.max as number) ?? 20,
+          tips: (cat.tips as string[]) || (cat.recommendations as string[]) || defaultCategories[i]?.tips || [],
         })));
       } else {
-        // Calculate score from available data
+        const apiScores: Record<string, number | undefined> = {
+          profile_completeness: data.profile as number | undefined,
+          posting_consistency: data.posting as number | undefined,
+          content_variety: data.variety as number | undefined,
+          engagement_tracking: data.engagement as number | undefined,
+          competitive_position: data.competitive as number | undefined,
+        };
         const cats = defaultCategories.map((cat) => {
-          const catScore = data[cat.label.toLowerCase().replace(/\s+/g, "_")] ?? cat.score;
-          return { ...cat, score: catScore };
+          const key = cat.label.toLowerCase().replace(/\s+/g, "_");
+          const catScore = apiScores[key] ?? (data[key] as number | undefined) ?? cat.score;
+          return { ...cat, score: typeof catScore === "number" ? catScore : 0 };
         });
         setCategories(cats);
         if (!totalScore) {
@@ -106,7 +114,7 @@ export default function DashboardHealth() {
     } finally {
       setLoading(false);
     }
-  }, [businessId, isReady]);
+  }, [user?.id, isReady]);
 
   useEffect(() => {
     const controller = createAbortController();

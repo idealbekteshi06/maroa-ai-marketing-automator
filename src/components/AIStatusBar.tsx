@@ -51,12 +51,12 @@ export default function AIStatusBar({ businessId }: AIStatusBarProps) {
     const data = cronHealth.data;
     if (!data) return FALLBACK_IDLE_MESSAGES;
     const entries: { label: string; healthy: boolean; age: number | null; lastRun: string | null }[] = [
-      { label: "Content engine", healthy: data.content_generation.healthy, age: data.content_generation.age_hours, lastRun: data.content_generation.last_run_at },
-      { label: "Lead scoring", healthy: data.lead_scoring.healthy, age: data.lead_scoring.age_hours, lastRun: data.lead_scoring.last_run_at },
-      { label: "Competitor monitoring", healthy: data.competitor_monitor.healthy, age: data.competitor_monitor.age_hours, lastRun: data.competitor_monitor.last_run_at },
-      { label: "Performance tracker", healthy: data.analytics_snapshot.healthy, age: data.analytics_snapshot.age_hours, lastRun: data.analytics_snapshot.last_run_at },
-      { label: "Retention emails", healthy: data.retention_emails.healthy, age: data.retention_emails.age_hours, lastRun: data.retention_emails.last_run_at },
-      { label: "Win notifications", healthy: data.win_notifications.healthy, age: data.win_notifications.age_hours, lastRun: data.win_notifications.last_run_at },
+      { label: "Content engine", healthy: data.content_generation?.healthy ?? false, age: data.content_generation?.age_hours ?? null, lastRun: data.content_generation?.last_run_at ?? null },
+      { label: "Lead scoring", healthy: data.lead_scoring?.healthy ?? false, age: data.lead_scoring?.age_hours ?? null, lastRun: data.lead_scoring?.last_run_at ?? null },
+      { label: "Competitor monitoring", healthy: data.competitor_monitor?.healthy ?? false, age: data.competitor_monitor?.age_hours ?? null, lastRun: data.competitor_monitor?.last_run_at ?? null },
+      { label: "Performance tracker", healthy: data.analytics_snapshot?.healthy ?? false, age: data.analytics_snapshot?.age_hours ?? null, lastRun: data.analytics_snapshot?.last_run_at ?? null },
+      { label: "Retention emails", healthy: data.retention_emails?.healthy ?? false, age: data.retention_emails?.age_hours ?? null, lastRun: data.retention_emails?.last_run_at ?? null },
+      { label: "Win notifications", healthy: data.win_notifications?.healthy ?? false, age: data.win_notifications?.age_hours ?? null, lastRun: data.win_notifications?.last_run_at ?? null },
     ];
     const messages = entries
       .filter((e) => e.lastRun)

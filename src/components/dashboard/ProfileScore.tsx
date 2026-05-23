@@ -2,21 +2,14 @@
 import { useState, useEffect } from "react";
 import { CheckCircle2, Lock, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { apiGet } from "@/lib/apiClient";
+import { apiGet, normalizeOnboardingScore, type ProfileScoreUi } from "@/lib/apiClient";
 
 interface ProfileScoreProps {
   businessId: string;
   userId?: string;
 }
 
-interface ScoreData {
-  score: number;
-  unlocked: string[];
-  locked: string[];
-  next_unlock: string | null;
-  missing_for_next: string[];
-  thresholds: Record<string, { required: number; unlocked: boolean }>;
-}
+interface ScoreData extends ProfileScoreUi {}
 
 const featureLabels: Record<string, string> = {
   social_posts: "Social Media Posts",
@@ -32,8 +25,10 @@ export default function ProfileScore({ businessId, userId }: ProfileScoreProps) 
 
   useEffect(() => {
     if (!userId) return;
-    apiGet<ScoreData>(`/api/onboarding/score/${userId}`)
-      .then(setData)
+    apiGet<{ score?: number; missing_fields?: string[]; recommendations?: string[] }>(
+      `/api/onboarding/score/${userId}`,
+    )
+      .then((raw) => setData(normalizeOnboardingScore(raw)))
       .catch(() => {});
   }, [userId]);
 
@@ -68,7 +63,7 @@ export default function ProfileScore({ businessId, userId }: ProfileScoreProps) 
 
       {/* Feature list */}
       <div className="mt-3 space-y-1.5">
-        {Object.entries(data.thresholds).map(([key, val]) => (
+        {Object.entries(data.thresholds ?? {}).map(([key, val]) => (
           <div key={key} className="flex items-center gap-2 text-xs">
             {val.unlocked ? (
               <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />

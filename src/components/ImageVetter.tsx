@@ -145,7 +145,7 @@ export function ImageVetter({ businessId, defaultContentTheme }: Props) {
             <details className="mt-3 text-xs">
               <summary className="cursor-pointer text-muted-foreground">Per-dimension notes</summary>
               <div className="mt-1 space-y-1">
-                {Object.entries(verdict.notes).filter(([, v]) => v).map(([k, v]) => (
+                {Object.entries(verdict.notes ?? {}).filter(([, v]) => v).map(([k, v]) => (
                   <div key={k}><span className="font-mono text-foreground/60">{k}:</span> {v}</div>
                 ))}
               </div>

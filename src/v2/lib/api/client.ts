@@ -2,7 +2,7 @@
  * Maroa API client. Wraps fetch, attaches Supabase JWT, normalizes errors,
  * retries idempotent GETs with exponential backoff (2x).
  *
- * §10.1 base URL: VITE_API_BASE_URL (default https://api.maroa.ai)
+ * §10.1 base URL: VITE_API_BASE / VITE_API_BASE_URL (default Railway production)
  * §10.2 auth: Authorization: Bearer <supabase JWT>
  *             /webhook/* additionally needs x-webhook-secret (server-side proxy in prod)
  */
@@ -15,12 +15,13 @@ export interface ApiError {
   details?: unknown;
 }
 
-// Use the same backend the rest of the app uses (Railway via VITE_API_BASE).
-// Fall back to VITE_API_BASE_URL for forward-compat, then the production host.
-const BASE_URL =
-  (import.meta.env.VITE_API_BASE as string | undefined) ??
-  (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
-  "https://maroa-api-production.up.railway.app";
+const RAILWAY_API_DEFAULT = "https://maroa-api-production.up.railway.app";
+const RAW_BASE =
+  (import.meta.env.VITE_API_BASE as string | undefined)?.trim() ||
+  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
+  RAILWAY_API_DEFAULT;
+/** In dev, same-origin + Vite proxy (see vite.config.ts). */
+const BASE_URL = import.meta.env.DEV ? "" : RAW_BASE;
 
 async function authHeader(): Promise<Record<string, string>> {
   const { data } = await externalSupabase.auth.getSession();
@@ -35,9 +36,18 @@ interface RequestOptions extends Omit<RequestInit, "body"> {
 }
 
 function buildUrl(path: string, query?: RequestOptions["query"]) {
-  const url = new URL(
-    path.startsWith("http") ? path : `${BASE_URL}${path.startsWith("/") ? path : `/${path}`}`,
-  );
+  const pathPart = path.startsWith("/") ? path : `/${path}`;
+  let href: string;
+  if (path.startsWith("http")) {
+    href = path;
+  } else if (BASE_URL) {
+    href = `${BASE_URL}${pathPart}`;
+  } else if (typeof window !== "undefined") {
+    href = `${window.location.origin}${pathPart}`;
+  } else {
+    href = pathPart;
+  }
+  const url = new URL(href);
   if (query) {
     for (const [k, v] of Object.entries(query)) {
       if (v !== undefined && v !== null) url.searchParams.set(k, String(v));

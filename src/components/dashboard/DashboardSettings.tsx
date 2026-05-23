@@ -105,7 +105,9 @@ export default function DashboardSettings() {
       if (data.notification_preferences) {
         try {
           const p = typeof data.notification_preferences === "string" ? JSON.parse(data.notification_preferences) : data.notification_preferences;
-          setNotifPrefs({ ...defaultNotifs, ...p });
+          if (p && typeof p === "object") {
+            setNotifPrefs({ ...defaultNotifs, ...p });
+          }
         } catch (err: unknown) {
           if (err instanceof Error && err.name === "AbortError") return;
           toast.error(ERROR_MESSAGES.LOAD_FAILED);

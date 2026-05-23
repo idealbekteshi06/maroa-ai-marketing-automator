@@ -250,23 +250,23 @@ export default function Home({ onNavigate }: HomeProps) {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Server-aggregated metrics overlay — POSTs from /api/performance/summary.
-  // Keeps the dashboard fresh without forcing a full refetch.
+  // Server-aggregated metrics overlay from GET /api/performance/summary/:userId.
   useEffect(() => {
-    if (!businessId) return;
+    if (!user?.id) return;
     const ctrl = new AbortController();
-    apiGet<{ summary?: Record<string, unknown> }>(`/api/performance/summary/${businessId}`, ctrl.signal)
+    apiGet<{
+      this_week?: { reach?: number; engagement?: number; clicks?: number };
+      last_week?: { reach?: number; engagement?: number; clicks?: number };
+    }>(`/api/performance/summary/${user.id}`, ctrl.signal)
       .then(data => {
-        const s = data?.summary;
-        if (!s) return;
-        if (typeof s.total_reach === "number") setReach(s.total_reach);
-        if (typeof s.active_leads === "number") setLeads(s.active_leads);
-        if (typeof s.ad_spend === "number") setAdSpend(s.ad_spend);
-        if (typeof s.revenue === "number") setRevenue(s.revenue);
+        const tw = data?.this_week;
+        if (!tw) return;
+        if (typeof tw.reach === "number") setReach(tw.reach);
+        if (typeof tw.clicks === "number") setLeads(tw.clicks);
       })
       .catch(() => { /* server summary is optional; UI degrades gracefully */ });
     return () => ctrl.abort();
-  }, [businessId]);
+  }, [user?.id]);
 
   // Realtime feed
   useEffect(() => {

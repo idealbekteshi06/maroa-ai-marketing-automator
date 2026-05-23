@@ -1,9 +1,60 @@
 import { externalSupabase } from "@/integrations/supabase/external-client";
 
-const RAW_API_BASE = (import.meta.env.VITE_API_BASE as string) ?? "";
+const RAILWAY_API_DEFAULT = "https://maroa-api-production.up.railway.app";
+const RAW_API_BASE =
+  (import.meta.env.VITE_API_BASE as string | undefined)?.trim() || RAILWAY_API_DEFAULT;
 
 /** In dev, use same-origin requests + Vite proxy so Railway CORS does not block the browser. */
 const API_BASE = import.meta.env.DEV ? "" : RAW_API_BASE;
+
+/** Backend GET /api/onboarding/score/:userId shape (v2.3). */
+export interface OnboardingScoreApiDto {
+  score: number;
+  missing_fields?: string[];
+  recommendations?: string[];
+}
+
+/** UI shape expected by ProfileScore widgets (derived from API score). */
+export interface ProfileScoreUi {
+  score: number;
+  unlocked: string[];
+  locked: string[];
+  next_unlock: string | null;
+  missing_for_next: string[];
+  thresholds: Record<string, { required: number; unlocked: boolean }>;
+}
+
+const FEATURE_UNLOCK_THRESHOLDS: Record<string, number> = {
+  social_posts: 30,
+  email_sms: 50,
+  paid_ads: 70,
+  full_autopilot: 90,
+  premium_accuracy: 95,
+};
+
+/** Map backend onboarding score → legacy ProfileScore UI fields. */
+export function normalizeOnboardingScore(
+  raw: OnboardingScoreApiDto | null | undefined,
+): ProfileScoreUi | null {
+  if (!raw || typeof raw.score !== "number") return null;
+  const thresholds: ProfileScoreUi["thresholds"] = {};
+  const unlocked: string[] = [];
+  const locked: string[] = [];
+  for (const [key, required] of Object.entries(FEATURE_UNLOCK_THRESHOLDS)) {
+    const isUnlocked = raw.score >= required;
+    thresholds[key] = { required, unlocked: isUnlocked };
+    if (isUnlocked) unlocked.push(key);
+    else locked.push(key);
+  }
+  return {
+    score: raw.score,
+    unlocked,
+    locked,
+    next_unlock: locked[0] ?? null,
+    missing_for_next: raw.missing_fields ?? [],
+    thresholds,
+  };
+}
 
 export function getApiBase(): string {
   return API_BASE;
