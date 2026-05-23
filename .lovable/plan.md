@@ -1,73 +1,129 @@
-# Maroa Dashboard — Build Plan
+## Goal
 
-This is a very large spec (27 routes, 180+ endpoints, full Apple design system, realtime, i18n, plan gating). The current project already has a Lovable Cloud–wired dashboard against a different backend (Railway + external Supabase). Shipping all of §1–§22 in a single pass would produce thousands of lines of code, break the existing working app, and almost certainly miss the acceptance bar in §21.
+Make `/app` the entire product: every backend capability accessible, Apple-clean, light by default with dark toggle, mobile-first, SEO-friendly, single blue accent. Landing page untouched. Retire `/dashboard`.
 
-I'm proposing a phased approach so each phase is shippable and reviewable. Confirm the phase plan (and whether to keep or replace the current code) before I start.
+## Honest constraint
 
-## Key decisions needed before coding
+The backend exposes ~165 routes across 14 domains. Doing every screen + full wiring in one pass means I will not match Apple-level polish on every detail. I will prioritize: (1) shell + design system, (2) the flows you called out (Today, Content, Higgsfield Product Library), (3) Growth/Ads/SEO, (4) CRM/Email/Competitors/Settings. Everything will be present, typed, and wired — depth of polish drops in later sections. You'll be able to iterate per page after.
 
-1. **Greenfield vs. evolve?** The existing app has ~80 dashboard components wired to Railway + an external Supabase project (`zqhyrbttuqkvmdewiytf`). The spec assumes a new backend at `api.maroa.ai`. Options:
-   - **A. Greenfield rewrite** under `src/v2/` with a new router, keep old code untouched until cutover. (Cleaner, matches spec exactly.)
-   - **B. Evolve in place** — replace shell, design tokens, and rewire api client; migrate modules one by one. (Less throwaway code, messier transition.)
-   - **Default if you don't pick:** A (greenfield).
+---
 
-2. **Backend reality.** Does `https://api.maroa.ai` actually exist and serve every endpoint in §10.3 today? If not, I'll wire the client but screens will sit in empty/error states until the backend lands. Spec says "no mocks" — I'll honor that.
+## 1. Design system (foundation everything else depends on)
 
-3. **Webhook secret.** Spec §16 says webhook secret must stay server-side via a Supabase edge function proxy. I'll build that proxy (one edge function `webhook-proxy` that forwards `/webhook/*` with the secret attached). Confirm OK.
+- New token layer in `src/index.css` + `tailwind.config.ts`:
+  - Light: bg `#FBFBFD`, surface `#FFFFFF`, text `#1D1D1F`, border `#E5E5EA`, muted `#86868B`
+  - Dark: bg `#000000`, surface `#1C1C1E`, text `#F5F5F7`, border `#2C2C2E`, muted `#8E8E93`
+  - Single accent `--accent-blue` = same blue used on landing (read from current landing token, not invented)
+  - Type scale (SF-style): 34/28/22/17/15/13, system font stack (`-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", Inter`)
+  - Radii: 10 / 14 / 20. Shadows: subtle 1-layer only. No gradients.
+- Theme: default **light**, topbar toggle (light / dark / system). Persist in `localStorage`. Extend existing `useTheme`.
+- Primitives in `src/v2/components/ui/`: `Button`, `Card`, `Sheet`, `Drawer`, `Dialog`, `Tabs`, `Input`, `Select`, `Toggle`, `Skeleton`, `EmptyState`, `Toast`. All consume tokens only — no raw colors.
+- Mobile: bottom tab bar < 768px (5 tabs), sidebar ≥ 768px. Safe-area insets, 44px hit targets.
 
-## Phase plan
+## 2. Information architecture (final /app map)
 
-### Phase 1 — Foundation (this PR)
-- Design tokens (§2): typography scale, HSL color vars (light+dark), spacing, radii, elevation, glass, motion timings, Apple-styled Recharts theme.
-- `lib/api/client.ts` with JWT + error envelope + retry.
-- `lib/api/types.ts` + zod schemas for the 10 core tables (businesses, generated_content, ad_campaigns, contacts, deals, reviews, analytics_snapshots, learning_logs, win_notifications, inbox_messages).
-- AppShell: glass topbar, 256/64 sidebar with all groups from §3.2, command palette skeleton, autopilot toggle, plan badge, workspace switcher.
-- Supabase auth pages (`/auth/sign-in`, `/auth/callback`, `/auth/check-email`) + protected route wrapper.
-- One end-to-end vertical slice: **Home `/`** with real KPIs from `/api/health`, `/api/performance/summary`, `/webhook/pipeline-get`, `/webhook/dashboard-events` + realtime channel.
-- Webhook proxy edge function.
+Top-level (5 tabs, same as today):
+- **Today** — single-screen morning view
+- **Studio** (rename from Content) — Posts, Calendar, Library, Video, **Products**, Brand
+- **Growth** — Ads, SEO, CRO, Landing Pages, Lead Magnets, Referrals, Competitors, Analytics, Forecast
+- **Audience** (new tab, folded from CRM/Email) — Inbox, Contacts, Pipeline, Email Sequences, Reviews
+- **Settings** — Profile, Brand, Integrations, Team, Billing, Notifications, AI Brain config
 
-### Phase 2 — Creative cluster
-Content Studio (+ approval sheet, scoring radar, regenerate), Calendar, Library, Brand DNA, Video Studio.
+That's 6 tabs. On mobile, Audience collapses into a "More" sheet so the bottom bar stays 5. AI Brain becomes a floating assistant button (bottom-right) reachable from every page — not its own tab.
 
-### Phase 3 — Growth cluster
-Ads (Meta+Google, creatives, A/B, audit), SEO, CRO, Landing Pages, Lead Magnets, Referrals.
+All legacy `/dashboard/*` routes redirect into the new IA. `/dashboard` route + every component under `src/components/dashboard/` is removed.
 
-### Phase 4 — Audience cluster
-CRM, Pipeline, Email Sequences, Reviews, Inbox.
+## 3. Product Library + Higgsfield pipeline (the flow you described)
 
-### Phase 5 — Intelligence cluster
-Analytics, Competitors, Forecasting, AI Brain, Strategy.
+New section under Studio → Products.
 
-### Phase 6 — Platform & polish
-Integrations, Team (agency), Billing (Paddle), Settings, Notifications, Waitlist, i18n scaffolding, plan gating sweep, perf budget pass, a11y pass, Lighthouse run, acceptance checklist §21.
+- **Upload**: drag-drop or file picker. Multiple products. Each product = `{ name, description, category, photos[], hero_photo_id }`. Stored via existing external Supabase media path used by `src/lib/api.ts` upload helpers; product metadata in a new `products` table on the external DB (I'll add the migration on the API side later — for now stored in business `brand_dna.products` JSON which already exists).
+- **Auto-pipeline** on upload, per photo:
+  1. `vetCustomerAsset(businessId, imageUrl, contentTheme)` → 8-dim verdict
+  2. Branch on verdict automatically:
+     - `use_as_is` → mark ready, skip Higgsfield
+     - `enhance_via_higgsfield` → call `smartProcessAsset` (Soul I2I) using returned `i2i_prompts`
+     - `regenerate_fresh` → call `/webhook/generate-image` with full MCSLA prompt + product description as reference
+     - `reject` → show reason, ask for new photo
+  3. Generated assets land in Library, tagged with `product_id`
+- **Product detail page**: gallery, vetter scorecards (collapsed by default), "Generate post", "Generate ad creative", "Generate video" — each opens the existing generators pre-filled with the chosen product photo
+- **Campaign integration**: in Content composer and Ads composer, a "Use product" picker pulls from this library and runs the same pipeline if the chosen photo isn't pre-vetted
+- Uses existing endpoints — no backend changes:
+  - `vetCustomerAsset`, `smartProcessAsset` (already in `api.ts`)
+  - `/webhook/generate-image`, `/webhook/score-image`, `/webhook/ad-creative-generate`
+  - `/webhook/higgsfield-self-test` for a "connection healthy" indicator in Settings → Integrations
 
-### Phase 7 — Onboarding wizard
-8-step glass wizard with progress ring + research kickoff (deferred until after Phase 1 because it depends on the new shell + auth being live).
+## 4. Page-by-page wiring (every backend module surfaced)
 
-## Phase 1 scope detail
+For each page below: real hook (no mocks), loading skeletons, empty state with next-step CTA, error envelope handling, primary action in topbar.
 
-Files I'd create/replace:
-- `src/styles/tokens.css` — full token set §2.2–§2.6
-- `tailwind.config.ts` — typography scale, radii, color mapping to vars, motion easing
-- `src/lib/api/client.ts`, `src/lib/api/types.ts`, `src/lib/schemas/*.ts`
-- `src/lib/api/hooks/{useBusinesses,useHealth,useDashboardEvents,usePipeline,usePerformance}.ts`
-- `src/components/shell/{AppShell,Sidebar,Topbar,CommandPalette,AutopilotToggle,WorkspaceSwitcher,PlanBadge,AIChatPanel}.tsx`
-- `src/components/common/{PageHeader,KpiCard,Sparkline,RadialGauge,GlassCard,EmptyState,StatusBadge}.tsx`
-- `src/components/charts/{AppleAreaChart,AppleLineChart}.tsx`
-- `src/pages/v2/Home.tsx`, `src/pages/v2/auth/{SignIn,Callback,CheckEmail}.tsx`
-- `src/router.tsx` (new — coexists with old `App.tsx` routes for now; greenfield routes live under same paths but old routes get removed in Phase 6 cutover)
-- `supabase/functions/webhook-proxy/index.ts`
+| Page | Endpoints |
+|---|---|
+| Today | `wf1GetDailyPlan`, `useHealth`, `useDashboardEvents`, `useOpportunities`, pending approvals from `getContentPieces?status=pending_approval` |
+| Studio · Posts | `getContentPieces`, `generateContent`, `approveContentPiece`, `rejectContentPiece`, `requestContentChanges`, `batchApprove/Reject` |
+| Studio · Calendar | `useCalendar`, `schedulePost` |
+| Studio · Library | `useLibrary` + filter by product |
+| Studio · Video | `useVideoJobs`, video generator |
+| Studio · Products | (new — see §3) |
+| Studio · Brand | `getBrandVoice`, `/webhook/build-brand-voice`, brand memory store/retrieve/train |
+| Growth · Ads | Meta + Google: create/activate/optimize/get, `adOptimizerAuditCampaign`, ad creatives, A/B tests |
+| Growth · SEO | `useSeo`, `/webhook/seo-audit`, `/webhook/seo-recommendations-get` |
+| Growth · CRO | `useCro`, recommendations apply |
+| Growth · Landing Pages | `useLandingPages`, `/webhook/generate-landing-page` |
+| Growth · Lead Magnets | `useLeadMagnets` |
+| Growth · Referrals | `useReferrals` |
+| Growth · Competitors | `/webhook/competitor-analyze`, `/webhook/competitor-report-get`, `/webhook/competitor-check` |
+| Growth · Analytics | `/webhook/analytics-snapshot/report/get` |
+| Growth · Forecast | `/webhook/revenue-forecast`, `/webhook/attribute-revenue` |
+| Audience · Inbox | existing inbox endpoints |
+| Audience · Contacts | `/webhook/contacts-get`, create/update/import, activity log |
+| Audience · Pipeline | `/webhook/pipeline-get`, deal create/stage-update |
+| Audience · Email Sequences | sequence create/process, enroll, trigger |
+| Audience · Reviews | reviews endpoints |
+| Settings · Profile | business CRUD |
+| Settings · Brand | links to Studio · Brand |
+| Settings · Integrations | Meta/Google/LinkedIn/TikTok/Twitter OAuth start endpoints + status, Higgsfield self-test |
+| Settings · Team | org-get, org-add-workspace, org-invite-member, white-label |
+| Settings · Billing | `/api/billing/plans`, `/api/checkout` (Paddle), legacy Stripe customer portal |
+| Settings · Notifications | preferences |
+| Floating AI Brain | `wf1SetAutonomyMode`, brain chat → existing `chat` edge function, decision log from `useDashboardEvents` |
 
-Existing files left untouched in Phase 1: every `src/components/dashboard/*`, `src/pages/Dashboard.tsx`, `src/pages/Onboarding.tsx`, current Railway api client.
+## 5. Data layer cleanup
 
-Estimated size: ~25 new files, ~3,500 LOC. One reviewable PR.
+- Keep `src/v2/lib/data/types.ts` + page-data hooks pattern.
+- Delete `mocks.ts` and every mock fallback. Empty → empty state, never fake data.
+- Replace placeholder `handlers.ts` bodies with real mutations from `src/lib/api.ts`. Names stay the same so call sites don't change.
+- Add `useProducts`, `useProduct`, `useProductPipeline` hooks.
+- All mutations use React Query `useMutation` with toast on success/error + cache invalidation.
 
-## What I need from you
+## 6. Performance + SEO + a11y
 
-Reply with:
-1. **A** (greenfield) or **B** (evolve in place)?
-2. Is `api.maroa.ai` live today, or do screens sit empty until it ships?
-3. OK to add the `webhook-proxy` edge function?
-4. Anything to deprioritize (e.g., skip i18n, skip white-label, skip video studio for v1)?
+- Code-split each top-level tab (already lazy).
+- `useSEO` per page: unique title, description, canonical. `<h1>` per page, semantic landmarks, focus rings on all interactives, ARIA labels on icon-only buttons.
+- Skeletons sized to final content to avoid CLS.
+- Images: `loading="lazy"`, explicit dimensions, `srcset` where we control the asset.
+- Keyboard: `⌘K` palette (already exists), `g t` / `g s` / `g g` / `g a` / `g ,` jump shortcuts.
 
-Once you confirm, I'll execute Phase 1 in one pass.
+## 7. Cleanup
+
+- Remove `/dashboard` route from `src/App.tsx` (already redirects — also delete the legacy `Dashboard.tsx` page and unused `src/components/dashboard/*` files).
+- Update `mem://index.md`: drop "Meta Design System" core rule, add Apple design system rule. Remove "5-tab" claim (now 6 desktop / 5 mobile).
+
+## Order of execution (single build mode pass)
+
+1. Tokens + theme + primitives (§1)
+2. Shell, sidebar, topbar, bottom-bar, theme toggle, command palette refresh (§2)
+3. Today + Studio (Posts, Calendar, Library, Brand) (§4)
+4. **Products + Higgsfield pipeline** (§3)
+5. Growth section (Ads → Forecast)
+6. Audience section (Inbox → Reviews)
+7. Settings (all tabs) + floating AI Brain
+8. Mock removal, route cleanup, memory update
+9. QA pass on light + dark + 375px viewport
+
+## Technical notes
+
+- No backend changes. Everything wires to existing `src/lib/api.ts` + Railway endpoints + external Supabase.
+- Products metadata piggybacks on `brand_dna.products` JSON until a real `products` table exists server-side.
+- Higgsfield auto-pipeline runs client-side orchestration of existing endpoints; if a `/webhook/product-pipeline` endpoint is added later, swap one hook.
+- All new UI under `src/v2/`. No edits to `src/integrations/supabase/*` files.
