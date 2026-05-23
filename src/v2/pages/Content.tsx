@@ -1,29 +1,21 @@
 import { useMemo, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
 import { Card, Pill, Btn } from "@/v2/components/common/Card";
-import { useCurrentBusiness } from "@/v2/lib/api/hooks/useBusinesses";
-import { useContent, useCalendar } from "@/v2/lib/api/hooks/useModules";
-import { Sparkles, Calendar as CalendarIcon } from "lucide-react";
+import { useContentPageData } from "@/v2/lib/data/usePageData";
+import {
+  generateWeeklyContent,
+  approveContentPost,
+  editContentPost,
+  schedulePost,
+  filterContentByPlatform,
+  filterContentByStatus,
+} from "@/v2/lib/data/handlers";
+import type { ContentStatus, ContentPlatform } from "@/v2/lib/data/types";
+import { Sparkles, Calendar as CalendarIcon, AlertCircle } from "lucide-react";
 
 const PLATFORMS = ["All", "Instagram", "Facebook", "TikTok", "LinkedIn"] as const;
 const STATUSES = ["All", "Draft", "Needs approval", "Scheduled", "Published"] as const;
 
-function statusOf(c: any): (typeof STATUSES)[number] {
-  const s = (c?.status ?? "").toString().toLowerCase();
-  if (s === "published") return "Published";
-  if (s === "scheduled") return "Scheduled";
-  if (s === "pending_approval" || s === "pending") return "Needs approval";
-  return "Draft";
-}
-function platformOf(c: any): string {
-  if (c?.platform) return c.platform;
-  if (c?.instagram_caption) return "Instagram";
-  if (c?.facebook_post) return "Facebook";
-  if (c?.tiktok_caption) return "TikTok";
-  if (c?.linkedin_post) return "LinkedIn";
-  return "—";
-}
-function statusTone(s: string) {
+function statusTone(s: ContentStatus) {
   if (s === "Published") return "success" as const;
   if (s === "Scheduled") return "info" as const;
   if (s === "Needs approval") return "warning" as const;
@@ -31,44 +23,37 @@ function statusTone(s: string) {
 }
 
 export default function Content() {
-  const { user } = useAuth();
-  const { business } = useCurrentBusiness(user?.id);
-  const bid = business?.id;
-  const content = useContent(bid);
-  const now = new Date();
-  const calendar = useCalendar(bid, now.getMonth() + 1, now.getFullYear());
-
+  const state = useContentPageData();
   const [platform, setPlatform] = useState<(typeof PLATFORMS)[number]>("All");
   const [status, setStatus] = useState<(typeof STATUSES)[number]>("All");
 
+  const isLoading = state.status === "loading";
+  const data = state.status === "loading" ? undefined : state.data;
+
   const list = useMemo(() => {
-    const arr = Array.isArray(content.data) ? content.data : [];
-    return arr.filter((c: any) => {
-      if (platform !== "All" && platformOf(c).toLowerCase() !== platform.toLowerCase()) return false;
-      if (status !== "All" && statusOf(c) !== status) return false;
+    const posts = data?.posts ?? [];
+    return posts.filter((p) => {
+      if (platform !== "All" && p.platform !== (platform as ContentPlatform)) return false;
+      if (status !== "All" && p.status !== (status as ContentStatus)) return false;
       return true;
     });
-  }, [content.data, platform, status]);
+  }, [data?.posts, platform, status]);
 
-  // Build current week (Mon–Sun) with scheduled items from calendar
-  const week = useMemo(() => {
-    const today = new Date();
-    const day = (today.getDay() + 6) % 7; // 0 = Monday
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - day);
-    monday.setHours(0, 0, 0, 0);
-    const cal = Array.isArray(calendar.data) ? calendar.data : [];
-    return Array.from({ length: 7 }).map((_, i) => {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      const items = cal.filter((c: any) => {
-        if (!c?.scheduled_at) return false;
-        const dd = new Date(c.scheduled_at);
-        return dd.toDateString() === d.toDateString();
-      });
-      return { date: d, items };
-    });
-  }, [calendar.data]);
+  if (state.status === "error") {
+    return (
+      <Card>
+        <div className="flex items-start gap-3">
+          <AlertCircle size={18} style={{ color: "hsl(var(--m-destructive))" }} />
+          <div>
+            <div className="text-[14px] font-medium">We couldn't load your content.</div>
+            <p className="text-[12.5px] mt-1" style={{ color: "hsl(var(--m-muted-foreground))" }}>
+              Please refresh in a moment.
+            </p>
+          </div>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -79,7 +64,7 @@ export default function Content() {
             Plan, approve, and schedule everything Maroa creates.
           </p>
         </div>
-        <Btn variant="primary" size="md">
+        <Btn variant="primary" size="md" onClick={() => generateWeeklyContent()}>
           <Sparkles size={13} />
           Generate this week's plan
         </Btn>
@@ -87,7 +72,7 @@ export default function Content() {
 
       {/* Weekly calendar */}
       <Card title="This week" padded={false}>
-        {calendar.isLoading ? (
+        {isLoading ? (
           <div className="p-5 grid grid-cols-7 gap-2">
             {Array.from({ length: 7 }).map((_, i) => (
               <div key={i} className="h-28 rounded-lg animate-pulse" style={{ background: "hsl(var(--m-border-subtle))" }} />
@@ -95,52 +80,41 @@ export default function Content() {
           </div>
         ) : (
           <div className="p-5 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-            {week.map((d) => {
-              const isToday = d.date.toDateString() === new Date().toDateString();
+            {(data?.weekCalendar ?? []).map((d) => {
+              const date = new Date(d.date);
+              const isToday = date.toDateString() === new Date().toDateString();
               return (
                 <div
-                  key={d.date.toISOString()}
+                  key={d.date}
                   className="rounded-lg p-2.5 min-h-[110px]"
                   style={{
-                    background: isToday
-                      ? "hsl(var(--m-accent) / 0.06)"
-                      : "hsl(var(--m-surface))",
-                    border: `1px solid ${
-                      isToday ? "hsl(var(--m-accent) / 0.3)" : "hsl(var(--m-border-subtle))"
-                    }`,
+                    background: isToday ? "hsl(var(--m-accent) / 0.06)" : "hsl(var(--m-surface))",
+                    border: `1px solid ${isToday ? "hsl(var(--m-accent) / 0.3)" : "hsl(var(--m-border-subtle))"}`,
                   }}
                 >
                   <div className="flex items-baseline justify-between">
                     <span
                       className="text-[10px] font-medium uppercase tracking-wide"
-                      style={{
-                        color: isToday
-                          ? "hsl(var(--m-accent))"
-                          : "hsl(var(--m-muted-foreground))",
-                      }}
+                      style={{ color: isToday ? "hsl(var(--m-accent))" : "hsl(var(--m-muted-foreground))" }}
                     >
-                      {d.date.toLocaleDateString(undefined, { weekday: "short" })}
+                      {date.toLocaleDateString(undefined, { weekday: "short" })}
                     </span>
-                    <span className="text-[13px] font-semibold tabular-nums">
-                      {d.date.getDate()}
-                    </span>
+                    <span className="text-[13px] font-semibold tabular-nums">{date.getDate()}</span>
                   </div>
                   <div className="mt-2 space-y-1">
                     {d.items.length === 0 ? (
-                      <span className="text-[11px]" style={{ color: "hsl(var(--m-muted-foreground))" }}>
-                        —
-                      </span>
+                      <span className="text-[11px]" style={{ color: "hsl(var(--m-muted-foreground))" }}>—</span>
                     ) : (
-                      d.items.slice(0, 3).map((it: any, i: number) => (
+                      d.items.slice(0, 3).map((it) => (
                         <div
-                          key={it.id ?? i}
+                          key={it.id}
                           className="text-[11px] px-1.5 py-1 rounded truncate"
                           style={{
                             background: "hsl(var(--m-surface-elevated))",
                             border: "1px solid hsl(var(--m-border-subtle))",
                           }}
                         >
-                          {platformOf(it)} · {(it.title ?? it.theme ?? "Post").toString().slice(0, 18)}
+                          {it.platform} · {it.title}
                         </div>
                       ))
                     )}
@@ -158,7 +132,7 @@ export default function Content() {
           {PLATFORMS.map((p) => (
             <button
               key={p}
-              onClick={() => setPlatform(p)}
+              onClick={() => { setPlatform(p); filterContentByPlatform(p); }}
               className="px-2.5 h-7 rounded-md text-[12px] font-medium transition-colors"
               style={{
                 background: platform === p ? "hsl(var(--m-surface-elevated))" : "transparent",
@@ -174,7 +148,7 @@ export default function Content() {
           {STATUSES.map((s) => (
             <button
               key={s}
-              onClick={() => setStatus(s)}
+              onClick={() => { setStatus(s); filterContentByStatus(s); }}
               className="px-2.5 h-7 rounded-md text-[12px] font-medium transition-colors"
               style={{
                 background: status === s ? "hsl(var(--m-surface-elevated))" : "transparent",
@@ -190,7 +164,7 @@ export default function Content() {
 
       {/* Posts */}
       <Card title={`Posts · ${list.length}`} padded={false}>
-        {content.isLoading ? (
+        {isLoading ? (
           <div className="p-5 space-y-3">
             {[0, 1, 2].map((i) => (
               <div key={i} className="h-16 rounded-lg animate-pulse" style={{ background: "hsl(var(--m-border-subtle))" }} />
@@ -198,65 +172,46 @@ export default function Content() {
           </div>
         ) : list.length === 0 ? (
           <div className="px-5 py-16 text-center">
-            <CalendarIcon
-              size={22}
-              strokeWidth={1.5}
-              className="mx-auto mb-2"
-              style={{ color: "hsl(var(--m-muted-foreground))" }}
-            />
+            <CalendarIcon size={22} strokeWidth={1.5} className="mx-auto mb-2" style={{ color: "hsl(var(--m-muted-foreground))" }} />
             <div className="text-[14px] font-medium">No content scheduled yet</div>
-            <p
-              className="text-[12.5px] mt-1 mb-4 max-w-sm mx-auto"
-              style={{ color: "hsl(var(--m-muted-foreground))" }}
-            >
+            <p className="text-[12.5px] mt-1 mb-4 max-w-sm mx-auto" style={{ color: "hsl(var(--m-muted-foreground))" }}>
               Maroa will draft a week of on-brand posts. You approve, it publishes.
             </p>
-            <Btn variant="primary">
+            <Btn variant="primary" onClick={() => generateWeeklyContent()}>
               <Sparkles size={13} />
               Generate this week's plan
             </Btn>
           </div>
         ) : (
           <ul>
-            {list.map((c: any, idx: number) => {
-              const s = statusOf(c);
-              return (
-                <li
-                  key={c.id ?? idx}
-                  className="px-5 py-4 flex items-start gap-4"
-                  style={{
-                    borderBottom:
-                      idx === list.length - 1
-                        ? "none"
-                        : "1px solid hsl(var(--m-border-subtle))",
-                  }}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[13px] font-medium truncate">
-                        {c.content_theme ?? c.title ?? "Post"}
-                      </span>
-                      <Pill tone="muted">{platformOf(c)}</Pill>
-                      <Pill tone={statusTone(s)}>{s}</Pill>
-                    </div>
-                    <p
-                      className="text-[12.5px] mt-1 line-clamp-2"
-                      style={{ color: "hsl(var(--m-muted-foreground))" }}
-                    >
-                      {c.instagram_caption ?? c.facebook_post ?? c.preview ?? "—"}
-                    </p>
+            {list.map((c, idx) => (
+              <li
+                key={c.id}
+                className="px-5 py-4 flex items-start gap-4"
+                style={{
+                  borderBottom: idx === list.length - 1 ? "none" : "1px solid hsl(var(--m-border-subtle))",
+                }}
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] font-medium truncate">{c.title}</span>
+                    <Pill tone="muted">{c.platform}</Pill>
+                    <Pill tone={statusTone(c.status)}>{c.status}</Pill>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <Btn variant="ghost">Edit</Btn>
-                    {s === "Needs approval" || s === "Draft" ? (
-                      <Btn variant="primary">Approve</Btn>
-                    ) : (
-                      <Btn variant="secondary">Schedule</Btn>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
+                  <p className="text-[12.5px] mt-1 line-clamp-2" style={{ color: "hsl(var(--m-muted-foreground))" }}>
+                    {c.preview}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Btn variant="ghost" onClick={() => editContentPost(c.id)}>Edit</Btn>
+                  {c.status === "Needs approval" || c.status === "Draft" ? (
+                    <Btn variant="primary" onClick={() => approveContentPost(c.id)}>Approve</Btn>
+                  ) : (
+                    <Btn variant="secondary" onClick={() => schedulePost(c.id)}>Schedule</Btn>
+                  )}
+                </div>
+              </li>
+            ))}
           </ul>
         )}
       </Card>

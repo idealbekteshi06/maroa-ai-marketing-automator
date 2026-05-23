@@ -1,11 +1,16 @@
-import { useAuth } from "@/contexts/AuthContext";
+import { useState, useEffect } from "react";
 import { Card, Btn, Pill } from "@/v2/components/common/Card";
-import { useCurrentBusiness } from "@/v2/lib/api/hooks/useBusinesses";
-import { useIntegrations, useBilling, useBrandDna } from "@/v2/lib/api/hooks/useModules";
-import { Building2, MessageSquareQuote, Plug, Zap, CreditCard, Check } from "lucide-react";
-import { useState } from "react";
-
-type AutopilotMode = "manual" | "review" | "autopilot";
+import { useSettingsPageData } from "@/v2/lib/data/usePageData";
+import {
+  updateAutopilotMode,
+  editBusinessProfile,
+  editBrandVoice,
+  connectSocialAccount,
+  manageConnectedAccount,
+  manageBilling,
+} from "@/v2/lib/data/handlers";
+import type { AutopilotMode } from "@/v2/lib/data/types";
+import { Plug, Check, AlertCircle } from "lucide-react";
 
 const MODES: { id: AutopilotMode; label: string; desc: string }[] = [
   { id: "manual", label: "Manual", desc: "Maroa drafts. You decide every action." },
@@ -25,20 +30,38 @@ function Field({ label, value }: { label: string; value?: string | null }) {
 }
 
 export default function SettingsPage() {
-  const { user } = useAuth();
-  const { business } = useCurrentBusiness(user?.id);
-  const bid = business?.id;
-  const integrations = useIntegrations(bid);
-  const billing = useBilling(bid);
-  const brand = useBrandDna(bid);
+  const state = useSettingsPageData();
+  const [mode, setMode] = useState<AutopilotMode>("review");
 
-  const [mode, setMode] = useState<AutopilotMode>(
-    business?.autopilot_enabled ? "autopilot" : "review",
-  );
+  useEffect(() => {
+    if (state.status === "success" || state.status === "empty") {
+      setMode(state.data.autopilotMode);
+    }
+  }, [state.status, state.status === "success" || state.status === "empty" ? state.data.autopilotMode : null]);
 
-  const integList = Array.isArray(integrations.data) ? integrations.data : [];
-  const brandD = brand.data as any;
-  const billingD = billing.data as any;
+  if (state.status === "error") {
+    return (
+      <Card>
+        <div className="flex items-start gap-3">
+          <AlertCircle size={18} style={{ color: "hsl(var(--m-destructive))" }} />
+          <div>
+            <div className="text-[14px] font-medium">We couldn't load your settings.</div>
+            <p className="text-[12.5px] mt-1" style={{ color: "hsl(var(--m-muted-foreground))" }}>
+              Please refresh in a moment.
+            </p>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  const isLoading = state.status === "loading";
+  const data = state.status === "loading" ? undefined : state.data;
+
+  const handleModeChange = (m: AutopilotMode) => {
+    setMode(m);
+    updateAutopilotMode(m);
+  };
 
   return (
     <div className="space-y-6">
@@ -51,62 +74,54 @@ export default function SettingsPage() {
 
       <Card
         title="Business profile"
-        action={<Btn variant="secondary">Edit</Btn>}
+        action={<Btn variant="secondary" onClick={() => editBusinessProfile()}>Edit</Btn>}
       >
-        <Field label="Business name" value={business?.business_name ?? business?.name} />
-        <Field label="Primary goal" value={business?.primary_goal} />
+        <Field label="Business name" value={data?.profile.businessName} />
+        <Field label="Primary goal" value={data?.profile.primaryGoal} />
         <Field
           label="Monthly budget"
-          value={business?.monthly_budget ? `$${business.monthly_budget}` : null}
+          value={data?.profile.monthlyBudget ? `$${data.profile.monthlyBudget}` : null}
         />
-        <Field label="Owner email" value={user?.email} />
+        <Field label="Owner email" value={data?.profile.ownerEmail} />
       </Card>
 
-      <Card title="Brand voice" action={<Btn variant="secondary">Edit voice</Btn>}>
-        {brand.isLoading ? (
+      <Card title="Brand voice" action={<Btn variant="secondary" onClick={() => editBrandVoice()}>Edit voice</Btn>}>
+        {isLoading ? (
           <div className="h-16 rounded animate-pulse" style={{ background: "hsl(var(--m-border-subtle))" }} />
         ) : (
           <>
-            <Field label="Tone" value={brandD?.tone ?? brandD?.voice?.tone} />
-            <Field label="Mission" value={brandD?.mission} />
-            <Field label="Audience" value={brandD?.audience ?? brandD?.target_audience} />
+            <Field label="Tone" value={data?.brandVoice.tone} />
+            <Field label="Mission" value={data?.brandVoice.mission} />
+            <Field label="Audience" value={data?.brandVoice.audience} />
           </>
         )}
       </Card>
 
       <Card title="Connected accounts" padded={false}>
-        {integrations.isLoading ? (
+        {isLoading ? (
           <div className="p-5 space-y-2">
             {[0, 1, 2].map((i) => (
               <div key={i} className="h-12 rounded animate-pulse" style={{ background: "hsl(var(--m-border-subtle))" }} />
             ))}
           </div>
-        ) : integList.length === 0 ? (
+        ) : !data || data.connectedAccounts.length === 0 ? (
           <div className="px-5 py-10 text-center">
-            <Plug
-              size={20}
-              strokeWidth={1.5}
-              className="mx-auto mb-2"
-              style={{ color: "hsl(var(--m-muted-foreground))" }}
-            />
+            <Plug size={20} strokeWidth={1.5} className="mx-auto mb-2" style={{ color: "hsl(var(--m-muted-foreground))" }} />
             <p className="text-[12.5px]" style={{ color: "hsl(var(--m-muted-foreground))" }}>
               Connect your social, ad, and analytics accounts to give Maroa context.
             </p>
-            <Btn variant="primary" className="mt-3">
+            <Btn variant="primary" className="mt-3" onClick={() => connectSocialAccount()}>
               Connect an account
             </Btn>
           </div>
         ) : (
           <ul>
-            {integList.map((it: any, idx: number) => (
+            {data.connectedAccounts.map((it, idx) => (
               <li
-                key={it.id ?? idx}
+                key={it.id}
                 className="px-5 py-3 flex items-center gap-3"
                 style={{
-                  borderBottom:
-                    idx === integList.length - 1
-                      ? "none"
-                      : "1px solid hsl(var(--m-border-subtle))",
+                  borderBottom: idx === data.connectedAccounts.length - 1 ? "none" : "1px solid hsl(var(--m-border-subtle))",
                 }}
               >
                 <div
@@ -116,17 +131,15 @@ export default function SettingsPage() {
                   <Plug size={13} strokeWidth={1.75} style={{ color: "hsl(var(--m-muted-foreground))" }} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-[13px] font-medium truncate">
-                    {it.provider ?? it.name ?? "Integration"}
-                  </div>
+                  <div className="text-[13px] font-medium truncate">{it.provider}</div>
                   <div className="text-[11px]" style={{ color: "hsl(var(--m-muted-foreground))" }}>
-                    {it.account_name ?? it.account ?? "—"}
+                    {it.accountName}
                   </div>
                 </div>
-                <Pill tone={it.status === "connected" ? "success" : "muted"}>
-                  {it.status ?? "—"}
+                <Pill tone={it.status === "connected" ? "success" : it.status === "needs_attention" ? "warning" : "muted"}>
+                  {it.status === "connected" ? "Connected" : it.status === "needs_attention" ? "Needs attention" : "Disconnected"}
                 </Pill>
-                <Btn variant="ghost">Manage</Btn>
+                <Btn variant="ghost" onClick={() => manageConnectedAccount(it.id)}>Manage</Btn>
               </li>
             ))}
           </ul>
@@ -140,15 +153,11 @@ export default function SettingsPage() {
             return (
               <button
                 key={m.id}
-                onClick={() => setMode(m.id)}
+                onClick={() => handleModeChange(m.id)}
                 className="text-left p-4 rounded-xl transition-all"
                 style={{
-                  background: active
-                    ? "hsl(var(--m-accent) / 0.06)"
-                    : "hsl(var(--m-surface))",
-                  border: `1px solid ${
-                    active ? "hsl(var(--m-accent))" : "hsl(var(--m-border-subtle))"
-                  }`,
+                  background: active ? "hsl(var(--m-accent) / 0.06)" : "hsl(var(--m-surface))",
+                  border: `1px solid ${active ? "hsl(var(--m-accent))" : "hsl(var(--m-border-subtle))"}`,
                 }}
               >
                 <div className="flex items-center justify-between mb-1.5">
@@ -162,10 +171,7 @@ export default function SettingsPage() {
                     </span>
                   )}
                 </div>
-                <p
-                  className="text-[12px] leading-relaxed"
-                  style={{ color: "hsl(var(--m-muted-foreground))" }}
-                >
+                <p className="text-[12px] leading-relaxed" style={{ color: "hsl(var(--m-muted-foreground))" }}>
                   {m.desc}
                 </p>
               </button>
@@ -174,17 +180,10 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      <Card title="Billing" action={<Btn variant="secondary">Manage billing</Btn>}>
-        <Field
-          label="Plan"
-          value={
-            (business?.plan
-              ? business.plan[0].toUpperCase() + business.plan.slice(1)
-              : null) ?? billingD?.plan
-          }
-        />
-        <Field label="Status" value={billingD?.status ?? "Active"} />
-        <Field label="Next invoice" value={billingD?.next_invoice_date} />
+      <Card title="Billing" action={<Btn variant="secondary" onClick={() => manageBilling()}>Manage billing</Btn>}>
+        <Field label="Plan" value={data?.billing.planName} />
+        <Field label="Status" value={data?.billing.status} />
+        <Field label="Next invoice" value={data?.billing.nextInvoiceDate} />
       </Card>
     </div>
   );

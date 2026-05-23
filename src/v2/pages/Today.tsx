@@ -1,26 +1,29 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, Pill, Btn } from "@/v2/components/common/Card";
-import { useCurrentBusiness } from "@/v2/lib/api/hooks/useBusinesses";
+import { useTodayPageData } from "@/v2/lib/data/usePageData";
 import {
-  useHealth,
-  useDashboardEvents,
-  useOpportunities,
-} from "@/v2/lib/api/hooks/useHome";
-import { useContent, useAds, useCompetitors, useCalendar } from "@/v2/lib/api/hooks/useModules";
-import { Instagram, Facebook, Megaphone, Eye, FileBarChart, CheckCircle2, ChevronRight } from "lucide-react";
+  approveTodayPlan,
+  reviewApprovalItem,
+  approveApprovalItem,
+  viewPlanItem,
+  viewHealthDetails,
+  viewRecentActivity,
+  viewUpcomingSchedule,
+} from "@/v2/lib/data/handlers";
+import type { TodayPlanItem } from "@/v2/lib/data/types";
+import { Instagram, Facebook, Megaphone, Eye, FileBarChart, CheckCircle2, ChevronRight, AlertCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
-interface PlanItem {
-  id: string;
-  icon: LucideIcon;
-  title: string;
-  desc: string;
-  status: "Ready" | "Needs review" | "Scheduled" | "Watching";
-  action?: "Approve" | "Edit" | "Skip" | "View";
-}
+const ICON_MAP: Record<TodayPlanItem["iconKey"], LucideIcon> = {
+  instagram: Instagram,
+  facebook: Facebook,
+  ads: Megaphone,
+  competitor: Eye,
+  report: FileBarChart,
+};
 
-function statusTone(s: PlanItem["status"]) {
+function statusTone(s: TodayPlanItem["status"]) {
   if (s === "Ready") return "success" as const;
   if (s === "Needs review") return "warning" as const;
   if (s === "Scheduled") return "info" as const;
@@ -45,7 +48,7 @@ function greeting(): string {
   return "Good evening";
 }
 
-function healthLabel(score?: number): string {
+function healthLabel(score?: number | null): string {
   if (score == null) return "Getting set up";
   if (score >= 80) return "Looking great";
   if (score >= 60) return "On track";
@@ -55,18 +58,7 @@ function healthLabel(score?: number): string {
 
 export default function Today() {
   const { user } = useAuth();
-  const { business } = useCurrentBusiness(user?.id);
-  const bid = business?.id;
-
-  const health = useHealth(user?.id);
-  const events = useDashboardEvents(bid);
-  const opps = useOpportunities(user?.id);
-  const content = useContent(bid);
-  const ads = useAds(bid);
-  const competitors = useCompetitors(bid);
-  const now = new Date();
-  const calendar = useCalendar(bid, now.getMonth() + 1, now.getFullYear());
-
+  const state = useTodayPageData();
   const [detailsTab, setDetailsTab] = useState<"health" | "activity" | "upcoming">("health");
 
   const firstName =
@@ -74,87 +66,39 @@ export default function Today() {
     user?.email?.split("@")[0] ??
     "there";
 
-  const plan: PlanItem[] = useMemo(() => {
-    const items: PlanItem[] = [];
-    const drafts = Array.isArray(content.data) ? content.data : [];
-    const ig = drafts.find((c: any) => /insta/i.test(c?.platform ?? "") || c?.instagram_caption);
-    const fb = drafts.find((c: any) => /face/i.test(c?.platform ?? "") || c?.facebook_post);
-    if (ig)
-      items.push({
-        id: `ig-${ig.id ?? "draft"}`,
-        icon: Instagram,
-        title: "Instagram post is ready",
-        desc: (ig.instagram_caption ?? ig.content_theme ?? "Take a quick look and approve.").toString().slice(0, 110),
-        status: ig.status === "published" ? "Scheduled" : ig.status === "pending_approval" ? "Needs review" : "Ready",
-        action: ig.status === "published" ? "View" : "Approve",
-      });
-    if (fb)
-      items.push({
-        id: `fb-${fb.id ?? "draft"}`,
-        icon: Facebook,
-        title: "Facebook post is ready",
-        desc: (fb.facebook_post ?? fb.content_theme ?? "Take a quick look and approve.").toString().slice(0, 110),
-        status: fb.status === "published" ? "Scheduled" : fb.status === "pending_approval" ? "Needs review" : "Ready",
-        action: fb.status === "published" ? "View" : "Approve",
-      });
-    const adList = Array.isArray(ads.data) ? ads.data : [];
-    if (adList.length > 0)
-      items.push({
-        id: "ad-refresh",
-        icon: Megaphone,
-        title: "Your ads could use fresh photos",
-        desc: `${adList.length} ad${adList.length === 1 ? "" : "s"} running — swapping creative this week usually boosts results.`,
-        status: "Needs review",
-        action: "View",
-      });
-    const compList = Array.isArray(competitors.data) ? competitors.data : [];
-    if (compList.length > 0)
-      items.push({
-        id: "comp-trend",
-        icon: Eye,
-        title: "A competitor just posted something new",
-        desc: `We're watching ${compList.length} competitor${compList.length === 1 ? "" : "s"} so you don't have to.`,
-        status: "Watching",
-        action: "View",
-      });
-    items.push({
-      id: "weekly-scorecard",
-      icon: FileBarChart,
-      title: "Your weekly summary lands Friday",
-      desc: "We'll email a plain-English recap of what worked.",
-      status: "Scheduled",
-    });
-    return items;
-  }, [content.data, ads.data, competitors.data]);
-
-  const approvalsCount = useMemo(() => {
-    const drafts = Array.isArray(content.data) ? content.data : [];
-    return drafts.filter((c: any) => c?.status === "pending_approval" || c?.status === "draft").length;
-  }, [content.data]);
-
-  const nextScheduled = useMemo(() => {
-    const cal = Array.isArray(calendar.data) ? calendar.data : [];
-    const future = cal
-      .filter((c: any) => c?.scheduled_at && new Date(c.scheduled_at).getTime() >= Date.now())
-      .sort((a: any, b: any) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
-    return future[0] ?? cal[0] ?? null;
-  }, [calendar.data]);
-
-  const insight = opps.data?.[0];
-  const score = health.data?.score;
-  const updated =
-    events.data?.[0]?.created_at ?? health.data?.updated_at ?? new Date().toISOString();
-
-  const loadingPlan = content.isLoading || ads.isLoading || competitors.isLoading;
+  const now = new Date();
   const dateLabel = now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
-  const totalToApprove = plan.filter((p) => p.action === "Approve").length || approvalsCount;
 
-  // One-line summary in plain language
+  // ── Error envelope ─────────────────────────────────────────────
+  if (state.status === "error") {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <div className="flex items-start gap-3">
+            <AlertCircle size={18} style={{ color: "hsl(var(--m-destructive))" }} />
+            <div>
+              <div className="text-[14px] font-medium">We couldn't load today's brief.</div>
+              <p className="text-[12.5px] mt-1" style={{ color: "hsl(var(--m-muted-foreground))" }}>
+                Please refresh in a moment. If this keeps happening, we'll already know.
+              </p>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  const isLoading = state.status === "loading";
+  const data = state.status === "loading" ? undefined : state.data;
+  const totalToApprove =
+    data ? data.plan.filter((p) => p.action === "Approve").length || data.approvalsCount : 0;
+
   const summary = (() => {
+    if (!data) return "Loading today's brief…";
     const bits: string[] = [];
     if (totalToApprove > 0) bits.push(`${totalToApprove} thing${totalToApprove === 1 ? "" : "s"} to approve`);
-    if (nextScheduled?.scheduled_at) {
-      const d = new Date(nextScheduled.scheduled_at);
+    if (data.nextScheduled?.scheduledAt) {
+      const d = new Date(data.nextScheduled.scheduledAt);
       const today = new Date();
       const sameDay = d.toDateString() === today.toDateString();
       bits.push(sameDay ? `next post at ${d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : `next post ${d.toLocaleDateString([], { weekday: "short" })}`);
@@ -165,7 +109,7 @@ export default function Today() {
 
   return (
     <div className="space-y-6">
-      {/* Hero: greeting + one-line summary + ONE obvious CTA */}
+      {/* Hero */}
       <section
         className="rounded-2xl p-6 sm:p-8"
         style={{
@@ -182,32 +126,41 @@ export default function Today() {
         <h1 className="text-[24px] sm:text-[28px] font-semibold tracking-tight mt-1.5 leading-tight">
           {greeting()}, {firstName}.
         </h1>
-        <p
-          className="text-[15px] mt-2 max-w-2xl"
-          style={{ color: "hsl(var(--m-muted-foreground))" }}
-        >
+        <p className="text-[15px] mt-2 max-w-2xl" style={{ color: "hsl(var(--m-muted-foreground))" }}>
           {summary}
         </p>
 
         <div className="mt-5 flex flex-wrap items-center gap-3">
           {totalToApprove > 0 ? (
-            <Btn variant="primary" size="md" className="!h-10 !px-5 !text-[14px]">
+            <Btn
+              variant="primary"
+              size="md"
+              className="!h-10 !px-5 !text-[14px]"
+              onClick={() => approveTodayPlan()}
+            >
               Review {totalToApprove} item{totalToApprove === 1 ? "" : "s"} →
             </Btn>
           ) : (
-            <Btn variant="primary" size="md" className="!h-10 !px-5 !text-[14px]">
+            <Btn
+              variant="primary"
+              size="md"
+              className="!h-10 !px-5 !text-[14px]"
+              onClick={() => viewRecentActivity()}
+            >
               See what Maroa's working on →
             </Btn>
           )}
-          <span className="text-[12px] tabular-nums" style={{ color: "hsl(var(--m-muted-foreground))" }}>
-            Updated {ago(updated)}
-          </span>
+          {data && (
+            <span className="text-[12px] tabular-nums" style={{ color: "hsl(var(--m-muted-foreground))" }}>
+              Updated {ago(data.updatedAt)}
+            </span>
+          )}
         </div>
       </section>
 
-      {/* Single primary card: today's work, with key insight inline */}
+      {/* What's on for today */}
       <Card title="What's on for today" padded={false}>
-        {insight && (
+        {data?.insight && (
           <div
             className="px-5 py-3 flex items-start gap-3"
             style={{
@@ -221,11 +174,11 @@ export default function Today() {
             >
               Tip
             </span>
-            <p className="text-[13px] leading-snug">{insight.title}</p>
+            <p className="text-[13px] leading-snug">{data.insight.title}</p>
           </div>
         )}
 
-        {loadingPlan ? (
+        {isLoading ? (
           <ul>
             {[0, 1, 2].map((i) => (
               <li
@@ -241,14 +194,9 @@ export default function Today() {
               </li>
             ))}
           </ul>
-        ) : plan.length === 0 ? (
+        ) : !data || data.plan.length === 0 ? (
           <div className="px-5 py-10 text-center">
-            <CheckCircle2
-              size={22}
-              strokeWidth={1.5}
-              className="mx-auto mb-2"
-              style={{ color: "hsl(var(--m-success))" }}
-            />
+            <CheckCircle2 size={22} strokeWidth={1.5} className="mx-auto mb-2" style={{ color: "hsl(var(--m-success))" }} />
             <div className="text-[14px] font-medium">Nothing on your plate</div>
             <p className="text-[12.5px] mt-1" style={{ color: "hsl(var(--m-muted-foreground))" }}>
               We'll ping you when there's something to look at.
@@ -256,42 +204,46 @@ export default function Today() {
           </div>
         ) : (
           <ul>
-            {plan.map((item, idx) => (
-              <li
-                key={item.id}
-                className="flex items-start gap-3.5 px-5 py-4"
-                style={{
-                  borderBottom: idx === plan.length - 1 ? "none" : "1px solid hsl(var(--m-border-subtle))",
-                }}
-              >
-                <item.icon
-                  size={16}
-                  strokeWidth={1.75}
-                  className="mt-0.5 shrink-0"
-                  style={{ color: "hsl(var(--m-muted-foreground))" }}
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[14px] font-medium truncate">{item.title}</span>
-                    <Pill tone={statusTone(item.status)}>{item.status}</Pill>
+            {data.plan.map((item, idx) => {
+              const Icon = ICON_MAP[item.iconKey];
+              return (
+                <li
+                  key={item.id}
+                  className="flex items-start gap-3.5 px-5 py-4"
+                  style={{
+                    borderBottom: idx === data.plan.length - 1 ? "none" : "1px solid hsl(var(--m-border-subtle))",
+                  }}
+                >
+                  <Icon size={16} strokeWidth={1.75} className="mt-0.5 shrink-0" style={{ color: "hsl(var(--m-muted-foreground))" }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[14px] font-medium truncate">{item.title}</span>
+                      <Pill tone={statusTone(item.status)}>{item.status}</Pill>
+                    </div>
+                    <p className="text-[12.5px] mt-0.5 line-clamp-2" style={{ color: "hsl(var(--m-muted-foreground))" }}>
+                      {item.description}
+                    </p>
                   </div>
-                  <p
-                    className="text-[12.5px] mt-0.5 line-clamp-2"
-                    style={{ color: "hsl(var(--m-muted-foreground))" }}
-                  >
-                    {item.desc}
-                  </p>
-                </div>
-                {item.action && (
-                  <Btn variant={item.action === "Approve" ? "primary" : "secondary"}>{item.action}</Btn>
-                )}
-              </li>
-            ))}
+                  {item.action && (
+                    <Btn
+                      variant={item.action === "Approve" ? "primary" : "secondary"}
+                      onClick={() =>
+                        item.action === "Approve"
+                          ? approveApprovalItem(item.id)
+                          : viewPlanItem(item.id)
+                      }
+                    >
+                      {item.action}
+                    </Btn>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </Card>
 
-      {/* Details, tucked behind tabs */}
+      {/* Details tabs */}
       <section
         className="rounded-xl"
         style={{
@@ -323,6 +275,13 @@ export default function Today() {
             ))}
           </div>
           <button
+            onClick={() =>
+              detailsTab === "health"
+                ? viewHealthDetails()
+                : detailsTab === "activity"
+                ? viewRecentActivity()
+                : viewUpcomingSchedule()
+            }
             className="inline-flex items-center gap-0.5 text-[12px] font-medium"
             style={{ color: "hsl(var(--m-muted-foreground))" }}
           >
@@ -332,20 +291,24 @@ export default function Today() {
 
         <div className="p-5">
           {detailsTab === "health" &&
-            (health.isLoading ? (
+            (isLoading ? (
               <div className="h-10 w-40 rounded animate-pulse" style={{ background: "hsl(var(--m-border-subtle))" }} />
+            ) : !data?.health ? (
+              <p className="text-[12.5px]" style={{ color: "hsl(var(--m-muted-foreground))" }}>
+                We're calculating your score. It'll appear after Maroa has a few days of data.
+              </p>
             ) : (
               <div className="flex items-center gap-4">
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-[34px] font-semibold tabular-nums leading-none">
-                    {score ?? "—"}
+                    {data.health.score}
                   </span>
                   <span className="text-[13px]" style={{ color: "hsl(var(--m-muted-foreground))" }}>
                     / 100
                   </span>
                 </div>
                 <div>
-                  <div className="text-[14px] font-medium">{healthLabel(score)}</div>
+                  <div className="text-[14px] font-medium">{healthLabel(data.health.score)}</div>
                   <div className="text-[12px]" style={{ color: "hsl(var(--m-muted-foreground))" }}>
                     A simple score for how your marketing is doing this week.
                   </div>
@@ -354,26 +317,23 @@ export default function Today() {
             ))}
 
           {detailsTab === "activity" &&
-            (events.isLoading ? (
+            (isLoading ? (
               <div className="space-y-2">
                 {[0, 1, 2].map((i) => (
                   <div key={i} className="h-4 rounded animate-pulse" style={{ background: "hsl(var(--m-border-subtle))" }} />
                 ))}
               </div>
-            ) : !events.data || events.data.length === 0 ? (
+            ) : !data || data.recentActivity.length === 0 ? (
               <p className="text-[12.5px]" style={{ color: "hsl(var(--m-muted-foreground))" }}>
                 Nothing yet today. We'll log things here as Maroa works.
               </p>
             ) : (
               <ul className="space-y-2">
-                {events.data.slice(0, 5).map((e) => (
+                {data.recentActivity.map((e) => (
                   <li key={e.id} className="flex items-center gap-3">
                     <span className="text-[13px] flex-1 truncate">{e.title}</span>
-                    <span
-                      className="text-[11px] tabular-nums shrink-0"
-                      style={{ color: "hsl(var(--m-muted-foreground))" }}
-                    >
-                      {ago(e.created_at)}
+                    <span className="text-[11px] tabular-nums shrink-0" style={{ color: "hsl(var(--m-muted-foreground))" }}>
+                      {ago(e.occurredAt)}
                     </span>
                   </li>
                 ))}
@@ -381,32 +341,63 @@ export default function Today() {
             ))}
 
           {detailsTab === "upcoming" &&
-            (calendar.isLoading ? (
+            (isLoading ? (
               <div className="h-4 w-2/3 rounded animate-pulse" style={{ background: "hsl(var(--m-border-subtle))" }} />
-            ) : nextScheduled ? (
-              <div>
-                <div className="text-[14px] font-medium">
-                  {nextScheduled.title ?? nextScheduled.theme ?? "Scheduled post"}
-                </div>
-                <div className="text-[12.5px] mt-0.5" style={{ color: "hsl(var(--m-muted-foreground))" }}>
-                  {nextScheduled.scheduled_at
-                    ? new Date(nextScheduled.scheduled_at).toLocaleString(undefined, {
-                        weekday: "long",
-                        month: "short",
-                        day: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                      })
-                    : ""}
-                </div>
-              </div>
-            ) : (
+            ) : !data?.nextScheduled ? (
               <p className="text-[12.5px]" style={{ color: "hsl(var(--m-muted-foreground))" }}>
                 Nothing scheduled yet — we'll plan posts as soon as you approve a few.
               </p>
+            ) : (
+              <div>
+                <div className="text-[14px] font-medium">{data.nextScheduled.title}</div>
+                <div className="text-[12.5px] mt-0.5" style={{ color: "hsl(var(--m-muted-foreground))" }}>
+                  {new Date(data.nextScheduled.scheduledAt).toLocaleString(undefined, {
+                    weekday: "long",
+                    month: "short",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })}
+                </div>
+              </div>
             ))}
         </div>
       </section>
+
+      {/* Approval queue (now wired through handlers) */}
+      {data && data.approvals.length > 0 && (
+        <Card title="Approval queue" padded={false}>
+          <ul>
+            {data.approvals.map((a, idx) => (
+              <li
+                key={a.id}
+                className="px-5 py-4 flex items-start gap-4"
+                style={{
+                  borderBottom: idx === data.approvals.length - 1 ? "none" : "1px solid hsl(var(--m-border-subtle))",
+                }}
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] font-medium truncate">{a.title}</span>
+                    <Pill tone="muted">{a.platform}</Pill>
+                  </div>
+                  <p className="text-[12.5px] mt-1 line-clamp-2" style={{ color: "hsl(var(--m-muted-foreground))" }}>
+                    {a.preview}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Btn variant="ghost" onClick={() => reviewApprovalItem(a.id)}>
+                    Review
+                  </Btn>
+                  <Btn variant="primary" onClick={() => approveApprovalItem(a.id)}>
+                    Approve
+                  </Btn>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
     </div>
   );
 }
