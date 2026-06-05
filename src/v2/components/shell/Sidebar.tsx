@@ -49,13 +49,21 @@ export function Sidebar() {
 
       <nav className="flex-1 overflow-y-auto px-2 py-1">
         <ul className="space-y-0.5">
-          {NAV.map((item) => {
+          {NAV.map((item, idx) => {
             const fullPath = `/app${item.to ? `/${item.to}` : ""}`;
             const active = pathname === fullPath ||
               (item.to && pathname.startsWith(`${fullPath}/`)) ||
               (!item.to && pathname === "/app");
+            const prevGroup = idx > 0 ? NAV[idx - 1].group : undefined;
+            const showGroupHeader = item.group && item.group !== prevGroup;
             return (
               <li key={item.label}>
+                {showGroupHeader && (
+                  <div className="px-2.5 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.08em]"
+                       style={{ color: "hsl(var(--m-muted-foreground))" }}>
+                    {item.group}
+                  </div>
+                )}
                 <NavLink
                   to={fullPath}
                   end={!item.to}
@@ -97,6 +105,7 @@ export function Sidebar() {
           })}
         </ul>
       </nav>
+
 
       <div className="px-3 py-3 space-y-2"
            style={{ borderTop: "1px solid hsl(var(--m-border-subtle))" }}>
