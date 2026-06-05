@@ -71,13 +71,12 @@ export default function Home() {
         />
         <KpiCard
           label="Health score"
-          value={
-            health.data?.score !== undefined
-              ? `${health.data.score}/100`
-              : (health.data as { total?: number } | undefined)?.total !== undefined
-                ? `${(health.data as { total: number }).total}/100`
-                : "—"
-          }
+          value={(() => {
+            const h = health.data as unknown as { score?: number; total?: number } | undefined;
+            if (h?.score !== undefined) return `${h.score}/100`;
+            if (h?.total !== undefined) return `${h.total}/100`;
+            return "—";
+          })()}
           loading={health.isLoading}
         />
       </section>
