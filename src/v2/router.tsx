@@ -4,9 +4,11 @@ import { AppShell } from "./components/shell/AppShell";
 
 const Today = lazy(() => import("./pages/Today"));
 const Studio = lazy(() => import("./pages/Studio"));
-const Growth = lazy(() => import("./pages/Growth"));
+const GrowthOverview = lazy(() => import("./pages/Growth"));
+const GrowthLayout = lazy(() => import("./pages/GrowthLayout"));
 const Audience = lazy(() => import("./pages/Audience"));
 const Content = lazy(() => import("./pages/Content"));
+const Ads = lazy(() => import("./pages/Ads"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Products = lazy(() => import("./pages/products/Products"));
 const InboxPageV2 = lazy(() => import("./pages/audience/Inbox"));
