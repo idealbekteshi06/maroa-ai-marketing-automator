@@ -6,6 +6,7 @@ const Today = lazy(() => import("./pages/Today"));
 const Studio = lazy(() => import("./pages/Studio"));
 const Growth = lazy(() => import("./pages/Growth"));
 const Audience = lazy(() => import("./pages/Audience"));
+const Content = lazy(() => import("./pages/Content"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Products = lazy(() => import("./pages/products/Products"));
 const InboxPageV2 = lazy(() => import("./pages/audience/Inbox"));
@@ -49,39 +50,51 @@ export function MaroaRoutes() {
         <Route element={<AppShell />}>
           <Route index element={<Today />} />
 
-          {/* Studio */}
-          <Route path="studio" element={<Studio />}>
+          {/* Content */}
+          <Route path="content" element={<Content />}>
             <Route index element={<Navigate to="posts" replace />} />
             <Route path="posts" element={<ContentPage />} />
             <Route path="calendar" element={<CalendarPage />} />
             <Route path="library" element={<LibraryPage />} />
-            <Route path="video" element={<VideoPage />} />
-            <Route path="products" element={<Products />} />
             <Route path="brand" element={<BrandPage />} />
           </Route>
 
-          {/* Growth */}
-          <Route path="growth" element={<Growth />}>
-            <Route index element={<Navigate to="ads" replace />} />
-            <Route path="ads" element={<AdsPage />} />
-            <Route path="seo" element={<SeoPage />} />
-            <Route path="cro" element={<CroPage />} />
-            <Route path="landing-pages" element={<LandingPagesPage />} />
-            <Route path="lead-magnets" element={<LeadMagnetsPage />} />
-            <Route path="referrals" element={<ReferralsPage />} />
-            <Route path="competitors" element={<CompetitorsPage />} />
-            <Route path="analytics" element={<AnalyticsPage />} />
-            <Route path="forecast" element={<ForecastPage />} />
+          {/* Studio */}
+          <Route path="studio" element={<Studio />}>
+            <Route index element={<Navigate to="products" replace />} />
+            <Route path="products" element={<Products />} />
+            <Route path="pipeline" element={<LibraryPage />} />
+            <Route path="video" element={<VideoPage />} />
           </Route>
 
-          {/* Audience */}
-          <Route path="audience" element={<Audience />}>
+          {/* Ads */}
+          <Route path="ads" element={<Growth />}>
+            <Route index element={<Navigate to="campaigns" replace />} />
+            <Route path="campaigns" element={<AdsPage />} />
+            <Route path="budget" element={<AdsPage />} />
+            <Route path="landing-pages" element={<LandingPagesPage />} />
+          </Route>
+
+          {/* CRM */}
+          <Route path="crm" element={<Audience />}>
             <Route index element={<Navigate to="inbox" replace />} />
             <Route path="inbox" element={<InboxPageV2 />} />
             <Route path="contacts" element={<ContactsPageV2 />} />
             <Route path="pipeline" element={<PipelinePageV2 />} />
             <Route path="email" element={<EmailPage />} />
             <Route path="reviews" element={<ReviewsPage />} />
+          </Route>
+
+          {/* Growth */}
+          <Route path="growth" element={<Growth />}>
+            <Route index element={<Navigate to="seo" replace />} />
+            <Route path="seo" element={<SeoPage />} />
+            <Route path="competitors" element={<CompetitorsPage />} />
+            <Route path="lead-magnets" element={<LeadMagnetsPage />} />
+            <Route path="referrals" element={<ReferralsPage />} />
+            <Route path="analytics" element={<AnalyticsPage />} />
+            <Route path="forecast" element={<ForecastPage />} />
+            <Route path="cro" element={<CroPage />} />
           </Route>
 
           {/* Settings */}
@@ -97,7 +110,13 @@ export function MaroaRoutes() {
           </Route>
 
           {/* Legacy redirects */}
-          <Route path="content" element={<Navigate to="/app/studio/posts" replace />} />
+          <Route path="audience" element={<Navigate to="/app/crm" replace />} />
+          <Route path="audience/*" element={<Navigate to="/app/crm" replace />} />
+          <Route path="studio/posts" element={<Navigate to="/app/content/posts" replace />} />
+          <Route path="studio/calendar" element={<Navigate to="/app/content/calendar" replace />} />
+          <Route path="studio/library" element={<Navigate to="/app/content/library" replace />} />
+          <Route path="studio/brand" element={<Navigate to="/app/content/brand" replace />} />
+          <Route path="growth/ads" element={<Navigate to="/app/ads/campaigns" replace />} />
           <Route path="brain" element={<Navigate to="/app" replace />} />
           <Route path="*" element={<Navigate to="" replace />} />
         </Route>
