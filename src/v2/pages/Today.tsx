@@ -608,7 +608,7 @@ export default function Today() {
         <TodayStrip items={todayItems} isLoading={isLoading} />
       </section>
 
-      <ReviewDrawer item={reviewing} onClose={() => setReviewing(null)} />
+      <ReviewDrawer open={!!reviewing} item={reviewing} onClose={() => setReviewing(null)} />
     </div>
   );
 }
