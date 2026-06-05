@@ -8,6 +8,9 @@ const Growth = lazy(() => import("./pages/Growth"));
 const Audience = lazy(() => import("./pages/Audience"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Products = lazy(() => import("./pages/products/Products"));
+const InboxPageV2 = lazy(() => import("./pages/audience/Inbox"));
+const ContactsPageV2 = lazy(() => import("./pages/audience/Contacts"));
+const PipelinePageV2 = lazy(() => import("./pages/audience/Pipeline"));
 
 // Reuse existing module pages for sub-routes
 const M = () => import("./pages/modules");
@@ -77,9 +80,9 @@ export function MaroaRoutes() {
           {/* Audience */}
           <Route path="audience" element={<Audience />}>
             <Route index element={<Navigate to="inbox" replace />} />
-            <Route path="inbox" element={<InboxPage />} />
-            <Route path="contacts" element={<AudiencePageMod />} />
-            <Route path="pipeline" element={<PipelinePage />} />
+            <Route path="inbox" element={<InboxPageV2 />} />
+            <Route path="contacts" element={<ContactsPageV2 />} />
+            <Route path="pipeline" element={<PipelinePageV2 />} />
             <Route path="email" element={<EmailPage />} />
             <Route path="reviews" element={<ReviewsPage />} />
           </Route>
