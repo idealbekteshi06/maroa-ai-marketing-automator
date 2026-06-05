@@ -15,7 +15,7 @@ export function BottomBar() {
       aria-label="Primary"
     >
       <ul className="flex items-stretch justify-around">
-        {NAV.map((item) => {
+        {NAV.filter((n) => ["", "content", "ads", "crm", "growth"].includes(n.to)).map((item) => {
           const full = `/app${item.to ? `/${item.to}` : ""}`;
           const active = pathname === full ||
             (item.to && pathname.startsWith(`${full}/`)) ||
