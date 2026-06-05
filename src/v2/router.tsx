@@ -88,8 +88,9 @@ export function MaroaRoutes() {
           </Route>
 
           {/* Growth */}
-          <Route path="growth" element={<Growth />}>
-            <Route index element={<Navigate to="seo" replace />} />
+          <Route path="growth" element={<GrowthLayout />}>
+            <Route index element={<GrowthOverview />} />
+
             <Route path="seo" element={<SeoPage />} />
             <Route path="competitors" element={<CompetitorsPage />} />
             <Route path="lead-magnets" element={<LeadMagnetsPage />} />
