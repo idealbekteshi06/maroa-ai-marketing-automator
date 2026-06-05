@@ -1,46 +1,49 @@
 import {
-  LayoutGrid, Sparkles, TrendingUp, Users, Settings2,
+  Home, FileText, Sparkles, Megaphone, Users, TrendingUp, Settings2,
   CalendarDays, Image as ImageIcon, Film, Package, Palette,
-  Megaphone, Search, Wand2, FileText, Magnet, Gift, Eye, BarChart3, LineChart,
+  Search, Wand2, Magnet, Gift, Eye, BarChart3, LineChart,
   Inbox, GitBranch, Mail, Star,
-  User, Plug, UsersRound, CreditCard, Bell, Brain,
+  User, Plug, UsersRound, CreditCard, Bell, Brain, Layers, Target, Wallet,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export interface SubNavItem { label: string; to: string; icon: LucideIcon; }
 export interface NavItem {
-  label: string; to: string; icon: LucideIcon; children?: SubNavItem[];
+  label: string; to: string; icon: LucideIcon; children?: SubNavItem[]; group?: string;
 }
 
 export const NAV: NavItem[] = [
-  { label: "Today", to: "", icon: LayoutGrid },
+  { label: "Home", to: "", icon: Home, group: "Workspace" },
+
   {
-    label: "Studio", to: "studio", icon: Sparkles,
+    label: "Content", to: "content", icon: FileText, group: "Create",
     children: [
       { label: "Posts", to: "posts", icon: Sparkles },
       { label: "Calendar", to: "calendar", icon: CalendarDays },
       { label: "Library", to: "library", icon: ImageIcon },
-      { label: "Video", to: "video", icon: Film },
-      { label: "Products", to: "products", icon: Package },
-      { label: "Brand", to: "brand", icon: Palette },
+      { label: "Brand voice", to: "brand", icon: Palette },
     ],
   },
   {
-    label: "Growth", to: "growth", icon: TrendingUp,
+    label: "Studio", to: "studio", icon: Sparkles, group: "Create",
     children: [
-      { label: "Ads", to: "ads", icon: Megaphone },
-      { label: "SEO", to: "seo", icon: Search },
-      { label: "CRO", to: "cro", icon: Wand2 },
-      { label: "Landing Pages", to: "landing-pages", icon: FileText },
-      { label: "Lead Magnets", to: "lead-magnets", icon: Magnet },
-      { label: "Referrals", to: "referrals", icon: Gift },
-      { label: "Competitors", to: "competitors", icon: Eye },
-      { label: "Analytics", to: "analytics", icon: BarChart3 },
-      { label: "Forecast", to: "forecast", icon: LineChart },
+      { label: "Products", to: "products", icon: Package },
+      { label: "AI pipeline", to: "pipeline", icon: Layers },
+      { label: "Video", to: "video", icon: Film },
     ],
   },
+
   {
-    label: "Audience", to: "audience", icon: Users,
+    label: "Ads", to: "ads", icon: Megaphone, group: "Distribute",
+    children: [
+      { label: "Campaigns", to: "campaigns", icon: Target },
+      { label: "Budget", to: "budget", icon: Wallet },
+      { label: "Landing pages", to: "landing-pages", icon: FileText },
+    ],
+  },
+
+  {
+    label: "CRM", to: "crm", icon: Users, group: "Customers",
     children: [
       { label: "Inbox", to: "inbox", icon: Inbox },
       { label: "Contacts", to: "contacts", icon: Users },
@@ -49,8 +52,22 @@ export const NAV: NavItem[] = [
       { label: "Reviews", to: "reviews", icon: Star },
     ],
   },
+
   {
-    label: "Settings", to: "settings", icon: Settings2,
+    label: "Growth", to: "growth", icon: TrendingUp, group: "Customers",
+    children: [
+      { label: "SEO", to: "seo", icon: Search },
+      { label: "Competitors", to: "competitors", icon: Eye },
+      { label: "Lead magnets", to: "lead-magnets", icon: Magnet },
+      { label: "Referrals", to: "referrals", icon: Gift },
+      { label: "Analytics", to: "analytics", icon: BarChart3 },
+      { label: "Forecast", to: "forecast", icon: LineChart },
+      { label: "CRO", to: "cro", icon: Wand2 },
+    ],
+  },
+
+  {
+    label: "Settings", to: "settings", icon: Settings2, group: "Workspace",
     children: [
       { label: "Profile", to: "profile", icon: User },
       { label: "Brand voice", to: "brand", icon: Palette },
