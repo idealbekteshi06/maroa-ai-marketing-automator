@@ -70,7 +70,7 @@ export function MaroaRoutes() {
           </Route>
 
           {/* Ads */}
-          <Route path="ads" element={<Growth />}>
+          <Route path="ads" element={<Ads />}>
             <Route index element={<Navigate to="campaigns" replace />} />
             <Route path="campaigns" element={<AdsPage />} />
             <Route path="budget" element={<AdsPage />} />
