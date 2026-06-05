@@ -1,9 +1,18 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const EXTERNAL_SUPABASE_URL = "https://zqhyrbttuqkvmdewiytf.supabase.co";
+
+// Server-side allowlist of permitted redirect URIs for Meta OAuth
+const ALLOWED_REDIRECT_URIS = new Set<string>([
+  "https://maroa-ai-marketing-automator.lovable.app/oauth/meta/callback",
+  "https://maroa-ai-marketing-automator.lovable.app/auth/callback",
+]);
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -11,10 +20,36 @@ serve(async (req) => {
   }
 
   try {
+    // Require authenticated caller
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const anonKey = Deno.env.get("EXTERNAL_SUPABASE_ANON_KEY");
+    if (!anonKey) throw new Error("EXTERNAL_SUPABASE_ANON_KEY not configured");
+    const supabaseClient = createClient(EXTERNAL_SUPABASE_URL, anonKey);
+    const { data: userData, error: userErr } = await supabaseClient.auth.getUser(
+      authHeader.replace("Bearer ", "")
+    );
+    if (userErr || !userData.user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { code, redirect_uri } = await req.json();
 
     if (!code || !redirect_uri) {
       return new Response(JSON.stringify({ error: "Missing code or redirect_uri" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!ALLOWED_REDIRECT_URIS.has(redirect_uri)) {
+      return new Response(JSON.stringify({ error: "Invalid redirect_uri" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
