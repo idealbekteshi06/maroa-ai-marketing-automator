@@ -28,9 +28,6 @@ const ReferralsPage = lazy(() => M().then((m) => ({ default: m.ReferralsPage }))
 const CompetitorsPage = lazy(() => M().then((m) => ({ default: m.CompetitorsPage })));
 const AnalyticsPage = lazy(() => M().then((m) => ({ default: m.AnalyticsPage })));
 const ForecastPage = lazy(() => M().then((m) => ({ default: m.ForecastPage })));
-const InboxPage = lazy(() => M().then((m) => ({ default: m.InboxPage })));
-const AudiencePageMod = lazy(() => M().then((m) => ({ default: m.AudiencePage })));
-const PipelinePage = lazy(() => M().then((m) => ({ default: m.PipelinePage })));
 const EmailPage = lazy(() => M().then((m) => ({ default: m.EmailPage })));
 const ReviewsPage = lazy(() => M().then((m) => ({ default: m.ReviewsPage })));
 const IntegrationsPage = lazy(() => M().then((m) => ({ default: m.IntegrationsPage })));
