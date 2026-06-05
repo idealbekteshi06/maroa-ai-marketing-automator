@@ -13,6 +13,8 @@ import {
   Instagram, Facebook, Megaphone, Eye, FileBarChart,
   CheckCircle2, ChevronRight, AlertCircle, RefreshCw, Sparkles,
   MessageSquare, Inbox as InboxIcon, Clock, ArrowUpRight, Zap,
+  Wand2, Calendar, Users, Search, ArrowRight, Plus, Send,
+  TrendingUp, Image as ImageIcon, BarChart3,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -45,161 +47,15 @@ function timeFmt(iso?: string | null): string {
   return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
-/* ----------------------------------------------------------------
- * Ring — Apple Activity style. A single SVG ring with a label.
- * ----------------------------------------------------------------*/
-function Ring({
-  label, value, goal, color, icon: Icon, unit,
-}: {
-  label: string; value: number; goal: number; color: string;
-  icon: LucideIcon; unit?: string;
-}) {
-  const pct = Math.max(0, Math.min(1, goal > 0 ? value / goal : 0));
-  const C = 2 * Math.PI * 42;
-  const dash = `${pct * C} ${C}`;
-  return (
-    <div className="flex flex-col items-center">
-      <div className="relative h-[120px] w-[120px]">
-        <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
-          <circle cx="50" cy="50" r="42" fill="none" strokeWidth="9"
-                  stroke="hsl(var(--m-border-subtle))" />
-          <circle cx="50" cy="50" r="42" fill="none" strokeWidth="9"
-                  stroke={color} strokeLinecap="round" strokeDasharray={dash}
-                  style={{ transition: "stroke-dasharray 600ms var(--m-ease)" }} />
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <Icon size={16} strokeWidth={1.75} style={{ color }} />
-          <div className="text-[22px] font-semibold tabular-nums mt-0.5 leading-none">
-            {value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value}
-          </div>
-          {unit && (
-            <div className="text-[10px] uppercase tracking-wider mt-0.5"
-                 style={{ color: "hsl(var(--m-muted-foreground))" }}>
-              {unit}
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="mt-3 text-center">
-        <div className="text-[13px] font-medium">{label}</div>
-        <div className="text-[11px] tabular-nums" style={{ color: "hsl(var(--m-muted-foreground))" }}>
-          {Math.round(pct * 100)}% of {goal >= 1000 ? `${(goal / 1000).toFixed(0)}k` : goal} goal
-        </div>
-      </div>
-    </div>
-  );
+function platformLabel(raw: any): string | undefined {
+  const p = (raw?.platform ?? "").toString().toLowerCase();
+  if (p.includes("insta") || raw?.instagram_caption) return "Instagram";
+  if (p.includes("face") || raw?.facebook_post) return "Facebook";
+  if (p.includes("tik") || raw?.tiktok_caption) return "TikTok";
+  if (p.includes("link") || raw?.linkedin_post) return "LinkedIn";
+  return undefined;
 }
 
-/* ----------------------------------------------------------------
- * NeedsYou item — single row in the inbox
- * ----------------------------------------------------------------*/
-interface NeedsItem {
-  id: string;
-  iconKey: "instagram" | "facebook" | "ads" | "competitor" | "report" | "inbox";
-  title: string;
-  detail: string;
-  action?: { label: string; kind: "primary" | "secondary" | "ghost"; onClick: () => void };
-  secondary?: { label: string; onClick: () => void };
-}
-
-const ICON_MAP: Record<NeedsItem["iconKey"], LucideIcon> = {
-  instagram: Instagram,
-  facebook: Facebook,
-  ads: Megaphone,
-  competitor: Eye,
-  report: FileBarChart,
-  inbox: MessageSquare,
-};
-
-function NeedsRow({ item, last }: { item: NeedsItem; last: boolean }) {
-  const Icon = ICON_MAP[item.iconKey];
-  return (
-    <li
-      className="flex items-start gap-3 px-5 py-4 transition-colors hover:bg-[hsl(var(--m-surface))]"
-      style={{ borderBottom: last ? "none" : "1px solid hsl(var(--m-border-subtle))" }}
-    >
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-           style={{ background: "hsl(var(--m-accent-soft))", color: "hsl(var(--m-accent))" }}>
-        <Icon size={15} strokeWidth={1.75} />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="text-[14px] font-medium leading-snug">{item.title}</div>
-        <p className="text-[12.5px] mt-0.5 line-clamp-2"
-           style={{ color: "hsl(var(--m-muted-foreground))" }}>
-          {item.detail}
-        </p>
-      </div>
-      <div className="flex items-center gap-1.5 shrink-0">
-        {item.secondary && (
-          <Btn variant="ghost" onClick={item.secondary.onClick}>{item.secondary.label}</Btn>
-        )}
-        {item.action && (
-          <Btn variant={item.action.kind} onClick={item.action.onClick}>{item.action.label}</Btn>
-        )}
-      </div>
-    </li>
-  );
-}
-
-/* ----------------------------------------------------------------
- * Today schedule strip
- * ----------------------------------------------------------------*/
-function TodayStrip({
-  items, isLoading,
-}: {
-  items: Array<{ id: string; title: string; scheduledAt: string; platform?: string }>;
-  isLoading: boolean;
-}) {
-  if (isLoading) {
-    return (
-      <div className="flex gap-3 overflow-x-auto px-5 py-4">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="h-20 w-56 shrink-0 rounded-xl animate-pulse"
-               style={{ background: "hsl(var(--m-border-subtle))" }} />
-        ))}
-      </div>
-    );
-  }
-  if (items.length === 0) {
-    return (
-      <div className="px-5 py-8 text-center">
-        <Clock size={20} strokeWidth={1.5} className="mx-auto mb-2"
-               style={{ color: "hsl(var(--m-muted-foreground))" }} />
-        <p className="text-[12.5px]" style={{ color: "hsl(var(--m-muted-foreground))" }}>
-          Nothing scheduled for the next 24 hours.
-        </p>
-      </div>
-    );
-  }
-  return (
-    <div className="flex gap-3 overflow-x-auto px-5 py-4">
-      {items.map((it) => (
-        <div key={it.id}
-             className="shrink-0 w-60 rounded-xl p-3 cursor-pointer transition-transform hover:-translate-y-px"
-             style={{
-               background: "hsl(var(--m-surface))",
-               border: "1px solid hsl(var(--m-border-subtle))",
-             }}>
-          <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider"
-               style={{ color: "hsl(var(--m-accent))" }}>
-            <Clock size={11} />
-            {timeFmt(it.scheduledAt)}
-            {it.platform && (
-              <span style={{ color: "hsl(var(--m-muted-foreground))" }}>· {it.platform}</span>
-            )}
-          </div>
-          <div className="text-[13px] font-medium mt-1.5 line-clamp-2 leading-snug">
-            {it.title}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/* ----------------------------------------------------------------
- * Drawer
- * ----------------------------------------------------------------*/
 interface DrawerItem {
   id: string;
   title: string;
@@ -209,15 +65,6 @@ interface DrawerItem {
   mediaUrl?: string | null;
   status?: string;
   scheduledAt?: string | null;
-}
-
-function platformLabel(raw: any): string | undefined {
-  const p = (raw?.platform ?? "").toString().toLowerCase();
-  if (p.includes("insta") || raw?.instagram_caption) return "Instagram";
-  if (p.includes("face") || raw?.facebook_post) return "Facebook";
-  if (p.includes("tik") || raw?.tiktok_caption) return "TikTok";
-  if (p.includes("link") || raw?.linkedin_post) return "LinkedIn";
-  return undefined;
 }
 
 function toDrawerItem(raw: any): DrawerItem {
@@ -241,7 +88,134 @@ function toDrawerItem(raw: any): DrawerItem {
 }
 
 /* ----------------------------------------------------------------
- * Home / Today page
+ * Small primitives
+ * ----------------------------------------------------------------*/
+function Card({ children, className = "", padded = true }: {
+  children: React.ReactNode; className?: string; padded?: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-2xl bg-white border border-[hsl(var(--m-border-subtle))] ${padded ? "p-5" : ""} ${className}`}
+      style={{ boxShadow: "var(--m-shadow-sm)" }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function SectionHeader({ icon: Icon, title, action, count }: {
+  icon: LucideIcon; title: string; action?: { label: string; onClick: () => void }; count?: number;
+}) {
+  return (
+    <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center gap-2">
+        <Icon size={14} className="text-[hsl(var(--m-muted-foreground))]" strokeWidth={1.75} />
+        <h2 className="font-display text-[14px] font-semibold tracking-tight">{title}</h2>
+        {typeof count === "number" && count > 0 && (
+          <span className="text-[11px] tabular-nums px-1.5 py-0.5 rounded-md font-medium"
+                style={{ background: "hsl(var(--m-accent-soft))", color: "hsl(var(--m-accent))" }}>
+            {count}
+          </span>
+        )}
+      </div>
+      {action && (
+        <button onClick={action.onClick}
+                className="inline-flex items-center gap-0.5 text-[12px] font-medium text-[hsl(var(--m-muted-foreground))] hover:text-[hsl(var(--m-foreground))] transition-colors">
+          {action.label} <ChevronRight size={13} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function Kpi({ label, value, sub, trend, icon: Icon }: {
+  label: string; value: string | number; sub?: string;
+  trend?: { dir: "up" | "down" | "flat"; pct: string };
+  icon: LucideIcon;
+}) {
+  const trendColor =
+    trend?.dir === "up" ? "hsl(var(--m-success))" :
+    trend?.dir === "down" ? "hsl(var(--m-destructive))" :
+    "hsl(var(--m-muted-foreground))";
+  return (
+    <Card padded={false} className="p-4">
+      <div className="flex items-start justify-between">
+        <div className="text-[11.5px] uppercase tracking-wider font-medium text-[hsl(var(--m-muted-foreground))]">
+          {label}
+        </div>
+        <Icon size={14} className="text-[hsl(var(--m-muted-foreground))]" strokeWidth={1.75} />
+      </div>
+      <div className="font-display text-[26px] font-semibold tabular-nums mt-2 leading-none tracking-tight">
+        {value}
+      </div>
+      <div className="flex items-center gap-1.5 mt-1.5">
+        {trend && (
+          <span className="text-[11px] tabular-nums font-medium" style={{ color: trendColor }}>
+            {trend.dir === "up" ? "↑" : trend.dir === "down" ? "↓" : "·"} {trend.pct}
+          </span>
+        )}
+        {sub && (
+          <span className="text-[11px] text-[hsl(var(--m-muted-foreground))]">{sub}</span>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function QuickTile({ icon: Icon, title, sub, accent, onClick }: {
+  icon: LucideIcon; title: string; sub: string; accent: string; onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="group relative text-left rounded-2xl bg-white border border-[hsl(var(--m-border-subtle))] p-4 transition-all hover:-translate-y-px hover:shadow-[var(--m-shadow-md)]"
+    >
+      <div className="flex items-start justify-between">
+        <div
+          className="h-9 w-9 rounded-xl inline-flex items-center justify-center"
+          style={{ background: `${accent}14`, color: accent }}
+        >
+          <Icon size={17} strokeWidth={1.75} />
+        </div>
+        <ArrowUpRight size={14} className="text-[hsl(var(--m-muted-foreground))] opacity-0 group-hover:opacity-100 transition-opacity" />
+      </div>
+      <div className="font-display text-[14px] font-semibold mt-3 leading-tight">{title}</div>
+      <div className="text-[12px] text-[hsl(var(--m-muted-foreground))] mt-0.5 leading-snug">{sub}</div>
+    </button>
+  );
+}
+
+/* ----------------------------------------------------------------
+ * Ring (compact)
+ * ----------------------------------------------------------------*/
+function Ring({ label, value, color }: { label: string; value: number; color: string }) {
+  const pct = Math.max(0, Math.min(1, value / 100));
+  const C = 2 * Math.PI * 26;
+  const dash = `${pct * C} ${C}`;
+  return (
+    <div className="flex items-center gap-3">
+      <div className="relative h-[60px] w-[60px]">
+        <svg viewBox="0 0 64 64" className="h-full w-full -rotate-90">
+          <circle cx="32" cy="32" r="26" fill="none" strokeWidth="6"
+                  stroke="hsl(var(--m-border-subtle))" />
+          <circle cx="32" cy="32" r="26" fill="none" strokeWidth="6"
+                  stroke={color} strokeLinecap="round" strokeDasharray={dash}
+                  style={{ transition: "stroke-dasharray 600ms var(--m-ease)" }} />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center font-display text-[13px] font-semibold tabular-nums">
+          {Math.round(pct * 100)}
+        </div>
+      </div>
+      <div>
+        <div className="text-[12px] font-medium">{label}</div>
+        <div className="text-[11px] text-[hsl(var(--m-muted-foreground))]">score / 100</div>
+      </div>
+    </div>
+  );
+}
+
+/* ----------------------------------------------------------------
+ * Page
  * ----------------------------------------------------------------*/
 export default function Today() {
   const { user } = useAuth();
@@ -252,8 +226,8 @@ export default function Today() {
   const [reviewing, setReviewing] = useState<DrawerItem | null>(null);
   const [batchBusy, setBatchBusy] = useState(false);
   const [genBusy, setGenBusy] = useState(false);
+  const [command, setCommand] = useState("");
 
-  // re-render once a minute so "x m ago" stays fresh
   const [, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 60_000);
@@ -265,12 +239,10 @@ export default function Today() {
     user?.email?.split("@")[0] ??
     "there";
 
-  const now = new Date();
-  const dateLabel = now.toLocaleDateString(undefined, {
+  const dateLabel = new Date().toLocaleDateString(undefined, {
     weekday: "long", month: "long", day: "numeric",
   });
 
-  // Build lookup for the drawer
   const draftsById = useMemo(() => {
     const list = Array.isArray(content.data) ? content.data : [];
     const map = new Map<string, any>();
@@ -298,9 +270,6 @@ export default function Today() {
 
   const totalToApprove = pendingIds.length || (data?.approvalsCount ?? 0);
 
-  /* Activity rings ---------------------------------------------- */
-  // Best-effort metrics derived from health dimensions when available;
-  // otherwise show 0 with goals so the rings still render.
   const dims = data?.health?.dimensions;
   const ringContent = dims?.content ?? 0;
   const ringAds = dims?.ads ?? 0;
@@ -316,11 +285,9 @@ export default function Today() {
         const t = new Date(c.scheduled_at).getTime();
         return t >= Date.now() - 60_000 && t <= horizon;
       })
-      .sort(
-        (a: any, b: any) =>
-          new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime(),
-      )
-      .slice(0, 8)
+      .sort((a: any, b: any) =>
+        new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())
+      .slice(0, 6)
       .map((c: any) => ({
         id: c.id,
         title: c.content_theme ?? c.title ?? "Scheduled post",
@@ -329,284 +296,378 @@ export default function Today() {
       }));
   }, [content.data]);
 
-  /* Needs-you inbox -------------------------------------------- */
-  const needsItems: NeedsItem[] = useMemo(() => {
-    const out: NeedsItem[] = [];
+  /* Needs-you list -------------------------------------------- */
+  const needsItems = useMemo(() => {
+    const out: Array<{
+      id: string; iconKey: string; title: string; detail: string;
+      onApprove?: () => void; onReview?: () => void;
+    }> = [];
     const drafts = Array.isArray(content.data) ? content.data : [];
     const pending = drafts.filter(
       (c: any) => c?.status === "pending_approval" || c?.status === "draft",
     );
-    pending.slice(0, 4).forEach((c: any) => {
+    pending.slice(0, 5).forEach((c: any) => {
       const platform = platformLabel(c) ?? "Social";
       out.push({
         id: c.id,
         iconKey: /face/i.test(platform) ? "facebook" : "instagram",
-        title: `${platform} post needs your approval`,
-        detail:
-          (c.instagram_caption ?? c.facebook_post ?? c.content_theme ?? "Draft ready for review.")
-            .toString()
-            .slice(0, 140),
-        action: { label: "Approve", kind: "primary", onClick: () => approveApprovalItem(c.id) },
-        secondary: { label: "Review", onClick: () => openReview(c.id) },
+        title: `${platform} post needs approval`,
+        detail: (c.instagram_caption ?? c.facebook_post ?? c.content_theme ?? "Draft ready for review.")
+          .toString().slice(0, 120),
+        onApprove: () => approveApprovalItem(c.id),
+        onReview: () => openReview(c.id),
       });
     });
-
-    // Insight as a single nudge
     if (data?.insight) {
       out.push({
         id: `insight-${data.insight.id}`,
         iconKey: "report",
         title: data.insight.title,
-        detail: "Recommendation from Maroa based on this week's signal.",
-        action: { label: "View", kind: "secondary", onClick: () => nav("/app/growth") },
+        detail: "Recommendation from Maroa Brain.",
+        onReview: () => nav("/app/growth"),
       });
     }
     return out;
   }, [content.data, data?.insight, nav, draftsById]);
 
-  /* AI brief --------------------------------------------------- */
-  const briefBullets = useMemo(() => {
-    const bullets: string[] = [];
-    if (totalToApprove > 0) {
-      bullets.push(`${totalToApprove} draft${totalToApprove === 1 ? "" : "s"} waiting for your sign-off.`);
-    }
-    if (todayItems.length > 0) {
-      bullets.push(`${todayItems.length} post${todayItems.length === 1 ? "" : "s"} scheduled in the next 24h.`);
-    }
-    if (data?.recentActivity && data.recentActivity.length > 0) {
-      bullets.push(`Latest: ${data.recentActivity[0].title}.`);
-    }
-    if (bullets.length === 0) {
-      bullets.push("Nothing urgent. A good window to plan next week's content.");
-    }
-    return bullets;
-  }, [totalToApprove, todayItems.length, data?.recentActivity]);
+  const ICON_MAP: Record<string, LucideIcon> = {
+    instagram: Instagram, facebook: Facebook, ads: Megaphone,
+    competitor: Eye, report: FileBarChart, inbox: MessageSquare,
+  };
+
+  /* KPIs --------------------------------------------------- */
+  const postsScheduled = todayItems.length;
+  const reachScore = ringContent;
+  const draftsCount = pendingIds.length;
+  const adsScore = ringAds;
+
+  /* Brain command bar -------------------------------------- */
+  const runCommand = async () => {
+    const c = command.trim().toLowerCase();
+    if (!c) return;
+    if (c.includes("ad")) nav("/app/ads");
+    else if (c.includes("contact") || c.includes("crm")) nav("/app/crm/contacts");
+    else if (c.includes("seo") || c.includes("audit")) nav("/app/growth");
+    else if (c.includes("schedule") || c.includes("calendar")) nav("/app/content/calendar");
+    else nav(`/app/content/studio?prompt=${encodeURIComponent(command)}`);
+    setCommand("");
+  };
 
   /* Error state ------------------------------------------------ */
   if (state.status === "error") {
     return (
-      <div className="space-y-6">
-        <div className="rounded-2xl p-6"
-             style={{
-               background: "hsl(var(--m-surface-elevated))",
-               border: "1px solid hsl(var(--m-border-subtle))",
-             }}>
-          <div className="flex items-start gap-3">
-            <AlertCircle size={18} style={{ color: "hsl(var(--m-destructive))" }} />
-            <div className="flex-1">
-              <div className="text-[14px] font-medium">We couldn't load today's brief.</div>
-              <p className="text-[12.5px] mt-1" style={{ color: "hsl(var(--m-muted-foreground))" }}>
-                Please refresh in a moment. If this keeps happening, we'll already know.
-              </p>
-            </div>
-            <Btn onClick={refreshToday}>
-              <RefreshCw size={12} /> Try again
-            </Btn>
+      <Card>
+        <div className="flex items-start gap-3">
+          <AlertCircle size={18} style={{ color: "hsl(var(--m-destructive))" }} />
+          <div className="flex-1">
+            <div className="text-[14px] font-medium">We couldn't load today's brief.</div>
+            <p className="text-[12.5px] mt-1 text-[hsl(var(--m-muted-foreground))]">
+              Please refresh in a moment.
+            </p>
           </div>
+          <Btn onClick={refreshToday}><RefreshCw size={12} /> Try again</Btn>
         </div>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* ──────────────── Hero ──────────────── */}
-      <section className="rounded-2xl overflow-hidden"
-               style={{
-                 background:
-                   "linear-gradient(180deg, hsl(var(--m-surface-elevated)) 0%, hsl(var(--m-surface)) 100%)",
-                 border: "1px solid hsl(var(--m-border-subtle))",
-               }}>
-        <div className="px-6 sm:px-8 pt-6 sm:pt-8 pb-2">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <div className="text-[11px] font-medium uppercase tracking-[0.08em]"
-                   style={{ color: "hsl(var(--m-muted-foreground))" }}>
-                {dateLabel}
-              </div>
-              <h1 className="text-[26px] sm:text-[30px] font-semibold tracking-tight mt-1.5 leading-tight">
-                {greeting()}, {firstName}.
-              </h1>
-              <p className="text-[14px] mt-1.5 max-w-2xl"
-                 style={{ color: "hsl(var(--m-muted-foreground))" }}>
-                Here's where things stand today.
-              </p>
-            </div>
-            <button onClick={refreshToday} title="Refresh"
-                    className="shrink-0 h-9 w-9 rounded-lg inline-flex items-center justify-center transition-opacity hover:opacity-80"
-                    style={{
-                      background: "hsl(var(--m-surface))",
-                      border: "1px solid hsl(var(--m-border-subtle))",
-                    }}>
-              <RefreshCw size={14} />
-            </button>
+    <div className="space-y-5 pb-12">
+      {/* ─────────── Header ─────────── */}
+      <header className="flex items-end justify-between gap-4 pt-1">
+        <div>
+          <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-[hsl(var(--m-muted-foreground))]">
+            {dateLabel}
           </div>
+          <h1 className="font-display text-[28px] sm:text-[32px] font-semibold tracking-tight mt-1 leading-tight">
+            {greeting()}, {firstName}.
+          </h1>
         </div>
-
-        {/* Activity rings */}
-        <div className="px-4 sm:px-6 pt-4 pb-6">
-          <div className="grid grid-cols-3 gap-2 sm:gap-6 justify-items-center">
-            <Ring label="Content" value={ringContent} goal={100} unit="score"
-                  color="hsl(var(--m-accent))" icon={Sparkles} />
-            <Ring label="Ads" value={ringAds} goal={100} unit="score"
-                  color="hsl(var(--m-success))" icon={Megaphone} />
-            <Ring label="SEO" value={ringSeo} goal={100} unit="score"
-                  color="hsl(var(--m-warning))" icon={ArrowUpRight} />
-          </div>
-        </div>
-
-        {/* Primary action bar */}
-        <div className="px-6 sm:px-8 py-4 flex flex-wrap items-center gap-2"
-             style={{ borderTop: "1px solid hsl(var(--m-border-subtle))" }}>
-          {totalToApprove > 0 ? (
-            <>
-              <Btn variant="primary" size="md" className="!h-10 !px-5 !text-[14px]"
-                   disabled={batchBusy}
-                   onClick={async () => {
-                     setBatchBusy(true);
-                     try { await batchApproveToday(pendingIds); }
-                     finally { setBatchBusy(false); }
-                   }}>
-                {batchBusy ? "Approving…" : `Approve all ${totalToApprove}`}
-              </Btn>
-              <Btn size="md" className="!h-10 !px-4 !text-[13px]"
-                   onClick={() => {
-                     const first = pendingIds[0];
-                     if (first) openReview(first);
-                   }}>
-                Review one by one
-              </Btn>
-            </>
-          ) : (
-            <Btn variant="primary" size="md" className="!h-10 !px-5 !text-[14px]"
-                 disabled={genBusy}
-                 onClick={async () => {
-                   setGenBusy(true);
-                   try { await generateWeeklyContent(); }
-                   finally { setGenBusy(false); }
-                 }}>
-              <Sparkles size={13} /> {genBusy ? "Generating…" : "Plan this week"}
-            </Btn>
-          )}
+        <div className="flex items-center gap-2">
           {data && (
-            <span className="text-[12px] tabular-nums ml-auto"
-                  style={{ color: "hsl(var(--m-muted-foreground))" }}>
+            <span className="text-[11.5px] tabular-nums text-[hsl(var(--m-muted-foreground))] hidden sm:block">
               Updated {ago(data.updatedAt)}
             </span>
           )}
+          <button onClick={refreshToday} title="Refresh"
+                  className="h-9 w-9 rounded-lg inline-flex items-center justify-center bg-white border border-[hsl(var(--m-border-subtle))] hover:bg-[hsl(var(--m-surface))] transition-colors">
+            <RefreshCw size={14} />
+          </button>
         </div>
-      </section>
+      </header>
 
-      {/* ──────────────── AI brief ──────────────── */}
-      <section className="rounded-xl p-5"
-               style={{
-                 background: "hsl(var(--m-accent-soft))",
-                 border: "1px solid hsl(var(--m-border-subtle))",
-               }}>
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+      {/* ─────────── Brain command bar ─────────── */}
+      <Card padded={false} className="p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="h-6 w-6 rounded-md inline-flex items-center justify-center"
                style={{ background: "hsl(var(--m-accent))", color: "hsl(var(--m-accent-foreground))" }}>
-            <Zap size={14} strokeWidth={2} />
+            <Zap size={12} strokeWidth={2.25} />
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-[11px] font-semibold uppercase tracking-wider"
-                 style={{ color: "hsl(var(--m-accent))" }}>
-              Brain · daily brief
-            </div>
-            <ul className="mt-1.5 space-y-1">
-              {briefBullets.map((b, i) => (
-                <li key={i} className="text-[13.5px] leading-snug">
-                  {b}
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--m-accent))]">
+            Maroa Brain
+          </div>
+          <span className="text-[11.5px] text-[hsl(var(--m-muted-foreground))]">·  ask me to generate, schedule or analyze anything</span>
+        </div>
+        <form onSubmit={(e) => { e.preventDefault(); runCommand(); }}
+              className="flex items-center gap-2 rounded-xl border border-[hsl(var(--m-border-subtle))] bg-[hsl(var(--m-surface))] px-3 h-12 focus-within:border-[hsl(var(--m-accent))] focus-within:bg-white transition-colors">
+          <Sparkles size={15} className="text-[hsl(var(--m-muted-foreground))] shrink-0" />
+          <input
+            value={command}
+            onChange={(e) => setCommand(e.target.value)}
+            placeholder="Generate 5 Instagram posts about our new collection…"
+            className="flex-1 bg-transparent outline-none text-[14px] font-sans placeholder:text-[hsl(var(--m-muted-foreground))]"
+          />
+          <button type="submit"
+                  className="h-8 px-3 rounded-lg inline-flex items-center gap-1.5 text-[12.5px] font-medium text-white transition-opacity hover:opacity-90"
+                  style={{ background: "hsl(var(--m-accent))" }}>
+            <Send size={12} /> Run
+          </button>
+        </form>
+        <div className="flex flex-wrap gap-1.5 mt-3">
+          {[
+            { label: "Generate post", icon: Wand2, q: "generate post" },
+            { label: "Generate ad", icon: Megaphone, q: "generate ad" },
+            { label: "Plan this week", icon: Calendar, q: "schedule week" },
+            { label: "SEO audit", icon: Search, q: "seo audit" },
+            { label: "Reply inbox", icon: MessageSquare, q: "inbox" },
+          ].map((c) => (
+            <button key={c.label} onClick={() => { setCommand(c.label); }}
+                    className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[12px] font-medium bg-[hsl(var(--m-surface))] border border-[hsl(var(--m-border-subtle))] text-[hsl(var(--m-foreground))] hover:bg-[hsl(var(--m-accent-soft))] hover:text-[hsl(var(--m-accent))] hover:border-[hsl(var(--m-accent))] transition-colors">
+              <c.icon size={11} /> {c.label}
+            </button>
+          ))}
+        </div>
+      </Card>
+
+      {/* ─────────── KPIs ─────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Kpi label="Drafts to approve" value={draftsCount} sub={draftsCount === 0 ? "all clear" : "need sign-off"} icon={CheckCircle2} />
+        <Kpi label="Scheduled / 24h" value={postsScheduled} sub={postsScheduled === 0 ? "queue empty" : "going live"} icon={Calendar} />
+        <Kpi label="Content health" value={`${reachScore}`} sub="of 100" icon={TrendingUp}
+             trend={reachScore >= 70 ? { dir: "up", pct: "on track" } : reachScore >= 40 ? { dir: "flat", pct: "watch" } : { dir: "down", pct: "low" }} />
+        <Kpi label="Ads health" value={`${adsScore}`} sub="of 100" icon={BarChart3}
+             trend={adsScore >= 70 ? { dir: "up", pct: "on track" } : adsScore >= 40 ? { dir: "flat", pct: "watch" } : { dir: "down", pct: "low" }} />
+      </div>
+
+      {/* ─────────── Quick actions ─────────── */}
+      <div>
+        <div className="flex items-center justify-between mb-3 px-1">
+          <h2 className="font-display text-[14px] font-semibold tracking-tight">Quick actions</h2>
+          <span className="text-[11.5px] text-[hsl(var(--m-muted-foreground))]">one tap → full control in the dashboard</span>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <QuickTile icon={Wand2} title="Generate content" sub="AI posts for every channel"
+                     accent="#0881FF" onClick={() => nav("/app/content/studio")} />
+          <QuickTile icon={Megaphone} title="Generate ads" sub="Meta + TikTok creatives"
+                     accent="#FF6B35" onClick={() => nav("/app/ads")} />
+          <QuickTile icon={Calendar} title="Schedule" sub="Plan & queue your week"
+                     accent="#8B5CF6" onClick={() => nav("/app/content/calendar")} />
+          <QuickTile icon={MessageSquare} title="Inbox" sub="Reply to DMs with AI"
+                     accent="#10B981" onClick={() => nav("/app/crm/inbox")} />
+          <QuickTile icon={Users} title="CRM" sub="Contacts & pipeline"
+                     accent="#F59E0B" onClick={() => nav("/app/crm/contacts")} />
+          <QuickTile icon={Search} title="SEO & growth" sub="Audit & opportunities"
+                     accent="#EC4899" onClick={() => nav("/app/growth")} />
+        </div>
+      </div>
+
+      {/* ─────────── Two-col: Needs you + Schedule ─────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Needs you */}
+        <Card padded={false} className="lg:col-span-2">
+          <div className="px-5 pt-4">
+            <SectionHeader
+              icon={InboxIcon}
+              title="Needs you"
+              count={needsItems.length}
+              action={{ label: "Open inbox", onClick: () => nav("/app/crm/inbox") }}
+            />
+          </div>
+          {isLoading ? (
+            <ul>
+              {[0, 1, 2].map((i) => (
+                <li key={i} className="px-5 py-4 border-t border-[hsl(var(--m-border-subtle))]">
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-[hsl(var(--m-border-subtle))] animate-pulse" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 w-1/3 rounded bg-[hsl(var(--m-border-subtle))] animate-pulse" />
+                      <div className="h-3 w-2/3 rounded bg-[hsl(var(--m-border-subtle))] animate-pulse" />
+                    </div>
+                  </div>
                 </li>
               ))}
             </ul>
-          </div>
-        </div>
-      </section>
-
-      {/* ──────────────── Needs You ──────────────── */}
-      <section className="rounded-xl overflow-hidden"
-               style={{
-                 background: "hsl(var(--m-surface-elevated))",
-                 border: "1px solid hsl(var(--m-border-subtle))",
-               }}>
-        <header className="flex items-center justify-between px-5 h-12"
-                style={{ borderBottom: "1px solid hsl(var(--m-border-subtle))" }}>
-          <div className="flex items-center gap-2">
-            <InboxIcon size={14} style={{ color: "hsl(var(--m-muted-foreground))" }} />
-            <h2 className="text-[14px] font-semibold">Needs you</h2>
-            {needsItems.length > 0 && (
-              <span className="text-[11px] tabular-nums px-1.5 py-0.5 rounded-md"
-                    style={{
-                      background: "hsl(var(--m-accent-soft))",
-                      color: "hsl(var(--m-accent))",
-                    }}>
-                {needsItems.length}
-              </span>
-            )}
-          </div>
-          <button onClick={() => nav("/app/crm/inbox")}
-                  className="inline-flex items-center gap-0.5 text-[12px] font-medium"
-                  style={{ color: "hsl(var(--m-muted-foreground))" }}>
-            Open inbox <ChevronRight size={13} />
-          </button>
-        </header>
-        {isLoading ? (
-          <ul>
-            {[0, 1, 2].map((i) => (
-              <li key={i} className="px-5 py-4"
-                  style={{ borderBottom: "1px solid hsl(var(--m-border-subtle))" }}>
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-lg animate-pulse"
-                       style={{ background: "hsl(var(--m-border-subtle))" }} />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-3 w-1/3 rounded animate-pulse"
-                         style={{ background: "hsl(var(--m-border-subtle))" }} />
-                    <div className="h-3 w-2/3 rounded animate-pulse"
-                         style={{ background: "hsl(var(--m-border-subtle))" }} />
-                  </div>
+          ) : needsItems.length === 0 ? (
+            <div className="px-5 py-12 text-center border-t border-[hsl(var(--m-border-subtle))]">
+              <CheckCircle2 size={24} strokeWidth={1.5} className="mx-auto mb-2 text-[hsl(var(--m-success))]" />
+              <div className="font-display text-[14px] font-semibold">You're all caught up</div>
+              <p className="text-[12.5px] mt-1 text-[hsl(var(--m-muted-foreground))]">
+                Maroa will surface items here as they come in.
+              </p>
+              <button onClick={async () => {
+                setGenBusy(true);
+                try { await generateWeeklyContent(); } finally { setGenBusy(false); }
+              }}
+                className="mt-4 inline-flex items-center gap-1.5 h-9 px-4 rounded-lg text-[13px] font-medium text-white"
+                style={{ background: "hsl(var(--m-accent))" }}>
+                <Sparkles size={13} /> {genBusy ? "Generating…" : "Plan this week with AI"}
+              </button>
+            </div>
+          ) : (
+            <>
+              <ul>
+                {needsItems.map((it, i) => {
+                  const Icon = ICON_MAP[it.iconKey] ?? InboxIcon;
+                  return (
+                    <li key={it.id}
+                        className={`flex items-start gap-3 px-5 py-3.5 hover:bg-[hsl(var(--m-surface))] transition-colors ${i === 0 ? "border-t" : ""} border-b border-[hsl(var(--m-border-subtle))]`}>
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                           style={{ background: "hsl(var(--m-accent-soft))", color: "hsl(var(--m-accent))" }}>
+                        <Icon size={14} strokeWidth={1.75} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[13.5px] font-medium leading-snug">{it.title}</div>
+                        <p className="text-[12px] mt-0.5 line-clamp-2 text-[hsl(var(--m-muted-foreground))]">
+                          {it.detail}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {it.onReview && (
+                          <button onClick={it.onReview}
+                                  className="h-7 px-2.5 rounded-md text-[12px] font-medium text-[hsl(var(--m-muted-foreground))] hover:bg-[hsl(var(--m-surface))]">
+                            Review
+                          </button>
+                        )}
+                        {it.onApprove && (
+                          <button onClick={it.onApprove}
+                                  className="h-7 px-2.5 rounded-md text-[12px] font-medium text-white"
+                                  style={{ background: "hsl(var(--m-accent))" }}>
+                            Approve
+                          </button>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+              {totalToApprove > 1 && (
+                <div className="px-5 py-3 flex items-center justify-between">
+                  <span className="text-[12px] text-[hsl(var(--m-muted-foreground))]">
+                    {totalToApprove} drafts total
+                  </span>
+                  <button disabled={batchBusy}
+                          onClick={async () => {
+                            setBatchBusy(true);
+                            try { await batchApproveToday(pendingIds); } finally { setBatchBusy(false); }
+                          }}
+                          className="h-8 px-3 rounded-lg text-[12.5px] font-medium text-white disabled:opacity-60"
+                          style={{ background: "hsl(var(--m-accent))" }}>
+                    {batchBusy ? "Approving…" : `Approve all ${totalToApprove}`}
+                  </button>
                 </div>
-              </li>
-            ))}
-          </ul>
-        ) : needsItems.length === 0 ? (
-          <div className="px-5 py-12 text-center">
-            <CheckCircle2 size={24} strokeWidth={1.5} className="mx-auto mb-2"
-                          style={{ color: "hsl(var(--m-success))" }} />
-            <div className="text-[14px] font-medium">You're all caught up</div>
-            <p className="text-[12.5px] mt-1" style={{ color: "hsl(var(--m-muted-foreground))" }}>
-              We'll surface things here as they come in.
-            </p>
-          </div>
-        ) : (
-          <ul>
-            {needsItems.map((it, i) => (
-              <NeedsRow key={it.id} item={it} last={i === needsItems.length - 1} />
-            ))}
-          </ul>
-        )}
-      </section>
+              )}
+            </>
+          )}
+        </Card>
 
-      {/* ──────────────── Today schedule ──────────────── */}
-      <section className="rounded-xl overflow-hidden"
-               style={{
-                 background: "hsl(var(--m-surface-elevated))",
-                 border: "1px solid hsl(var(--m-border-subtle))",
-               }}>
-        <header className="flex items-center justify-between px-5 h-12"
-                style={{ borderBottom: "1px solid hsl(var(--m-border-subtle))" }}>
-          <div className="flex items-center gap-2">
-            <Clock size={14} style={{ color: "hsl(var(--m-muted-foreground))" }} />
-            <h2 className="text-[14px] font-semibold">Next 24 hours</h2>
+        {/* Schedule */}
+        <Card padded={false}>
+          <div className="px-5 pt-4">
+            <SectionHeader
+              icon={Clock}
+              title="Next 24 hours"
+              count={todayItems.length}
+              action={{ label: "Calendar", onClick: () => nav("/app/content/calendar") }}
+            />
           </div>
-          <button onClick={() => nav("/app/content/calendar")}
-                  className="inline-flex items-center gap-0.5 text-[12px] font-medium"
-                  style={{ color: "hsl(var(--m-muted-foreground))" }}>
-            Open calendar <ChevronRight size={13} />
-          </button>
-        </header>
-        <TodayStrip items={todayItems} isLoading={isLoading} />
-      </section>
+          {isLoading ? (
+            <div className="px-5 pb-5 space-y-2">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="h-14 rounded-xl bg-[hsl(var(--m-border-subtle))] animate-pulse" />
+              ))}
+            </div>
+          ) : todayItems.length === 0 ? (
+            <div className="px-5 py-10 text-center border-t border-[hsl(var(--m-border-subtle))]">
+              <Clock size={20} strokeWidth={1.5} className="mx-auto mb-2 text-[hsl(var(--m-muted-foreground))]" />
+              <p className="text-[12.5px] text-[hsl(var(--m-muted-foreground))]">
+                Nothing scheduled for the next 24h.
+              </p>
+              <button onClick={() => nav("/app/content/studio")}
+                      className="mt-3 inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12.5px] font-medium bg-[hsl(var(--m-surface))] border border-[hsl(var(--m-border-subtle))] hover:bg-white">
+                <Plus size={12} /> Create post
+              </button>
+            </div>
+          ) : (
+            <ul className="px-3 pb-3 space-y-1">
+              {todayItems.map((it) => (
+                <li key={it.id}>
+                  <button onClick={() => openReview(it.id)}
+                          className="w-full text-left rounded-xl p-3 hover:bg-[hsl(var(--m-surface))] transition-colors flex items-start gap-3">
+                    <div className="shrink-0 text-center w-12">
+                      <div className="font-display text-[12px] font-semibold tabular-nums text-[hsl(var(--m-accent))]">
+                        {timeFmt(it.scheduledAt)}
+                      </div>
+                      <div className="text-[10px] uppercase tracking-wider text-[hsl(var(--m-muted-foreground))] mt-0.5">
+                        {it.platform ?? "post"}
+                      </div>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[13px] font-medium line-clamp-2 leading-snug">
+                        {it.title}
+                      </div>
+                    </div>
+                    <ArrowRight size={13} className="text-[hsl(var(--m-muted-foreground))] mt-1 shrink-0" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
+
+      {/* ─────────── Health rings + brief ─────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <Card className="lg:col-span-2">
+          <SectionHeader
+            icon={TrendingUp}
+            title="Marketing health"
+            action={{ label: "Open growth", onClick: () => nav("/app/growth") }}
+          />
+          <div className="grid grid-cols-3 gap-4 pt-1">
+            <Ring label="Content" value={ringContent} color="hsl(var(--m-accent))" />
+            <Ring label="Ads" value={ringAds} color="hsl(var(--m-success))" />
+            <Ring label="SEO" value={ringSeo} color="hsl(var(--m-warning))" />
+          </div>
+        </Card>
+
+        <Card>
+          <div className="flex items-center gap-2 mb-2">
+            <Zap size={13} className="text-[hsl(var(--m-accent))]" strokeWidth={2} />
+            <h2 className="font-display text-[13px] font-semibold uppercase tracking-wider text-[hsl(var(--m-accent))]">
+              Daily brief
+            </h2>
+          </div>
+          <ul className="space-y-1.5">
+            {(() => {
+              const bullets: string[] = [];
+              if (totalToApprove > 0)
+                bullets.push(`${totalToApprove} draft${totalToApprove === 1 ? "" : "s"} waiting for sign-off.`);
+              if (todayItems.length > 0)
+                bullets.push(`${todayItems.length} post${todayItems.length === 1 ? "" : "s"} going live in the next 24h.`);
+              if (data?.recentActivity && data.recentActivity.length > 0)
+                bullets.push(`Latest: ${data.recentActivity[0].title}.`);
+              if (bullets.length === 0)
+                bullets.push("Nothing urgent — a great window to plan next week's content.");
+              return bullets.map((b, i) => (
+                <li key={i} className="text-[13px] leading-snug flex gap-2">
+                  <span className="text-[hsl(var(--m-accent))] mt-0.5">·</span>
+                  <span>{b}</span>
+                </li>
+              ));
+            })()}
+          </ul>
+        </Card>
+      </div>
 
       <ReviewDrawer open={!!reviewing} item={reviewing} onClose={() => setReviewing(null)} />
     </div>
