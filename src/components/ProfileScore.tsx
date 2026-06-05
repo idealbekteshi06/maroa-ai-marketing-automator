@@ -20,7 +20,7 @@ export default function ProfileScore({ compact }: { compact?: boolean }) {
 
   useEffect(() => {
     if (!businessId || !user?.id) return;
-    apiGet<{ score?: number; missing_fields?: string[]; recommendations?: string[] }>(
+    apiGet<{ score: number; missing_fields?: string[]; recommendations?: string[] }>(
       `/api/onboarding/score/${user.id}`,
     )
       .then((raw) => setData(normalizeOnboardingScore(raw)))
