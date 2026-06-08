@@ -30,13 +30,14 @@ const Strategy = lazy(() => import("./pages/Strategy"));
 const queryClient = new QueryClient();
 
 /**
- * Backend OAuth callbacks redirect to ${FRONTEND_URL}/settings/connections?…
- * (FRONTEND_URL = site root). Forward that top-level path into the in-app
- * Connections page, preserving ?meta / ?google so the banner can render.
+ * Backend OAuth callbacks redirect to ${FRONTEND_URL}/settings/connections?meta=…
+ * (FRONTEND_URL = site root). The live connections surface is the Social Hub tab,
+ * so forward there, preserving ?meta / ?google so the banner can render.
  */
 const ConnectionsRedirect = () => {
   const { search } = useLocation();
-  return <Navigate to={`/app/settings/connections${search}`} replace />;
+  const extra = search ? `&${search.replace(/^\?/, "")}` : "";
+  return <Navigate to={`/dashboard?tab=social${extra}`} replace />;
 };
 
 const Loading = () => (
@@ -62,10 +63,8 @@ const App = () => (
               <Route path="/signup" element={<SignUp />} />
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              {/* Legacy /dashboard → polished v2 shell (audit pass: single CTA, plain language, calmer UI) */}
-              {/* Legacy dashboard fully retired — /app is the only dashboard */}
-              <Route path="/dashboard" element={<Navigate to="/app" replace />} />
-              <Route path="/dashboard/*" element={<Navigate to="/app" replace />} />
+              {/* /dashboard is the live product UI (flat sidebar). */}
+              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/onboarding" element={<ProtectedRoute allowIncompleteOnboarding><Onboarding /></ProtectedRoute>} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/privacy" element={<Privacy />} />

@@ -7,9 +7,13 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  FileText, Megaphone, Settings, Menu, X, LogOut, Home, Mail,
-  Users, Globe, MousePointer, BarChart3, Star, MoreHorizontal,
-  Rocket, Brain, ChevronRight, Scale,
+  LayoutDashboard, FileText, Megaphone, Share2, Target,
+  Search, Settings, Menu, X, LogOut, Globe, Star, Mail,
+  Users, Home, MoreHorizontal, Gift, Magnet, Rocket,
+  Lightbulb, Brain, Code, FileSearch, DollarSign,
+  MessageSquare, Briefcase, BarChart3, Wrench, MousePointer,
+  UserPlus, TrendingUp, CreditCard, Bot, Palette, Inbox,
+  ChevronRight, Sparkles, Scale,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import NotificationCenter from "@/components/NotificationCenter";
@@ -21,7 +25,6 @@ import CompetitorAlert from "@/components/CompetitorAlert";
 import WeeklyReportOverlay from "@/components/WeeklyReportOverlay";
 import WelcomeModal from "@/components/WelcomeModal";
 import Heartbeat from "@/components/Heartbeat";
-import FounderPill from "@/components/dashboard/FounderPill";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 
 /* Animated logo dot — pure CSS keyframes, no React reconciliation. */
@@ -83,127 +86,81 @@ const LaunchOrchestrator = lazy(() => import("@/pages/LaunchOrchestrator"));
 const BudgetROI = lazy(() => import("@/pages/BudgetROI"));
 const ProfileEnhancement = lazy(() => import("@/pages/ProfileEnhancement"));
 
-/* ── Sidebar nav.
- * Top: 2 always-visible singletons (Home, Approvals).
- * Middle: 8 collapsible groups bucketing the ~30 wired surfaces by what
- *   they produce — Content, Ads, Email, Audience, SEO, CRO, Insights,
- *   Reputation.
- * Bottom: Settings + Sign-out are anchored in the sidebar footer.
- * WF pages call live APIs (wf6/wf8/wf12 wired); EmailLifecycle partial.
- * out of nav until their pages are wired to real data.
- *
- * `to` is set for items that navigate to a separate route (e.g. /strategy)
- * instead of swapping a dashboard tab.
+/* ── v2 Navigation (REFACTOR_BRIEF_V2 section 2.1) ────────────
+ * 7 primary items per Miller's 7±2 law. Workflows expand into 4 categories
+ * per the V2 spec. Legacy pages are kept reachable via direct URL (?tab=key)
+ * but removed from sidebar to eliminate cognitive overload (Hick's Law).
  */
-type NavItem = { key: string; label: string; icon: typeof Home; to?: string };
-type NavGroup = { key: string; label: string; icon: typeof Home; items: NavItem[] };
+type NavItem = { key: string; label: string; icon: typeof Home };
+type WorkflowGroup = { label: string; items: NavItem[] };
 
-const topSingletons: NavItem[] = [
+const primaryNav: NavItem[] = [
   { key: "overview", label: "Home", icon: Home },
+  // Approvals sits second per Miller's 7±2 — it's the brand promise
+  // ("Marketing that asks before it ships. Not after.") and the most
+  // load-bearing operator surface. ShieldCheck mark matches the
+  // landing-page differentiator card icon for visual continuity.
   { key: "approvals", label: "Approvals", icon: Scale },
+  { key: "inbox", label: "Inbox", icon: Inbox },
+  { key: "studio", label: "Studio", icon: Palette },
+  { key: "insights", label: "Insights", icon: BarChart3 },
+  { key: "crm", label: "Customers", icon: Users },
+  { key: "ai-brain", label: "Ask Maroa", icon: Sparkles },
 ];
 
-const navGroups: NavGroup[] = [
+const workflowGroups: WorkflowGroup[] = [
   {
-    key: "content",
-    label: "Content",
-    icon: FileText,
+    label: "Audience Growth",
     items: [
-      { key: "content", label: "Posts & captions", icon: FileText },
-      { key: "social", label: "Social hub", icon: Users },
-      { key: "schema", label: "Schema markup", icon: Globe },
-      { key: "campaign", label: "Instant campaign", icon: Megaphone },
+      { key: "wf1-daily-content", label: "Daily Content Engine", icon: FileText },
+      { key: "wf6-local-presence", label: "Local + Digital Presence", icon: Globe },
+      { key: "wf12-launch", label: "Launch Orchestrator", icon: Rocket },
     ],
   },
   {
-    key: "ads",
-    label: "Ads",
-    icon: Megaphone,
+    label: "Revenue Generation",
     items: [
-      { key: "campaigns", label: "Live campaigns", icon: Megaphone },
-      { key: "ad-optimization", label: "Ad optimization", icon: BarChart3 },
-      { key: "ab-tests", label: "A/B tests", icon: BarChart3 },
+      { key: "wf3-ads", label: "Ad Optimization", icon: Megaphone },
+      { key: "wf7-email", label: "Email Lifecycle", icon: Mail },
+      { key: "wf2-leads", label: "Lead Scoring", icon: TrendingUp },
     ],
   },
   {
-    key: "email",
-    label: "Email",
-    icon: Mail,
+    label: "Customer Operations",
     items: [
-      { key: "email", label: "Email marketing", icon: Mail },
-      { key: "community", label: "Community engagement", icon: Users },
+      { key: "wf4-reviews", label: "Reviews & Reputation", icon: Star },
+      { key: "wf11-inbox", label: "Unified Inbox", icon: MessageSquare },
+      { key: "wf8-insights", label: "Customer Insights", icon: FileSearch },
     ],
   },
   {
-    key: "audience",
-    label: "Audience",
-    icon: Users,
+    label: "Intelligence",
     items: [
-      { key: "crm", label: "CRM & leads", icon: Users },
-      { key: "lead-magnets", label: "Lead magnets", icon: FileText },
-      { key: "research", label: "Customer research", icon: Brain },
-      { key: "ideas", label: "Marketing ideas", icon: Brain },
-      { key: "launch", label: "Launch campaign", icon: Rocket },
-    ],
-  },
-  {
-    key: "seo",
-    label: "SEO",
-    icon: Globe,
-    items: [
-      { key: "seo", label: "SEO overview", icon: Globe },
-      { key: "ai-seo", label: "AI SEO", icon: Brain },
-      { key: "seo-pages", label: "SEO pages", icon: FileText },
-    ],
-  },
-  {
-    key: "cro",
-    label: "CRO",
-    icon: MousePointer,
-    items: [
-      { key: "popup-cro", label: "Popups", icon: MousePointer },
-      { key: "onboarding-cro", label: "Onboarding CRO", icon: MousePointer },
-      { key: "signup-cro", label: "Signup CRO", icon: MousePointer },
-      { key: "upgrade-cro", label: "Upgrade CRO", icon: MousePointer },
-      { key: "free-tools", label: "Free tools", icon: FileText },
-    ],
-  },
-  {
-    key: "insights",
-    label: "Insights",
-    icon: BarChart3,
-    items: [
-      { key: "ai-brain", label: "AI Brain", icon: Brain },
-      { key: "orchestrator", label: "AI Orchestrator", icon: Brain },
-      { key: "competitors", label: "Competitors", icon: BarChart3 },
-      { key: "sales", label: "Sales assets", icon: FileText },
-      { key: "revops", label: "RevOps", icon: BarChart3 },
-      { key: "pricing", label: "Pricing strategy", icon: BarChart3 },
-      { key: "health", label: "Health score", icon: BarChart3 },
-    ],
-  },
-  {
-    key: "reputation",
-    label: "Reputation",
-    icon: Star,
-    items: [
-      { key: "reviews", label: "Reviews", icon: Star },
-      { key: "referral", label: "Referrals", icon: Star },
+      { key: "wf5-competitors", label: "Competitor Intelligence", icon: Target },
+      { key: "wf13-brief", label: "Weekly Strategy Brief", icon: Scale },
+      { key: "wf14-budget", label: "Budget & ROI Optimizer", icon: DollarSign },
     ],
   },
 ];
 
-const moreItemsBase: NavItem[] = [
-  { key: "strategy", label: "Strategy", icon: Brain, to: "/strategy" },
+/* Every key reachable anywhere in the app — used for route resolution and shortcuts */
+const allNavItems: NavItem[] = [
+  ...primaryNav,
+  ...workflowGroups.flatMap((g) => g.items),
+  { key: "settings", label: "Settings", icon: Settings },
 ];
 
-/* Mobile bottom tab bar — 5 thumb-reachable slots. */
+/* Mobile bottom tab bar — 5 items per REFACTOR_BRIEF_V2 section 2.7.
+ * Approvals replaced Content here — approvals is the load-bearing
+ * brand-promise surface and outranks the workflow-#1 content link
+ * for mobile-thumb access. Content remains reachable via the
+ * Workflows accordion in the desktop sidebar. */
 const mobileNav: NavItem[] = [
   { key: "overview", label: "Home", icon: Home },
   { key: "approvals", label: "Approvals", icon: Scale },
-  { key: "content", label: "Content", icon: FileText },
-  { key: "campaigns", label: "Ads", icon: Megaphone },
-  { key: "settings", label: "Settings", icon: Settings },
+  { key: "inbox", label: "Inbox", icon: Inbox },
+  { key: "studio", label: "Studio", icon: Palette },
+  { key: "ai-brain", label: "Ask", icon: Sparkles },
 ];
 
 /* Page titles and subtitles — keyed by nav key */
@@ -291,7 +248,7 @@ export default function Dashboard() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [showReport, setShowReport] = useState(true);
-  const { user, businessId, signOut, onboardingComplete } = useAuth();
+  const { user, businessId, signOut } = useAuth();
   const navigate = useNavigate();
 
   const handleNavigate = useCallback((tab: string) => setActive(tab), []);
@@ -395,39 +352,23 @@ export default function Dashboard() {
   };
 
   /* ── Sidebar content (shared desktop + mobile) ──
-   * Top singletons + 8 collapsible groups + "More" (Strategy + conditional
-   * Onboarding). Per-group expanded state persists; the group containing
-   * the current active tab auto-opens.
+   * 7-item primary nav + expandable Workflows group (4 categories per
+   * REFACTOR_BRIEF_V2 section 2.1). Expanded state persists per user in
+   * localStorage. Keyboard navigation is handled by useKeyboardShortcuts.
    */
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(
-    () => {
-      try {
-        const raw = localStorage.getItem("maroa.nav.openGroups");
-        return raw ? JSON.parse(raw) : {};
-      } catch { return {}; }
-    },
+  const [workflowsOpen, setWorkflowsOpen] = useState<boolean>(
+    () => localStorage.getItem("maroa.nav.workflowsOpen") === "1",
   );
   useEffect(() => {
-    localStorage.setItem("maroa.nav.openGroups", JSON.stringify(openGroups));
-  }, [openGroups]);
+    localStorage.setItem("maroa.nav.workflowsOpen", workflowsOpen ? "1" : "0");
+  }, [workflowsOpen]);
 
-  const moreItems: NavItem[] = [
-    ...moreItemsBase,
-    ...(onboardingComplete === false
-      ? [{ key: "onboarding", label: "Onboarding", icon: Rocket, to: "/onboarding" } as NavItem]
-      : []),
-  ];
-
-  /* Auto-open the group containing the active tab so deep links land
-   * with their parent visible. */
-  const activeGroupKey = navGroups.find(g =>
-    g.items.some(i => i.key === active),
-  )?.key;
+  const activeIsWorkflow = workflowGroups.some((g) =>
+    g.items.some((i) => i.key === active),
+  );
   useEffect(() => {
-    if (activeGroupKey && !openGroups[activeGroupKey]) {
-      setOpenGroups(prev => ({ ...prev, [activeGroupKey]: true }));
-    }
-  }, [activeGroupKey, openGroups]);
+    if (activeIsWorkflow && !workflowsOpen) setWorkflowsOpen(true);
+  }, [activeIsWorkflow, workflowsOpen]);
 
   const NavItemButton = ({
     item,
@@ -440,96 +381,81 @@ export default function Dashboard() {
   }) => (
     <button
       onClick={() => {
-        if (item.to) {
-          navigate(item.to);
-        } else {
-          setActive(item.key);
-        }
+        setActive(item.key);
         onItemClick?.();
       }}
       className={`flex w-full items-center gap-3 rounded-lg ${
         indent ? "pl-9 pr-3" : "px-3"
       } py-2 text-[13px] font-medium transition-colors ${
-        !item.to && active === item.key
+        active === item.key
           ? "border-l-[3px] border-primary bg-primary/10 text-primary"
           : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground"
       }`}
     >
       <item.icon
         className="h-[18px] w-[18px]"
-        strokeWidth={!item.to && active === item.key ? 2 : 1.5}
+        strokeWidth={active === item.key ? 2 : 1.5}
       />
       {item.label}
     </button>
   );
 
-  const GroupButton = ({
-    group,
-    onItemClick,
-  }: {
-    group: NavGroup;
-    onItemClick?: () => void;
-  }) => {
-    const isOpen = !!openGroups[group.key];
-    const containsActive = group.items.some(i => i.key === active);
-    return (
-      <div>
-        <button
-          type="button"
-          onClick={() => setOpenGroups(prev => ({ ...prev, [group.key]: !prev[group.key] }))}
-          className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
-            containsActive && !isOpen
-              ? "bg-primary/5 text-primary"
-              : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground"
-          }`}
-          aria-expanded={isOpen}
-        >
-          <group.icon className="h-[18px] w-[18px]" strokeWidth={1.5} />
-          <span className="flex-1 text-left">{group.label}</span>
-          <ChevronRight
-            className={`h-3.5 w-3.5 transition-transform ${isOpen ? "rotate-90" : ""}`}
-          />
-        </button>
-        {isOpen && (
-          <div className="mt-0.5 space-y-0.5 pb-1">
-            {group.items.map(item => (
-              <NavItemButton
-                key={item.key}
-                item={item}
-                onItemClick={onItemClick}
-                indent
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   const SidebarNav = ({ onItemClick }: { onItemClick?: () => void }) => (
     <nav className="flex-1 overflow-y-auto px-2 py-2">
       <div className="space-y-0.5">
-        {topSingletons.map(item => (
+        {primaryNav.map((item) => (
           <NavItemButton key={item.key} item={item} onItemClick={onItemClick} />
         ))}
       </div>
 
-      <div className="mt-3 space-y-0.5 border-t border-sidebar-border pt-3">
-        {navGroups.map(group => (
-          <GroupButton key={group.key} group={group} onItemClick={onItemClick} />
-        ))}
+      {/* Expandable Workflows group */}
+      <div className="mt-2">
+        <button
+          type="button"
+          onClick={() => setWorkflowsOpen((v) => !v)}
+          className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
+            activeIsWorkflow && !workflowsOpen
+              ? "bg-primary/5 text-primary"
+              : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground"
+          }`}
+          aria-expanded={workflowsOpen}
+        >
+          <Bot className="h-[18px] w-[18px]" strokeWidth={1.5} />
+          <span className="flex-1 text-left">Workflows</span>
+          <ChevronRight
+            className={`h-3.5 w-3.5 transition-transform ${
+              workflowsOpen ? "rotate-90" : ""
+            }`}
+          />
+        </button>
+        {workflowsOpen && (
+          <div className="mt-1 space-y-2 pb-1">
+            {workflowGroups.map((group) => (
+              <div key={group.label}>
+                <p className="px-5 pb-0.5 pt-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/40">
+                  {group.label}
+                </p>
+                <div className="space-y-0.5">
+                  {group.items.map((item) => (
+                    <NavItemButton
+                      key={item.key}
+                      item={item}
+                      onItemClick={onItemClick}
+                      indent
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {moreItems.length > 0 && (
-        <div className="mt-3 border-t border-sidebar-border pt-3">
-          <GroupButton
-            group={{ key: "more", label: "More", icon: MoreHorizontal, items: moreItems }}
-            onItemClick={onItemClick}
-          />
-        </div>
-      )}
-
-      <div className="mt-3 border-t border-sidebar-border pt-3">
+      <div className="mt-3 border-t border-sidebar-border pt-2">
+        <NavItemButton
+          item={{ key: "profile-enhancement", label: "Improve your AI", icon: Sparkles }}
+          onItemClick={onItemClick}
+        />
         <NavItemButton
           item={{ key: "settings", label: "Settings", icon: Settings }}
           onItemClick={onItemClick}
@@ -595,7 +521,6 @@ export default function Dashboard() {
 
       {/* ── Main content ── */}
       <div className="flex flex-1 flex-col min-w-0">
-        <FounderPill />
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-card/80 backdrop-blur-xl px-4">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" className="md:hidden h-9 w-9" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
