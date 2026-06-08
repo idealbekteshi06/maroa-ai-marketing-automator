@@ -83,8 +83,9 @@ export const useStrategy = (bid: Id) =>
   useQuery({ queryKey: ["strategy", bid], enabled: !!bid, queryFn: () => api.get<any>(`/api/strategy/${bid}`).catch(() => null) });
 
 // Platform
-export const useIntegrations = (bid: Id) =>
-  useQuery({ queryKey: ["integrations", bid], enabled: !!bid, queryFn: () => api.get<any[]>(`/api/integrations/${bid}`).catch(() => []) });
+// Live connection status — correct endpoint + typed payload lives in its own
+// module (was previously hitting /api/integrations/:bid, which 404'd → []).
+export { useIntegrations } from "./useIntegrations";
 export const useTeam = (bid: Id) =>
   useQuery({ queryKey: ["team", bid], enabled: !!bid, queryFn: () => api.get<any[]>(`/api/team/${bid}`).catch(() => []) });
 export const useBilling = (uid: Id) =>

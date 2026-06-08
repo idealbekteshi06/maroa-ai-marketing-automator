@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { AppShell } from "./components/shell/AppShell";
 
@@ -10,6 +10,7 @@ const Audience = lazy(() => import("./pages/Audience"));
 const Content = lazy(() => import("./pages/Content"));
 const Ads = lazy(() => import("./pages/Ads"));
 const Settings = lazy(() => import("./pages/Settings"));
+const Connections = lazy(() => import("./pages/settings/Connections"));
 const Products = lazy(() => import("./pages/products/Products"));
 const InboxPageV2 = lazy(() => import("./pages/audience/Inbox"));
 const ContactsPageV2 = lazy(() => import("./pages/audience/Contacts"));
@@ -33,7 +34,6 @@ const AnalyticsPage = lazy(() => M().then((m) => ({ default: m.AnalyticsPage }))
 const ForecastPage = lazy(() => M().then((m) => ({ default: m.ForecastPage })));
 const EmailPage = lazy(() => M().then((m) => ({ default: m.EmailPage })));
 const ReviewsPage = lazy(() => M().then((m) => ({ default: m.ReviewsPage })));
-const IntegrationsPage = lazy(() => M().then((m) => ({ default: m.IntegrationsPage })));
 const TeamPage = lazy(() => M().then((m) => ({ default: m.TeamPage })));
 const BillingPage = lazy(() => M().then((m) => ({ default: m.BillingPage })));
 
@@ -100,16 +100,21 @@ export function MaroaRoutes() {
             <Route path="cro" element={<CroPage />} />
           </Route>
 
-          {/* Settings */}
-          <Route path="settings" element={<Settings />}>
+          {/* Settings — parent is an <Outlet/> layout (the SubNav renders from
+              nav.ts in AppShell), so the child pages actually mount. */}
+          <Route path="settings" element={<Outlet />}>
             <Route index element={<Navigate to="profile" replace />} />
             <Route path="profile" element={<Settings />} />
+            <Route path="connections" element={<Connections />} />
             <Route path="brand" element={<BrandPage />} />
-            <Route path="integrations" element={<IntegrationsPage />} />
-            <Route path="autopilot" element={<Settings />} />
             <Route path="team" element={<TeamPage />} />
             <Route path="billing" element={<BillingPage />} />
-            <Route path="notifications" element={<Settings />} />
+            {/* Honest redirects: legacy "integrations" → Connections; the
+                autopilot/notifications tabs had no real page (autopilot lives
+                on the profile page), so point them somewhere real. */}
+            <Route path="integrations" element={<Navigate to="/app/settings/connections" replace />} />
+            <Route path="autopilot" element={<Navigate to="/app/settings/profile" replace />} />
+            <Route path="notifications" element={<Navigate to="/app/settings/profile" replace />} />
           </Route>
 
           {/* Legacy redirects */}

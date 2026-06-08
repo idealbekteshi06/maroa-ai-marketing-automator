@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -28,6 +28,16 @@ const Compare = lazy(() => import("./pages/Compare"));
 const Strategy = lazy(() => import("./pages/Strategy"));
 
 const queryClient = new QueryClient();
+
+/**
+ * Backend OAuth callbacks redirect to ${FRONTEND_URL}/settings/connections?…
+ * (FRONTEND_URL = site root). Forward that top-level path into the in-app
+ * Connections page, preserving ?meta / ?google so the banner can render.
+ */
+const ConnectionsRedirect = () => {
+  const { search } = useLocation();
+  return <Navigate to={`/app/settings/connections${search}`} replace />;
+};
 
 const Loading = () => (
   <div className="flex min-h-screen items-center justify-center">
@@ -68,6 +78,8 @@ const App = () => (
               <Route path="/compare" element={<Compare />} />
               <Route path="/strategy" element={<ProtectedRoute><Strategy /></ProtectedRoute>} />
               <Route path="/app/*" element={<ProtectedRoute><MaroaRoutes /></ProtectedRoute>} />
+              {/* OAuth return target — forwards into /app/settings/connections */}
+              <Route path="/settings/connections" element={<ConnectionsRedirect />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

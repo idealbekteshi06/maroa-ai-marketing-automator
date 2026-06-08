@@ -299,12 +299,16 @@ export function editBrandVoice(): Promise<void> {
 }
 
 export async function connectSocialAccount(): Promise<void> {
-  notify("Connect an account", "Pick a platform from the sidebar to start.");
-  // Real OAuth init is handled per-provider in the connection screens.
+  // Real connect flow lives on Settings → Connections (Meta/Google OAuth).
+  notify("Open Connections", "Connect Meta or Google from Settings → Connections.");
 }
 
-export function manageConnectedAccount(accountId: string): Promise<void> {
-  return stub("Managing connection", `Account ${accountId}`);
+export function manageConnectedAccount(_accountId: string): Promise<void> {
+  // No disconnect/manage endpoint is exposed yet — say so honestly.
+  return stub(
+    "Managing a connection isn't available yet",
+    "Coming soon — reconnect from Settings → Connections.",
+  );
 }
 
 export async function manageBilling(): Promise<void> {
