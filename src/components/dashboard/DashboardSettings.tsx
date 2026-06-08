@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Check, ExternalLink, User, CreditCard, Bell, Zap, Palette, Link2, CalendarClock, Loader2, Trash2, Shield } from "lucide-react";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 import { apiPost, postCheckout, getBrandVoice, buildBrandVoice, type BrandVoiceDto } from "@/lib/apiClient";
+import { getBillingPlans } from "@/lib/api";
 import BrandVoiceCard from "@/components/BrandVoiceCard";
 import { events as analytics } from "@/lib/analytics";
 
@@ -79,6 +80,7 @@ export default function DashboardSettings() {
   const [brandTraining, setBrandTraining] = useState(false);
   const [brandDnaLoading, setBrandDnaLoading] = useState(false);
   const [brandVoice, setBrandVoice] = useState<BrandVoiceDto | null>(null);
+  const [livePlans, setLivePlans] = useState<Record<string, { price?: number; features?: string[]; name?: string }> | null>(null);
 
   useEffect(() => {
     if (!businessId || !isReady) return;
@@ -206,6 +208,19 @@ export default function DashboardSettings() {
     return () => ctrl.abort();
   }, [activeTab, businessId, isReady]);
 
+  // Feature C: drive plan price + features from GET /api/billing/plans (public).
+  // Copy (name/desc/CTA/popular/annual) stays local; falls back to the static
+  // CANONICAL_PLANS catalog when the fetch fails.
+  useEffect(() => {
+    let active = true;
+    getBillingPlans()
+      .then((res: { plans?: Record<string, { price?: number; features?: string[]; name?: string }> }) => {
+        if (active) setLivePlans(res?.plans ?? null);
+      })
+      .catch(() => { if (active) setLivePlans(null); });
+    return () => { active = false; };
+  }, []);
+
   return (
     <div className="flex gap-6 pb-20 md:pb-0">
       {/* Left sidebar nav */}
@@ -306,25 +321,30 @@ export default function DashboardSettings() {
           <div className="space-y-4">
             <div className="rounded-xl border border-border bg-card p-5">
               <p className="text-sm text-muted-foreground">
-                You are on the <strong className="text-foreground capitalize">{PLANS[currentPlan].name}</strong> plan — ${PLANS[currentPlan].monthlyPrice}/month
+                You are on the <strong className="text-foreground capitalize">{PLANS[currentPlan].name}</strong> plan — ${typeof livePlans?.[currentPlan]?.price === "number" ? livePlans[currentPlan].price : PLANS[currentPlan].monthlyPrice}/month
               </p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              {CANONICAL_PLANS.map((plan) => (
+              {CANONICAL_PLANS.map((plan) => {
+                const live = livePlans?.[plan.key];
+                const price = typeof live?.price === "number" ? live.price : plan.monthlyPrice;
+                const features = Array.isArray(live?.features) && live.features.length ? live.features : plan.features;
+                return (
                 <div key={plan.key} className={`relative rounded-xl border-2 p-5 flex flex-col ${currentPlan === plan.key ? "border-primary bg-primary/5" : "border-border bg-card"}`}>
                   {plan.popular && <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-semibold text-primary-foreground">Popular</span>}
                   <h4 className="font-bold text-foreground">{plan.name}</h4>
                   <p className="mt-1 text-2xl font-bold text-foreground">
-                    ${plan.monthlyPrice}<span className="text-sm font-normal text-muted-foreground">/mo</span>
+                    ${price}<span className="text-sm font-normal text-muted-foreground">/mo</span>
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">or ${plan.annualTotal.toLocaleString("en-US")}/yr — save ${plan.annualSavings.toLocaleString("en-US")}</p>
-                  <ul className="mt-3 space-y-1.5 flex-1">{plan.features.map(f => <li key={f} className="flex items-start gap-2 text-xs text-muted-foreground"><Check className="h-3 w-3 mt-0.5 text-success shrink-0" />{f}</li>)}</ul>
+                  <ul className="mt-3 space-y-1.5 flex-1">{features.map((f) => <li key={f} className="flex items-start gap-2 text-xs text-muted-foreground"><Check className="h-3 w-3 mt-0.5 text-success shrink-0" />{f}</li>)}</ul>
                   <Button variant={currentPlan === plan.key ? "outline" : "default"} size="sm" className="mt-4 w-full"
                     disabled={currentPlan === plan.key || !!checkoutLoading} onClick={() => handleUpgrade(plan.key)}>
                     {checkoutLoading === plan.key ? "Opening checkout..." : currentPlan === plan.key ? "Current plan" : `Switch to ${plan.name}`}
                   </Button>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Cancel my plan — no retention modal, no upsell. Confirms

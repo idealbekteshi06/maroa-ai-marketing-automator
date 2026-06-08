@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   CheckCircle2,
+  AlertTriangle,
+  X,
   Facebook,
   Instagram,
   Loader2,
@@ -14,6 +16,7 @@ import {
   Linkedin,
   Sparkles,
 } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -27,7 +30,7 @@ import {
 import ContentCalendar from "@/components/ContentCalendar";
 import { timeAgo } from "@/lib/format";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
-import { apiPost, apiFireAndForget, getApiBase } from "@/lib/apiClient";
+import { apiPost, apiGet } from "@/lib/apiClient";
 
 const META_APP_ID = "26551713411132003";
 const META_PERMISSIONS =
@@ -37,7 +40,7 @@ interface AccountConfig {
   color: string;
   dbFields: string[];
   icon: React.ReactNode;
-  type: "meta_oauth" | "linkedin_oauth" | "manual";
+  type: "meta_oauth" | "google_oauth" | "coming_soon";
   comingSoon?: boolean;
   description: string;
 }
@@ -64,7 +67,8 @@ const accounts: AccountConfig[] = [
     color: "hsl(210, 80%, 42%)",
     dbFields: ["linkedin_connected", "linkedin_access_token"],
     icon: <Linkedin className="h-5 w-5" />,
-    type: "linkedin_oauth",
+    type: "coming_soon",
+    comingSoon: true,
     description: "Professional posts published daily",
   },
   {
@@ -72,7 +76,7 @@ const accounts: AccountConfig[] = [
     color: "hsl(217, 71%, 53%)",
     dbFields: ["ad_account_id", "google_ads_id"],
     icon: <span className="text-sm font-bold">G</span>,
-    type: "manual",
+    type: "google_oauth",
     description: "Search and display ads managed by AI",
   },
   {
@@ -80,7 +84,7 @@ const accounts: AccountConfig[] = [
     color: "hsl(0, 0%, 0%)",
     dbFields: ["tiktok_handle", "tiktok_username"],
     icon: <span className="text-sm font-bold">T</span>,
-    type: "manual",
+    type: "coming_soon",
     comingSoon: true,
     description: "Video scripts generated automatically",
   },
@@ -101,6 +105,38 @@ const STATUS_CONFIG: Record<string, { label: string; classes: string }> = {
   published: { label: "\u2713 Published", classes: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" },
 };
 
+/* Maps a platform card to the live-status key from
+ * GET /api/business/:businessId/integrations. TikTok isn't returned by the
+ * endpoint (it's coming soon), so it has no key. */
+const INTEGRATION_KEY: Record<string, string> = {
+  Facebook: "meta",
+  Instagram: "meta",
+  "Google Ads": "google",
+  LinkedIn: "linkedin",
+};
+
+/* OAuth return banner copy (?meta / ?google = connected|error|cancelled). */
+function bannerFor(name: string, value: string): { tone: "success" | "error" | "warning" | "info"; message: string } {
+  if (value === "connected")
+    return {
+      tone: "success",
+      message:
+        name === "Meta"
+          ? "Meta connected \u2014 Maroa can now manage Facebook & Instagram."
+          : "Google connected \u2014 Maroa can now manage your Google channels.",
+    };
+  if (value === "error") return { tone: "error", message: `We couldn't connect ${name}. Please try again.` };
+  if (value === "cancelled") return { tone: "warning", message: `${name} connection was cancelled.` };
+  return { tone: "info", message: `${name}: ${value}` };
+}
+
+const BANNER_CLASSES: Record<string, string> = {
+  success: "border-green-500/30 bg-green-50 dark:bg-green-900/15 text-green-700 dark:text-green-300",
+  error: "border-destructive/30 bg-destructive/5 text-destructive",
+  warning: "border-yellow-500/30 bg-yellow-50 dark:bg-yellow-900/15 text-yellow-700 dark:text-yellow-300",
+  info: "border-primary/20 bg-primary/5 text-primary",
+};
+
 export default function DashboardSocial({ oauthCode }: { oauthCode?: string | null }) {
   const { businessId, user, isReady } = useAuth();
   const [business, setBusiness] = useState<Record<string, unknown> | null>(null);
@@ -112,6 +148,9 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
   const [recentPosts, setRecentPosts] = useState<Array<Record<string, unknown>>>([]);
   const [generating, setGenerating] = useState(false);
+  const [integrations, setIntegrations] = useState<Array<Record<string, unknown>>>([]);
+  const [recommended, setRecommended] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   /* ---- Fetch business ---- */
   const fetchBusiness = useCallback(async () => {
@@ -149,7 +188,13 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
   /* ---- Helpers ---- */
   const hasValue = (v: unknown) => (typeof v === "string" ? v.trim() !== "" : v != null);
 
+  const integrationFor = (a: AccountConfig) =>
+    integrations.find((i) => i?.key === INTEGRATION_KEY[a.name]);
+
   const isConnected = (a: AccountConfig) => {
+    // Live status (GET /api/business/:id/integrations) is the source of truth;
+    // fall back to the businesses row for legacy connections.
+    if (integrationFor(a)?.connected) return true;
     if (!business) return false;
     if (a.name === "LinkedIn") {
       return business.linkedin_connected === true || !!business.linkedin_access_token;
@@ -161,76 +206,76 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
 
   const connectedPlatforms = accounts.filter((a) => isConnected(a) && !a.comingSoon);
 
-  /* ---- Meta OAuth ---- */
-  const handleMetaOAuth = useCallback(() => {
-    const redirectUri = "https://maroa-ai-marketing-automator.lovable.app/social-callback";
-    const url = `https://www.facebook.com/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${META_PERMISSIONS}&response_type=code&state=maroa_oauth`;
-    localStorage.setItem("meta_oauth_business_id", businessId || "");
-    window.location.href = url;
-  }, [businessId]);
+  /* ---- Live integration status (B) ---- */
+  const loadIntegrations = useCallback(async () => {
+    if (!businessId || !isReady) return;
+    try {
+      const data = await apiGet<{ integrations?: Array<Record<string, unknown>>; recommended_action?: string | null }>(
+        `/api/business/${businessId}/integrations`,
+      );
+      setIntegrations(Array.isArray(data?.integrations) ? data.integrations : []);
+      setRecommended(data?.recommended_action ?? null);
+    } catch {
+      setIntegrations([]);
+    }
+  }, [businessId, isReady]);
 
-  /* ---- OAuth callback ---- */
+  useEffect(() => { loadIntegrations(); }, [loadIntegrations]);
+
+  /* ---- OAuth return banner (?meta / ?google = connected|error|cancelled) ---- */
+  const metaResult = searchParams.get("meta");
+  const googleResult = searchParams.get("google");
+  const banner = metaResult
+    ? bannerFor("Meta", metaResult)
+    : googleResult
+      ? bannerFor("Google", googleResult)
+      : null;
   useEffect(() => {
-    const code = oauthCode;
-    if (!code) return;
-    const storedBizId = localStorage.getItem("meta_oauth_business_id") || businessId;
-    if (!storedBizId) {
-      toast.error(ERROR_MESSAGES.GENERATION_FAILED);
+    if (banner?.tone === "success") loadIntegrations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [banner?.tone]);
+  const dismissBanner = () => {
+    setSearchParams((prev) => {
+      prev.delete("meta");
+      prev.delete("google");
+      return prev;
+    }, { replace: true });
+  };
+
+  /* ---- Connect via backend OAuth (A) — full-page nav with a fresh JWT ----
+   * Meta + Google go through ${VITE_API_BASE}/webhook/oauth/{provider}/start.
+   * The JWT rides the query string because a redirect can't set an
+   * Authorization header. LinkedIn + TikTok are "coming soon" (their backend
+   * redirect URIs are pinned to a legacy domain), so no working button shows. */
+  const startBackendOAuth = useCallback(async (provider: "meta" | "google") => {
+    if (!businessId) {
+      toast.error("Still loading your account — try again in a moment.");
       return;
     }
-    setConnecting("Facebook & Instagram");
-    (async () => {
-      try {
-        const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/meta-oauth-callback`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-            },
-            body: JSON.stringify({
-              code,
-              redirect_uri: "https://maroa-ai-marketing-automator.lovable.app/social-callback",
-            }),
-          }
-        );
-        const data = await res.json();
-        if (!res.ok || data.error) throw new Error(data.error || "OAuth failed");
-        const updateData: Record<string, unknown> = {
-          meta_access_token: data.access_token,
-          social_accounts_connected: true,
-        };
-        if (data.page_id) updateData.facebook_page_id = data.page_id;
-        if (data.instagram_account_id) updateData.instagram_account_id = data.instagram_account_id;
-        await externalSupabase.from("businesses").update(updateData).eq("id", storedBizId);
-        localStorage.removeItem("meta_oauth_business_id");
-        await fetchBusiness();
-        apiFireAndForget("/webhook/account-connected", {
-          user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
-          business_id: storedBizId,
-          facebook_page_id: data.page_id ?? null,
-          meta_access_token: data.access_token,
-        });
-        toast.success(SUCCESS_MESSAGES.GENERATED);
-      } catch (err: unknown) {
-        toast.error(err instanceof Error ? err.message : ERROR_MESSAGES.GENERATION_FAILED);
-      } finally {
+    setConnecting(provider === "meta" ? "Facebook & Instagram" : "Google");
+    try {
+      const { data } = await externalSupabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) {
+        toast.error("Your session has expired. Please sign in again.");
         setConnecting(null);
+        return;
       }
-    })();
-  }, [businessId, fetchBusiness, oauthCode, user?.id]);
+      const base = (import.meta.env.VITE_API_BASE || "https://maroa-api-production.up.railway.app").replace(/\/+$/, "");
+      window.location.assign(
+        `${base}/webhook/oauth/${provider}/start?businessId=${encodeURIComponent(businessId)}&token=${encodeURIComponent(token)}`,
+      );
+    } catch {
+      toast.error("Couldn't start the connection. Please try again.");
+      setConnecting(null);
+    }
+  }, [businessId]);
 
   /* ---- Connect handler ---- */
   const handleConnect = (a: AccountConfig) => {
-    if (a.type === "meta_oauth") {
-      handleMetaOAuth();
-    } else if (a.type === "linkedin_oauth") {
-      window.location.href = getApiBase() + "/linkedin-oauth-start?business_id=" + businessId;
-    } else {
-      setConnectForm({});
-      setConnectDialog(a);
-    }
+    if (a.type === "meta_oauth") startBackendOAuth("meta");
+    else if (a.type === "google_oauth") startBackendOAuth("google");
+    // coming_soon (LinkedIn, TikTok): no working button is shown
   };
 
   /* ---- Disconnect handler ---- */
@@ -324,6 +369,23 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
 
   return (
     <div className="space-y-6">
+      {/* OAuth return banner */}
+      {banner && (
+        <div className={`flex items-start gap-3 rounded-lg border p-4 ${BANNER_CLASSES[banner.tone]}`} role="status">
+          {banner.tone === "success" ? (
+            <CheckCircle2 className="h-5 w-5 shrink-0" />
+          ) : banner.tone === "error" ? (
+            <XCircle className="h-5 w-5 shrink-0" />
+          ) : (
+            <AlertTriangle className="h-5 w-5 shrink-0" />
+          )}
+          <p className="text-sm font-medium flex-1">{banner.message}</p>
+          <button onClick={dismissBanner} aria-label="Dismiss" className="opacity-70 hover:opacity-100">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* Connecting banner */}
       {connecting && (
         <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
@@ -338,6 +400,9 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
           <p className="text-sm font-medium text-primary">
             Connect your social accounts to unlock automatic posting and ad management.
           </p>
+          {recommended && (
+            <p className="text-xs text-muted-foreground mt-1">{recommended}</p>
+          )}
         </div>
       )}
 
@@ -387,8 +452,6 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {accounts.map((a) => {
           const connected = isConnected(a);
-          const isTikTok = a.name === "TikTok";
-          const isGoogleAds = a.name === "Google Ads";
 
           return (
             <div
@@ -408,7 +471,7 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-semibold text-foreground">{a.name}</p>
-                      {isTikTok && (
+                      {a.comingSoon && (
                         <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                           Coming Soon
                         </span>
@@ -437,14 +500,17 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
               <div className="mt-4 flex items-center gap-1.5">
                 {connected ? (
                   <>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 text-xs"
-                      onClick={() => handleConnect(a)}
-                    >
-                      <RefreshCw className="mr-1 h-3 w-3" /> Reconnect
-                    </Button>
+                    {(a.type === "meta_oauth" || a.type === "google_oauth") && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-xs"
+                        onClick={() => handleConnect(a)}
+                        disabled={!!connecting}
+                      >
+                        <RefreshCw className="mr-1 h-3 w-3" /> Reconnect
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="ghost"
@@ -459,22 +525,9 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
                       )}
                     </Button>
                   </>
-                ) : isTikTok ? (
-                  <p className="text-[11px] italic text-muted-foreground">
-                    TikTok posting available after app review
-                  </p>
-                ) : isGoogleAds ? (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="h-8 text-xs"
-                    onClick={() =>
-                      window.dispatchEvent(
-                        new CustomEvent("dashboard-navigate", { detail: "settings" })
-                      )
-                    }
-                  >
-                    Configure in Settings
+                ) : a.comingSoon ? (
+                  <Button size="sm" variant="secondary" className="h-8 text-xs" disabled>
+                    Coming soon
                   </Button>
                 ) : (
                   <Button
