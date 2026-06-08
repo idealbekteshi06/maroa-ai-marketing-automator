@@ -23,8 +23,14 @@ import {
 import {
   Inbox, Bell, Sparkles, Calendar, Image as ImageIcon, Film, Palette, Megaphone,
   Search, Wand2, FileText, Magnet, Gift, Users, GitBranch, Mail, Star, BarChart3,
-  Eye, TrendingUp, Brain, Compass, Plug, UsersRound, CreditCard, Settings2,
+  Eye, TrendingUp, Brain, Compass, Plug, UsersRound, CreditCard, Settings2, Check,
 } from "lucide-react";
+import { Btn, Pill } from "../components/common/Card";
+import { useBillingPlans } from "../lib/api/hooks/useBillingPlans";
+import { formatPrice } from "@/lib/constants/plans";
+import { postCheckout } from "@/lib/apiClient";
+import { manageBilling } from "../lib/data/handlers";
+import { toast } from "sonner";
 
 function useBid() {
   const { user } = useAuth();
@@ -757,7 +763,27 @@ export function TeamPage() {
 export function BillingPage() {
   const { uid, business } = useBid();
   const { data, isLoading } = useBilling(uid);
+  const { data: plans = [] } = useBillingPlans();
   const d = data as any;
+  const currentKey = (d?.plan ?? business?.plan ?? "").toString().toLowerCase();
+
+  async function handleChoose(planKey: string) {
+    if (!uid) {
+      toast.error("Sign in to change your plan.");
+      return;
+    }
+    try {
+      const res = (await postCheckout(uid, planKey)) as { checkout_url?: string };
+      if (res?.checkout_url) {
+        window.location.assign(res.checkout_url);
+        return;
+      }
+      toast.error("Couldn't start checkout. Please try again.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't start checkout.");
+    }
+  }
+
   return (
     <div>
       <PageHeader title="Billing" subtitle="Plan, payment, invoices." />
@@ -766,6 +792,55 @@ export function BillingPage() {
         <KpiCard label="MRR" value={d?.mrr ? `$${d.mrr}` : "—"} loading={isLoading} />
         <KpiCard label="Renews" value={d?.renews_at ? new Date(d.renews_at).toLocaleDateString() : "—"} loading={isLoading} />
       </section>
+
+      <section className="mb-8">
+        <h2 className="text-[13px] font-semibold mb-3">Plans</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {plans.map((p) => {
+            const isCurrent = currentKey === p.key;
+            return (
+              <div
+                key={p.key}
+                className="rounded-xl p-5 flex flex-col"
+                style={{
+                  background: "hsl(var(--m-surface-elevated))",
+                  border: `1px solid ${p.popular ? "hsl(var(--m-accent))" : "hsl(var(--m-border-subtle))"}`,
+                }}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[14px] font-semibold">{p.name}</span>
+                  {p.popular && <Pill tone="info">Popular</Pill>}
+                </div>
+                <div className="mt-2">
+                  <span className="text-title-2 m-tnum">{formatPrice(p.price)}</span>
+                  <span className="text-[12px]" style={{ color: "hsl(var(--m-muted-foreground))" }}> /mo</span>
+                </div>
+                <p className="text-[12px] mt-1 mb-3" style={{ color: "hsl(var(--m-muted-foreground))" }}>{p.desc}</p>
+                <ul className="space-y-1.5 flex-1">
+                  {p.features.map((f, i) => (
+                    <li key={i} className="flex items-start gap-2 text-[12.5px]">
+                      <Check size={13} className="mt-0.5 shrink-0" style={{ color: "hsl(var(--m-success))" }} />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-4">
+                  {isCurrent ? (
+                    <Btn variant="secondary" disabled className="w-full">Current plan</Btn>
+                  ) : (
+                    <Btn variant="primary" className="w-full" onClick={() => handleChoose(p.key)}>{p.ctaLabel}</Btn>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-[11px] mt-3" style={{ color: "hsl(var(--m-muted-foreground))" }}>
+          Manage your payment method or cancel anytime via the{" "}
+          <button onClick={() => void manageBilling()} className="underline hover:opacity-80">billing portal</button>.
+        </p>
+      </section>
+
       <Panel title="Recent invoices">
         <DataList
           loading={isLoading}

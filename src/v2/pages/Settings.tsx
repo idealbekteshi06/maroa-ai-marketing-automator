@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
-import { Card, Btn, Pill } from "@/v2/components/common/Card";
+import { useNavigate } from "react-router-dom";
+import { Card, Btn } from "@/v2/components/common/Card";
 import { useSettingsPageData } from "@/v2/lib/data/usePageData";
 import {
   updateAutopilotMode,
   editBusinessProfile,
   editBrandVoice,
-  connectSocialAccount,
-  manageConnectedAccount,
   manageBilling,
 } from "@/v2/lib/data/handlers";
 import type { AutopilotMode } from "@/v2/lib/data/types";
@@ -31,6 +30,7 @@ function Field({ label, value }: { label: string; value?: string | null }) {
 
 export default function SettingsPage() {
   const state = useSettingsPageData();
+  const navigate = useNavigate();
   const [mode, setMode] = useState<AutopilotMode>("review");
 
   useEffect(() => {
@@ -97,53 +97,24 @@ export default function SettingsPage() {
         )}
       </Card>
 
-      <Card title="Connected accounts" padded={false}>
-        {isLoading ? (
-          <div className="p-5 space-y-2">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="h-12 rounded animate-pulse" style={{ background: "hsl(var(--m-border-subtle))" }} />
-            ))}
+      <Card
+        title="Connections"
+        action={<Btn variant="secondary" onClick={() => navigate("/app/settings/connections")}>Manage</Btn>}
+      >
+        <div className="flex items-start gap-3">
+          <div
+            className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: "hsl(var(--m-surface))", border: "1px solid hsl(var(--m-border-subtle))" }}
+          >
+            <Plug size={15} strokeWidth={1.75} style={{ color: "hsl(var(--m-muted-foreground))" }} />
           </div>
-        ) : !data || data.connectedAccounts.length === 0 ? (
-          <div className="px-5 py-10 text-center">
-            <Plug size={20} strokeWidth={1.5} className="mx-auto mb-2" style={{ color: "hsl(var(--m-muted-foreground))" }} />
-            <p className="text-[12.5px]" style={{ color: "hsl(var(--m-muted-foreground))" }}>
-              Connect your social, ad, and analytics accounts to give Maroa context.
+          <div>
+            <div className="text-[13px] font-medium">Channels &amp; tools</div>
+            <p className="text-[12.5px] mt-1" style={{ color: "hsl(var(--m-muted-foreground))" }}>
+              Connect Meta and Google and see live status for every channel Maroa uses on the Connections page.
             </p>
-            <Btn variant="primary" className="mt-3" onClick={() => connectSocialAccount()}>
-              Connect an account
-            </Btn>
           </div>
-        ) : (
-          <ul>
-            {data.connectedAccounts.map((it, idx) => (
-              <li
-                key={it.id}
-                className="px-5 py-3 flex items-center gap-3"
-                style={{
-                  borderBottom: idx === data.connectedAccounts.length - 1 ? "none" : "1px solid hsl(var(--m-border-subtle))",
-                }}
-              >
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center"
-                  style={{ background: "hsl(var(--m-surface))", border: "1px solid hsl(var(--m-border-subtle))" }}
-                >
-                  <Plug size={13} strokeWidth={1.75} style={{ color: "hsl(var(--m-muted-foreground))" }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[13px] font-medium truncate">{it.provider}</div>
-                  <div className="text-[11px]" style={{ color: "hsl(var(--m-muted-foreground))" }}>
-                    {it.accountName}
-                  </div>
-                </div>
-                <Pill tone={it.status === "connected" ? "success" : it.status === "needs_attention" ? "warning" : "muted"}>
-                  {it.status === "connected" ? "Connected" : it.status === "needs_attention" ? "Needs attention" : "Disconnected"}
-                </Pill>
-                <Btn variant="ghost" onClick={() => manageConnectedAccount(it.id)}>Manage</Btn>
-              </li>
-            ))}
-          </ul>
-        )}
+        </div>
       </Card>
 
       <Card title="Autopilot mode">

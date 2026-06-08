@@ -3,7 +3,7 @@ import {
   CalendarDays, Image as ImageIcon, Film, Package, Palette,
   Search, Wand2, Magnet, Gift, Eye, BarChart3, LineChart,
   Inbox, GitBranch, Mail, Star,
-  User, Plug, UsersRound, CreditCard, Bell, Brain, Layers, Target, Wallet,
+  User, Plug, UsersRound, CreditCard, Layers, Target, Wallet,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -71,11 +71,9 @@ export const NAV: NavItem[] = [
     children: [
       { label: "Profile", to: "profile", icon: User },
       { label: "Brand voice", to: "brand", icon: Palette },
-      { label: "Connections", to: "integrations", icon: Plug },
-      { label: "Autopilot", to: "autopilot", icon: Brain },
+      { label: "Connections", to: "connections", icon: Plug },
       { label: "Team", to: "team", icon: UsersRound },
       { label: "Billing", to: "billing", icon: CreditCard },
-      { label: "Notifications", to: "notifications", icon: Bell },
     ],
   },
 ];
