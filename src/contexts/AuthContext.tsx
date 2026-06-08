@@ -41,19 +41,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .from("businesses")
         .select("id, onboarding_complete")
         .eq("user_id", userId)
-        .maybeSingle();
+        .order("onboarding_complete", { ascending: false })
+        .order("created_at", { ascending: true });
       if (!mountedRef.current) return;
       if (error) { return; }
 
-      if (data) {
-        setBusinessId(data.id);
-        setOnboardingComplete(data.onboarding_complete ?? null);
+      // A user can legitimately have more than one businesses row. Do NOT use
+      // .maybeSingle() here — it errors on a multi-row read, which left businessId
+      // unset and (worse) let a falsy `data` fall through to the insert branch,
+      // creating duplicate businesses on load. Read every row, then pick the first
+      // onboarded business, else the first (oldest) one.
+      const rows = data ?? [];
+      const chosen = rows.find((b) => b.onboarding_complete) ?? rows[0] ?? null;
+
+      if (chosen) {
+        setBusinessId(chosen.id);
+        setOnboardingComplete(chosen.onboarding_complete ?? null);
         setPersonProperties({
-          businessId: data.id,
-          onboardingComplete: data.onboarding_complete ?? false,
+          businessId: chosen.id,
+          onboardingComplete: chosen.onboarding_complete ?? false,
         });
-      } else if (user) {
+      } else if (rows.length === 0 && user) {
         // No business row — likely Google OAuth signup. Create one.
+        // Guarded on rows.length === 0 so it can never fire on a multi-row read.
         const meta = user.user_metadata || {};
         const email = user.email || meta.email || "";
         const firstName = meta.full_name?.split(" ")[0] || meta.name?.split(" ")[0] || "";

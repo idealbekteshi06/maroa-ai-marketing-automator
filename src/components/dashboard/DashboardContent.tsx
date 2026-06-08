@@ -119,7 +119,12 @@ export default function DashboardContent() {
   }, [businessId, isReady]);
 
   const handleGenerateNow = async () => {
-    if (!businessId || !user?.id) return;
+    if (!businessId || !user?.id) {
+      toast.error("No business profile found", {
+        description: "We couldn't load your business yet. Refresh the page, and finish onboarding if you haven't already.",
+      });
+      return;
+    }
     setGenerating(true); setGenMessage("AI is writing your post...");
     const progressInterval = (() => {
       const msgs = ["Crafting captions...", "Generating image...", "Voice-polishing...", "Almost done..."];
