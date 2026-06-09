@@ -180,6 +180,11 @@ export default function DashboardOverview() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [serverReach, setServerReach] = useState<number | null>(null);
+  // Declared up here with the other hooks on purpose: it used to live after the
+  // loading/error early returns below, so the hook count changed between renders
+  // (auth-not-ready/loading path skipped it) → React error #310. All hooks must
+  // run unconditionally before any early return.
+  const [showAllFeed, setShowAllFeed] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!isReady || (!businessId && !user?.id)) { setLoading(false); return; }
@@ -348,7 +353,6 @@ export default function DashboardOverview() {
 
   // Activity feed: limit to 5, with day grouping
   const visibleFeed = feed.slice(0, 5);
-  const [showAllFeed, setShowAllFeed] = useState(false);
   const displayFeed = showAllFeed ? feed : visibleFeed;
 
   return (
