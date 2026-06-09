@@ -63,7 +63,10 @@ type ContentKind = "post" | "ad" | "creative" | "email";
 interface ApprovalRow {
   id: string;
   platform: string | null;
-  caption: string | null;
+  // generated_content stores per-platform copy; there is no bare `caption`
+  // column. Selecting it returned a 400 (column does not exist).
+  instagram_caption: string | null;
+  facebook_post: string | null;
   content_theme: string | null;
   quality_score: number | null;
   compliance_passed: boolean | null;
@@ -204,7 +207,7 @@ export default function DashboardApprovals() {
     try {
       const { data } = await externalSupabase
         .from("generated_content")
-        .select("id, platform, caption, content_theme, quality_score, compliance_passed, reasoning_trace, content_type, created_at")
+        .select("id, platform, instagram_caption, facebook_post, content_theme, quality_score, compliance_passed, reasoning_trace, content_type, created_at")
         .eq("business_id", businessId)
         .in("status", ["pending_approval", "pending"])
         // Oldest first so urgent items surface at top of list.
@@ -585,8 +588,9 @@ function ApprovalCard({
   const KindIcon = KIND_ICONS[kind];
   const platformKey = (row.platform || "default").toLowerCase();
   const PlatformIcon = PLATFORM_ICONS[platformKey] || PLATFORM_ICONS.default;
-  const title = row.content_theme || row.caption?.slice(0, 80) || "Untitled draft";
-  const preview = previewText(row.caption);
+  const caption = row.instagram_caption || row.facebook_post || null;
+  const title = row.content_theme || caption?.slice(0, 80) || "Untitled draft";
+  const preview = previewText(caption);
   const trace = row.reasoning_trace;
 
   return (

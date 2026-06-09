@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiGet } from "@/lib/apiClient";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,9 +40,15 @@ export default function IntegrationHealthCard({
       const data = await apiGet<IntegrationsPayload>(`/api/business/${businessId}/integrations`);
       setItems(data.integrations || []);
       setConnectedCount(data.connected_count ?? 0);
-    } catch {
+    } catch (err) {
       setItems([]);
       setConnectedCount(0);
+      // Surface instead of failing silently. Shared id with the other
+      // integrations loaders so the app shows at most one such toast.
+      toast.error("Couldn't load integration status", {
+        id: "integrations-load",
+        description: err instanceof Error ? err.message : undefined,
+      });
     } finally {
       setLoading(false);
     }

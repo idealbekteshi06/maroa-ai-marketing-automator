@@ -54,7 +54,10 @@ interface PendingContent {
   id: string;
   content_theme?: string | null;
   platform?: string | null;
-  caption?: string | null;
+  // generated_content has no bare `caption` column — it stores per-platform
+  // copy. Selecting `caption` returns a 400 from PostgREST.
+  instagram_caption?: string | null;
+  facebook_post?: string | null;
   created_at: string;
 }
 interface ContentRow { created_at: string; status?: string | null }
@@ -193,7 +196,7 @@ export default function Home({ onNavigate }: HomeProps) {
       const [leadsRes, pendingRes, rc, ri, rr, rw, snapRes] = await Promise.all([
         externalSupabase.from("contacts").select("id", { count: "exact", head: true }).eq("business_id", bid),
         // Pending content — fetch real rows (not just count) so we can show real titles + caption previews.
-        externalSupabase.from("generated_content").select("id, content_theme, platform, caption, created_at").eq("business_id", bid).eq("status", "pending_approval").order("created_at", { ascending: false }).limit(5),
+        externalSupabase.from("generated_content").select("id, content_theme, platform, instagram_caption, facebook_post, created_at").eq("business_id", bid).eq("status", "pending_approval").order("created_at", { ascending: false }).limit(5),
         externalSupabase.from("generated_content").select("created_at, status").eq("business_id", bid).order("created_at", { ascending: false }).limit(5),
         externalSupabase.from("competitor_insights").select("recorded_at").eq("business_id", bid).order("recorded_at", { ascending: false }).limit(3),
         externalSupabase.from("retention_logs").select("email_type, sent_at").eq("business_id", bid).order("sent_at", { ascending: false }).limit(3),
@@ -309,7 +312,7 @@ export default function Home({ onNavigate }: HomeProps) {
   // Map pending content rows → WorkQueue's QueueApproval shape.
   // Snippet prefers a one-line caption preview; falls back to platform+age.
   const queueApprovals: QueueApproval[] = pendingItems.slice(0, 3).map(item => {
-    const caption = (item.caption || "").trim();
+    const caption = (item.instagram_caption || item.facebook_post || "").trim();
     const snippet = caption
       ? (caption.length > 110 ? caption.slice(0, 107) + "..." : caption)
       : pendingItemSubtitle(item);

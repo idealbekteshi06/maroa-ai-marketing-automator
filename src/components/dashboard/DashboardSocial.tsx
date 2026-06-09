@@ -215,8 +215,14 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
       );
       setIntegrations(Array.isArray(data?.integrations) ? data.integrations : []);
       setRecommended(data?.recommended_action ?? null);
-    } catch {
+    } catch (err) {
       setIntegrations([]);
+      // Don't fail silently: a 404 here means the backend integrations route
+      // isn't reachable. Deduped by id so it shows once, not on every refresh.
+      toast.error("Couldn't load connection status", {
+        id: "integrations-load",
+        description: err instanceof Error ? err.message : undefined,
+      });
     }
   }, [businessId, isReady]);
 

@@ -113,7 +113,15 @@ export default function AIStatusBar({ businessId }: AIStatusBarProps) {
           toast.error(ERROR_MESSAGES.LOAD_FAILED);
         }
       };
-      es.onerror = () => es.close();
+      es.onerror = () => {
+        // EventSource cannot send the Authorization: Bearer header, so if
+        // /webhook/dashboard-events is auth-protected the connection is rejected
+        // (401). Close to stop the reconnect loop and surface it once (deduped)
+        // rather than failing silently. Backend must accept the token via query
+        // param or leave this route public for live updates to work.
+        es.close();
+        toast.error("Live updates are offline", { id: "sse-offline" });
+      };
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") return;
       toast.error(ERROR_MESSAGES.LOAD_FAILED);
