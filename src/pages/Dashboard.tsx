@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -347,7 +348,14 @@ export default function Dashboard() {
         default: return <DashboardOverview />;
       }
     })();
-    return <Suspense fallback={<TabSpinner />}>{page}</Suspense>;
+    // Per-view boundary keyed by `active`: one tab crashing (e.g. a backend
+    // shape mismatch) degrades gracefully instead of white-screening the whole
+    // app, and switching tabs resets it.
+    return (
+      <ErrorBoundary key={active}>
+        <Suspense fallback={<TabSpinner />}>{page}</Suspense>
+      </ErrorBoundary>
+    );
   };
 
   /* ── Sidebar content (shared desktop + mobile) ──

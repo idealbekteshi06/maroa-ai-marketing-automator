@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { CheckCircle2, Lock, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { apiGet } from "@/lib/apiClient";
+import { apiGet, normalizeOnboardingScore, type OnboardingScoreApiDto } from "@/lib/apiClient";
 
 interface ProfileScoreProps {
   businessId: string;
@@ -31,8 +31,8 @@ export default function ProfileScore({ businessId, userId }: ProfileScoreProps) 
 
   useEffect(() => {
     if (!userId) return;
-    apiGet<ScoreData>(`/api/onboarding/score/${userId}`)
-      .then(setData)
+    apiGet<OnboardingScoreApiDto>(`/api/onboarding/score/${userId}`)
+      .then((raw) => setData(normalizeOnboardingScore(raw)))
       .catch(() => {});
   }, [userId]);
 
@@ -67,7 +67,7 @@ export default function ProfileScore({ businessId, userId }: ProfileScoreProps) 
 
       {/* Feature list */}
       <div className="mt-3 space-y-1.5">
-        {Object.entries(data.thresholds).map(([key, val]) => (
+        {Object.entries(data.thresholds || {}).map(([key, val]) => (
           <div key={key} className="flex items-center gap-2 text-xs">
             {val.unlocked ? (
               <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />

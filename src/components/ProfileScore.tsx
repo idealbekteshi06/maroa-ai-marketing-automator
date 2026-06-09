@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Lock, CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { apiGet } from "@/lib/apiClient";
+import { apiGet, normalizeOnboardingScore, type OnboardingScoreApiDto } from "@/lib/apiClient";
 
 interface ScoreData {
   score: number;
@@ -27,8 +27,8 @@ export default function ProfileScore({ compact }: { compact?: boolean }) {
 
   useEffect(() => {
     if (!businessId || !user?.id) return;
-    apiGet<ScoreData>(`/api/onboarding/score/${user.id}`)
-      .then(setData)
+    apiGet<OnboardingScoreApiDto>(`/api/onboarding/score/${user.id}`)
+      .then((raw) => setData(normalizeOnboardingScore(raw)))
       .catch(() => {});
   }, [businessId, user?.id]);
 
@@ -73,7 +73,7 @@ export default function ProfileScore({ compact }: { compact?: boolean }) {
         </div>
       </div>
       <div className="space-y-2">
-        {Object.entries(data.thresholds).map(([key, val]) => (
+        {Object.entries(data.thresholds || {}).map(([key, val]) => (
           <div key={key} className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {val.unlocked ? <CheckCircle2 className="h-4 w-4 text-success" /> : <Lock className="h-4 w-4 text-muted-foreground" />}
