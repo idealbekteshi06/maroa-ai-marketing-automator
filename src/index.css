@@ -357,3 +357,31 @@ input[type="range"]::-webkit-slider-thumb {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ──────────────────────────────────────────────────────────────────────
+ * Scoped "April" theme for the live /dashboard (commit e46a061 look).
+ *
+ * The site-wide rebrand — DM Sans body font + #0881FF brand blue — stays on
+ * the marketing/landing surfaces. Only the dashboard shell, which carries the
+ * .legacy-dashboard-theme wrapper (src/pages/Dashboard.tsx), is reverted to
+ * e46a061's Inter + #0A84FF. Scoped so nothing public-facing changes. The
+ * --brand* custom properties are redefined on the wrapper, so every
+ * var(--brand*) consumer inside the dashboard resolves to the April value.
+ * ────────────────────────────────────────────────────────────────────── */
+.legacy-dashboard-theme {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* Brand blue → e46a061 #0A84FF (light). hover/active already matched April. */
+  --brand: #0A84FF;
+  --brand-subtle: rgba(10, 132, 255, 0.06);
+  --brand-dim: rgba(10, 132, 255, 0.08);
+  --shadow-card-hover: 0 4px 14px rgba(10, 132, 255, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+.dark .legacy-dashboard-theme {
+  --brand: #0A84FF;
+  --brand-hover: #409CFF;
+  --brand-active: #60B4FF;
+  --brand-subtle: rgba(10, 132, 255, 0.10);
+  --brand-dim: rgba(10, 132, 255, 0.12);
+  --shadow-card-hover: 0 4px 14px rgba(10, 132, 255, 0.12), 0 2px 4px rgba(0, 0, 0, 0.3);
+}

@@ -465,7 +465,7 @@ export default function Dashboard() {
   );
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="legacy-dashboard-theme flex min-h-screen bg-background">
       {/* ── Desktop sidebar ── */}
       <aside className="hidden w-[260px] shrink-0 border-r border-sidebar-border bg-sidebar md:flex md:flex-col">
         <div className="flex h-14 items-center px-4 border-b border-sidebar-border">
