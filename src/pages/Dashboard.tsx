@@ -33,7 +33,7 @@ function LogoDot() {
 }
 
 /* ── Lazy-loaded tab components ── */
-const HomeOverview = lazy(() => import("@/components/dashboard/home/Home"));
+const DashboardOverview = lazy(() => import("@/components/dashboard/DashboardOverview"));
 const DashboardContent = lazy(() => import("@/components/dashboard/DashboardContent"));
 const DashboardAds = lazy(() => import("@/components/dashboard/DashboardAds"));
 const DashboardSocial = lazy(() => import("@/components/dashboard/DashboardSocial"));
@@ -280,7 +280,7 @@ export default function Dashboard() {
   const renderPage = () => {
     const page = (() => {
       switch (active) {
-        case "overview": return <HomeOverview onNavigate={setActive} />;
+        case "overview": return <DashboardOverview />;
         case "approvals": return <DashboardApprovals />;
         case "content": return <DashboardContent />;
         case "campaigns": return <DashboardAds />;
@@ -345,7 +345,7 @@ export default function Dashboard() {
         case "launch-orchestrator": return <LaunchOrchestrator />;
         case "budget-roi": return <BudgetROI />;
         case "profile-enhancement": return <ProfileEnhancement />;
-        default: return <HomeOverview onNavigate={setActive} />;
+        default: return <DashboardOverview />;
       }
     })();
     return <Suspense fallback={<TabSpinner />}>{page}</Suspense>;
