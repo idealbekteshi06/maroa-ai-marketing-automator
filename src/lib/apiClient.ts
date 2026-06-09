@@ -1,3 +1,5 @@
+import { externalSupabase } from "@/integrations/supabase/external-client";
+
 const RAW_API_BASE = (import.meta.env.VITE_API_BASE as string) ?? "";
 
 /** In dev, use same-origin requests + Vite proxy so Railway CORS does not block the browser. */
@@ -7,14 +9,30 @@ export function getApiBase(): string {
   return API_BASE;
 }
 
+/**
+ * Attach the current Supabase session JWT so the backend's
+ * requireAuthOrWebhookSecret / assertBusinessOwner middleware accepts the call.
+ * Returns {} when signed out (public endpoints still work).
+ */
+export async function getAuthHeaders(): Promise<Record<string, string>> {
+  try {
+    const { data } = await externalSupabase.auth.getSession();
+    const token = data?.session?.access_token;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch {
+    return {};
+  }
+}
+
 export async function apiPost<T>(
   endpoint: string,
   body: Record<string, unknown>,
   signal?: AbortSignal
 ): Promise<T> {
+  const auth = await getAuthHeaders();
   const res = await fetch(`${API_BASE}${endpoint}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...auth },
     body: JSON.stringify(body),
     signal,
   });
@@ -26,7 +44,8 @@ export async function apiGet<T>(
   endpoint: string,
   signal?: AbortSignal
 ): Promise<T> {
-  const res = await fetch(`${API_BASE}${endpoint}`, { signal });
+  const auth = await getAuthHeaders();
+  const res = await fetch(`${API_BASE}${endpoint}`, { headers: { ...auth }, signal });
   if (!res.ok) throw new Error(`API error ${res.status}: ${endpoint}`);
   return res.json() as Promise<T>;
 }
@@ -35,20 +54,24 @@ export function apiFireAndForget(
   path: string,
   body: Record<string, unknown>
 ): void {
-  void fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  }).catch(() => {});
+  void getAuthHeaders().then((auth) =>
+    fetch(`${API_BASE}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...auth },
+      body: JSON.stringify(body),
+      keepalive: true,
+    }).catch(() => {})
+  );
 }
 
 export async function apiPatch(
   endpoint: string,
   body: Record<string, unknown>
 ): Promise<void> {
+  const auth = await getAuthHeaders();
   const res = await fetch(`${API_BASE}${endpoint}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...auth },
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`API error ${res.status}: ${endpoint}`);
@@ -79,8 +102,10 @@ export async function postCheckout(
 }
 
 export async function getBrandDna(businessId: string): Promise<unknown> {
+  const auth = await getAuthHeaders();
   const res = await fetch(
-    `${API_BASE}/api/business/${encodeURIComponent(businessId)}/brand-dna`
+    `${API_BASE}/api/business/${encodeURIComponent(businessId)}/brand-dna`,
+    { headers: { ...auth } }
   );
   if (!res.ok) throw new Error(`API error ${res.status}: brand-dna`);
   return res.json();

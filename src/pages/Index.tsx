@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { apiPost } from "@/lib/apiClient";
+import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Check, Bot, Calendar, Target, BarChart3, Globe, Zap, ArrowRight, Sun, Moon, Sparkles, Search, MessageCircle, Mail, Link2, Cpu } from "lucide-react";
 
 const LAUNCH_DATE = new Date("2026-04-28T00:00:00Z").getTime();
@@ -89,6 +90,17 @@ const c = {
 
 export default function Index() {
   const cd = useCountdown();
+  const navigate = useNavigate();
+  const { user, onboardingComplete, isReady } = useAuth();
+
+  // Safety net: if an authenticated user lands on the marketing page — e.g.
+  // Supabase OAuth bounced to the Site URL ("/") instead of /dashboard because
+  // the redirect URL wasn't allow-listed — forward them into the app.
+  useEffect(() => {
+    if (isReady && user) {
+      navigate(onboardingComplete === false ? "/onboarding" : "/dashboard", { replace: true });
+    }
+  }, [isReady, user, onboardingComplete, navigate]);
   const [form, setForm] = useState({ name: "", email: "", plan: "growth", business_type: "", country: "" });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);

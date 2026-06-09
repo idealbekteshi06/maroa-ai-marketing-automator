@@ -1,4 +1,4 @@
-import { apiPost as corePost, apiFireAndForget, getApiBase } from "./apiClient";
+import { apiPost as corePost, apiFireAndForget, getApiBase, getAuthHeaders } from "./apiClient";
 
 async function post<T = unknown>(path: string, body: Record<string, unknown>): Promise<T> {
   return corePost<T>(path, body);
@@ -6,9 +6,11 @@ async function post<T = unknown>(path: string, body: Record<string, unknown>): P
 
 async function get<T = unknown>(path: string, params?: Record<string, string>): Promise<T> {
   const base = getApiBase();
-  const url = new URL(`${base}${path}`);
-  if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  const res = await fetch(url.toString());
+  // base is "" in dev (Vite proxy) → build a relative URL string; new URL() would throw on a
+  // relative input, so concatenate + URLSearchParams instead.
+  const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+  const auth = await getAuthHeaders();
+  const res = await fetch(`${base}${path}${qs}`, { headers: { ...auth } });
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
     throw new Error(text || `API error ${res.status}`);
@@ -617,11 +619,15 @@ export const wf15DecisionLog = (params: {
   }>("/webhook/wf15-decision-log", params);
 
 /** Upload a multimodal attachment (voice/image/file). Returns attachment id. */
-export const wf15UploadAttachment = (data: FormData) =>
-  fetch(`${getApiBase()}/webhook/wf15-upload-attachment`, {
+export const wf15UploadAttachment = async (data: FormData) => {
+  const auth = await getAuthHeaders();
+  const r = await fetch(`${getApiBase()}/webhook/wf15-upload-attachment`, {
     method: "POST",
+    headers: { ...auth }, // no Content-Type — browser sets multipart boundary
     body: data,
-  }).then((r) => r.json() as Promise<{ id: string; modality: string; url: string }>);
+  });
+  return r.json() as Promise<{ id: string; modality: string; url: string }>;
+};
 
 // ─── Workflow #2 — Lead Scoring & Routing ────────────────────
 // Backend spec in LEARNINGS.md §3 WF2.
