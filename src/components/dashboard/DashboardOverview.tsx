@@ -192,7 +192,7 @@ export default function DashboardOverview() {
       const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
 
       const [statsRes, publishedRes, leadsRes, todayRes, pendingRes, rc, ri, rr, rw, snapRes] = await Promise.all([
-        externalSupabase.from("daily_stats").select("recorded_at, total_reach").eq("business_id", resolvedBusinessId).order("recorded_at", { ascending: true }).limit(parseInt(dateRange)),
+        externalSupabase.from("daily_stats").select("recorded_at, total_reach").eq("business_id", resolvedBusinessId).order("recorded_at", { ascending: true }).limit(parseInt(dateRange, 10)),
         externalSupabase.from("generated_content").select("id", { count: "exact", head: true }).eq("business_id", resolvedBusinessId).eq("status", "published"),
         externalSupabase.from("contacts").select("id", { count: "exact", head: true }).eq("business_id", resolvedBusinessId),
         externalSupabase.from("generated_content").select("id", { count: "exact", head: true }).eq("business_id", resolvedBusinessId).gte("created_at", todayStart.toISOString()),

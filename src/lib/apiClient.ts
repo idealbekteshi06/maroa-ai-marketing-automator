@@ -115,7 +115,11 @@ export function apiFireAndForget(
       headers: { "Content-Type": "application/json", ...auth },
       body: JSON.stringify(body),
       keepalive: true,
-    }).catch(() => {})
+    }).catch((err: unknown) => {
+      // Fire-and-forget by design, but don't vanish entirely — leave an ops
+      // breadcrumb (audit §5: no failure should be fully invisible).
+      console.warn(`[apiFireAndForget] ${path} failed:`, err instanceof Error ? err.message : err);
+    })
   );
 }
 
