@@ -97,6 +97,8 @@ export default function Onboarding() {
   const [showLaunch, setShowLaunch] = useState(false);
   const [launchStep, setLaunchStep] = useState(-1);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mountedRef = useRef(true);
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
 
   // Complete form state — all 83 questions
   const [form, setForm] = useState<Record<string, unknown>>(() => {
@@ -184,6 +186,7 @@ export default function Onboarding() {
 
     for (let i = 0; i < launchSteps.length; i++) {
       await new Promise(r => setTimeout(r, 1200));
+      if (!mountedRef.current) return; // user navigated away mid-launch
       setLaunchStep(i);
     }
 

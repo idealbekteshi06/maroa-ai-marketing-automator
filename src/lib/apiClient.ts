@@ -156,14 +156,48 @@ export async function postCheckout(
   return apiPost("/api/checkout", { user_id: userId, plan });
 }
 
-export async function getBrandDna(businessId: string): Promise<unknown> {
+// NOTE: GET /api/business/:id/brand-dna was removed — that route never
+// existed on the backend (always 404'd; AUDIT_FINDINGS.md:166, audit §6).
+
+export interface GeneratedContentRow {
+  id?: string;
+  content_theme?: string;
+  instagram_caption?: string;
+  facebook_post?: string;
+  image_url?: string;
+  quality_score?: number;
+}
+
+/**
+ * Synchronous content generation — awaits the full backend flow and returns
+ * the actual generated row, or throws with the backend's real error message.
+ * Replaces the old fire-and-forget /webhook/instant-content flow, which
+ * showed an unconditional success toast even when generation failed
+ * (AUDIT_2026-06-10.md §2b).
+ */
+export async function generateContentNow(
+  businessId: string,
+  userId: string,
+  email?: string,
+  signal?: AbortSignal
+): Promise<GeneratedContentRow> {
   const auth = await getAuthHeaders();
-  const res = await fetch(
-    `${API_BASE}/api/business/${encodeURIComponent(businessId)}/brand-dna`,
-    { headers: { ...auth } }
-  );
-  if (!res.ok) throw new Error(`API error ${res.status}: brand-dna`);
-  return res.json();
+  const res = await fetch(`${API_BASE}/api/content/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...auth },
+    body: JSON.stringify({ business_id: businessId, user_id: userId, email: email ?? "" }),
+    signal,
+  });
+  const json = (await res.json().catch(() => ({}))) as {
+    ok?: boolean;
+    content?: GeneratedContentRow;
+    error?: { code?: string; message?: string };
+  };
+  if (!res.ok || !json?.ok) {
+    const msg = json?.error?.message || `API error ${res.status}: /api/content/generate`;
+    throw new Error(msg);
+  }
+  return json.content ?? {};
 }
 
 export async function postProductUpload(

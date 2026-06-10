@@ -152,6 +152,11 @@ export default function EmailLifecycle() {
 
   return (
     <div className="space-y-6">
+      {/* Honesty label: metrics/charts on this page are generated demo data
+          until the email APIs ship (AUDIT_2026-06-10.md §2c). */}
+      <p className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-[11px] font-medium text-muted-foreground">
+        Sample data — this preview uses demo numbers until your email account is connected
+      </p>
       {/* Hero Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {heroMetrics.map((m) => {

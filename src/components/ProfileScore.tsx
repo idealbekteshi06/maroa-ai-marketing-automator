@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Lock, CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiGet, normalizeOnboardingScore, type OnboardingScoreApiDto } from "@/lib/apiClient";
+import { toast } from "sonner";
 
 interface ScoreData {
   score: number;
@@ -29,7 +30,11 @@ export default function ProfileScore({ compact }: { compact?: boolean }) {
     if (!businessId || !user?.id) return;
     apiGet<OnboardingScoreApiDto>(`/api/onboarding/score/${user.id}`)
       .then((raw) => setData(normalizeOnboardingScore(raw)))
-      .catch(() => {});
+      .catch(() => {
+        // Widget renders null below; surface once instead of vanishing
+        // silently (audit §5). Same id as the dashboard variant → one toast.
+        toast.error("Couldn't load your profile score", { id: "profile-score-load" });
+      });
   }, [businessId, user?.id]);
 
   if (!data) return null;

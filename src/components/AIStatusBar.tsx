@@ -83,7 +83,13 @@ export default function AIStatusBar({ businessId }: AIStatusBarProps) {
           toast.error(ERROR_MESSAGES.LOAD_FAILED);
         }
       };
-      es.onerror = () => es.close();
+      es.onerror = () => {
+        // EventSource can't send an Authorization header, so an auth-protected
+        // route rejects this with 401. Close to stop the reconnect loop and
+        // surface it once (deduped) instead of dying silently (audit §5).
+        es.close();
+        toast.error("Live updates are offline", { id: "sse-offline" });
+      };
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") return;
       toast.error(ERROR_MESSAGES.LOAD_FAILED);

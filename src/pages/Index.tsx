@@ -167,7 +167,7 @@ export default function Index() {
           </h1>
 
           <p className={`mt-6 text-base sm:text-lg ${c.textSub} max-w-xl mx-auto leading-relaxed`}>
-            maroa.ai creates your posts, writes your ads, tracks your competitors, and grows your business — automatically. In 22 countries and 17 languages.
+            maroa.ai creates your posts, writes your ads, tracks your competitors, and grows your business — automatically.
           </p>
 
           {/* Countdown */}

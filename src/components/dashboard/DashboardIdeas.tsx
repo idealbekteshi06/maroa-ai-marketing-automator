@@ -69,9 +69,16 @@ export default function DashboardIdeas() {
   }, [businessId, user?.id]);
 
   const moveIdea = (id: string, newStatus: "new" | "in_progress" | "completed"): void => {
+    const previous = ideas;
     setIdeas(prev => (prev || []).map(i => i.id === id ? { ...i, status: newStatus } : i));
     if (!isDemo && businessId) {
-      apiPatch(`/api/ideas/${id}`, { status: newStatus }).catch(() => {});
+      // Optimistic update with rollback — the old silent .catch(() => {})
+      // let the server reject the move while the UI claimed it stuck,
+      // losing the change on next refresh (audit §5).
+      apiPatch(`/api/ideas/${id}`, { status: newStatus }).catch(() => {
+        setIdeas(previous);
+        toast.error("Couldn't save that move — reverted", { id: "ideas-move" });
+      });
     }
   };
 
