@@ -12,10 +12,11 @@ run DDL).
 
 ## 1. `GET /api/business/:businessId/integrations` → 404 (route not deployed)
 
-- **Frontend exposure today: NONE.** No caller exists on current `main`
-  (verified — connection status reads `businesses` row fields directly in
-  `DashboardSocial.tsx`). This becomes relevant only when an integrations
-  surface returns.
+- **NOT a reachable defect on current `main`.** A caller-sweep confirms zero
+  invocations of `/api/business/:id/integrations` in `src/`; connection status
+  reads `businesses` row fields directly in `DashboardSocial.tsx`. Nothing can
+  404 because nothing calls it. The handler below is **pre-staged for if/when
+  an integrations surface returns** — not a fix for a live bug.
 - **Deliverable — ready-to-paste Express handler** (matches the documented
   contract in the pre-restore tree, `{ ok, integrations[], connected_count,
   recommended_action }`):
@@ -41,8 +42,10 @@ app.get("/api/business/:businessId/integrations", requireSupabaseJwt, async (req
 
 ## 2. `POST /webhook/wf8-generate-report` → 500
 
-- **Frontend exposure today: NONE.** Current `main` has no wf8 caller
-  (`CustomerInsights.tsx` is static and now labeled "Sample data").
+- **NOT a reachable defect on current `main`.** Zero references on `main`
+  (`wf8GenerateReport`/`wf8LatestReport` do not exist; `CustomerInsights.tsx`
+  is fully static and labeled). The endpoint cannot 500 the product because
+  nothing calls it. The runbook below applies **only if** wf8 is wired later.
 - **Deliverable:** triage runbook — reproduce with
   `curl -X POST $API/webhook/wf8-generate-report -H 'content-type: application/json' -d '{"businessId":"<uuid>"}'`,
   read the Railway deploy logs for the stack trace; the 500 (vs 404) proves the
