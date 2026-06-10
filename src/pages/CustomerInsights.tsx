@@ -148,10 +148,10 @@ export default function CustomerInsights() {
       <section>
         <div className="flex items-center gap-2 mb-1">
           <Brain className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold text-foreground">AI-Generated Customer Personas</h2>
+          <h2 className="text-xl font-semibold text-foreground">Customer personas (example preview)</h2>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
-          Built from 6 months of order history, reviews, and support conversations for Uje Karadaku.
+          An illustration of what Maroa builds from your order history, reviews, and support conversations.
         </p>
 
         <div className="grid gap-4 md:grid-cols-3">
@@ -193,7 +193,7 @@ export default function CustomerInsights() {
       <section>
         <div className="flex items-center gap-2 mb-4">
           <UserCheck className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold text-foreground">Customer Segments</h2>
+          <h2 className="text-xl font-semibold text-foreground">Customer segments (example preview)</h2>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -226,7 +226,7 @@ export default function CustomerInsights() {
       <section>
         <div className="flex items-center gap-2 mb-1">
           <Heart className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold text-foreground">What Your Customers Want</h2>
+          <h2 className="text-xl font-semibold text-foreground">What your customers want (example preview)</h2>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
           AI-extracted insights from reviews, messages, and support tickets.
@@ -256,7 +256,7 @@ export default function CustomerInsights() {
       <section>
         <div className="flex items-center gap-2 mb-1">
           <TrendingUp className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold text-foreground">Cohort Retention</h2>
+          <h2 className="text-xl font-semibold text-foreground">Cohort retention (example preview)</h2>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
           Monthly retention rates for Uje Karadaku subscriber cohorts.
