@@ -138,6 +138,12 @@ export default function CustomerInsights() {
 
   return (
     <div className="space-y-8">
+      {/* Honesty label: personas/quotes below are hardcoded demo content —
+          the wf8 customer-voice backend isn't wired on this tree
+          (AUDIT_2026-06-10.md §2c addendum F-10). */}
+      <p className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-[11px] font-medium text-muted-foreground">
+        Sample data — example personas until your customer-voice analysis is connected
+      </p>
       {/* ── Hero: AI Personas ── */}
       <section>
         <div className="flex items-center gap-2 mb-1">
