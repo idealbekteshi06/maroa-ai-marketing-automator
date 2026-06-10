@@ -92,7 +92,7 @@ export default function SocialCallback() {
       toast.error(errorMsg);
       setTimeout(() => navigate("/dashboard?tab=social"), 4000);
     }
-  }, [businessId, navigate, searchParams, user, user?.id]);
+  }, [businessId, navigate, searchParams, user]);
 
   useEffect(() => {
     void handleOAuthCallback();
