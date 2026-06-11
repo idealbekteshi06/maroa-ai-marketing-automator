@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState, useRef, ReactNode, useCallback } from "react";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { apiFireAndForget } from "@/lib/apiClient";
+import { pickPrimaryBusiness } from "@/lib/business";
+import { toast } from "sonner";
 import type { User, Session } from "@supabase/supabase-js";
 
 interface AuthContextType {
@@ -36,19 +38,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (fetchingRef.current === userId) return;
     fetchingRef.current = userId;
     try {
+      // A user can have MORE THAN ONE businesses row — .maybeSingle() errors on
+      // a multi-row read (broke businessId app-wide; AUDIT_2026-06-10.md §1).
+      // Read every row, onboarded-first, and pick the primary one.
       const { data, error } = await externalSupabase
         .from("businesses")
         .select("id, onboarding_complete")
         .eq("user_id", userId)
-        .maybeSingle();
+        .order("onboarding_complete", { ascending: false })
+        .order("created_at", { ascending: true });
       if (!mountedRef.current) return;
-      if (error) { return; }
+      if (error) {
+        toast.error("Couldn't load your business profile", {
+          id: "auth-business-load",
+          description: error.message,
+        });
+        return;
+      }
 
-      if (data) {
-        setBusinessId(data.id);
-        setOnboardingComplete(data.onboarding_complete ?? null);
-      } else if (user) {
+      const rows = data ?? [];
+      const chosen = pickPrimaryBusiness(rows);
+
+      if (chosen) {
+        setBusinessId(chosen.id);
+        setOnboardingComplete(chosen.onboarding_complete ?? null);
+      } else if (rows.length === 0 && user) {
         // No business row — likely Google OAuth signup. Create one.
+        // Gated on a confirmed ZERO-row read so it can never duplicate
+        // businesses on a multi-row account or an ambiguous result.
         const meta = user.user_metadata || {};
         const email = user.email || meta.email || "";
         const firstName = meta.full_name?.split(" ")[0] || meta.name?.split(" ")[0] || "";
@@ -85,6 +102,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setBusinessId(null);
           setOnboardingComplete(null);
+          // Surface instead of stranding the user in a silent null state.
+          toast.error("Couldn't set up your business profile", {
+            id: "auth-business-insert",
+            description: insertError?.message ?? "Please refresh and try again.",
+          });
         }
       }
     } finally {

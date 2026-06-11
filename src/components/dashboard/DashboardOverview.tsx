@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Eye, Send, Users, Zap, CalendarClock, CheckCircle2, Circle, Loader2, BarChart2 } from "lucide-react";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
+import { pickPrimaryBusiness } from "@/lib/business";
 import { toast } from "sonner";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import PendingApprovals from "@/components/PendingApprovals";
@@ -171,11 +172,19 @@ export default function DashboardOverview() {
     setLoading(true); setError(null);
     try {
       let resolvedBusinessId = businessId;
+      // The user_id fallback must be a LIST read — a user can own multiple
+      // businesses rows and .maybeSingle() errors on multi-row, which put this
+      // whole tab into the error state (AUDIT_2026-06-10.md §1c).
       const bizQuery = businessId
-        ? externalSupabase.from("businesses").select("*").eq("id", businessId).maybeSingle()
-        : user?.id ? externalSupabase.from("businesses").select("*").eq("user_id", user.id).maybeSingle() : null;
+        ? externalSupabase.from("businesses").select("*").eq("id", businessId).limit(1)
+        : user?.id
+          ? externalSupabase.from("businesses").select("*").eq("user_id", user.id)
+              .order("onboarding_complete", { ascending: false })
+              .order("created_at", { ascending: true })
+          : null;
       if (!bizQuery) { setLoading(false); return; }
-      const { data: bizData } = await bizQuery;
+      const { data: bizRows } = await bizQuery;
+      const bizData = pickPrimaryBusiness(bizRows as BusinessProfile[] | null);
       setBusinessData(bizData);
       resolvedBusinessId = bizData?.id ?? resolvedBusinessId;
       if (!resolvedBusinessId) { setLoading(false); return; }
@@ -183,7 +192,7 @@ export default function DashboardOverview() {
       const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
 
       const [statsRes, publishedRes, leadsRes, todayRes, pendingRes, rc, ri, rr, rw, snapRes] = await Promise.all([
-        externalSupabase.from("daily_stats").select("recorded_at, total_reach").eq("business_id", resolvedBusinessId).order("recorded_at", { ascending: true }).limit(parseInt(dateRange)),
+        externalSupabase.from("daily_stats").select("recorded_at, total_reach").eq("business_id", resolvedBusinessId).order("recorded_at", { ascending: true }).limit(parseInt(dateRange, 10)),
         externalSupabase.from("generated_content").select("id", { count: "exact", head: true }).eq("business_id", resolvedBusinessId).eq("status", "published"),
         externalSupabase.from("contacts").select("id", { count: "exact", head: true }).eq("business_id", resolvedBusinessId),
         externalSupabase.from("generated_content").select("id", { count: "exact", head: true }).eq("business_id", resolvedBusinessId).gte("created_at", todayStart.toISOString()),
@@ -231,7 +240,12 @@ export default function DashboardOverview() {
         if (typeof actions === "number") setTodayActions(actions);
         if (typeof reach === "number") setServerReach(reach);
       })
-      .catch(() => {});
+      .catch((err: unknown) => {
+        if (err instanceof Error && err.name === "AbortError") return;
+        // KPIs silently going stale was audited as a silent failure (§5);
+        // deduped so it shows once, while Supabase fallbacks keep rendering.
+        toast.error("Live metrics are unavailable right now", { id: "perf-summary" });
+      });
     return () => ctrl.abort();
   }, [businessId]);
 

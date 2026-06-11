@@ -8,7 +8,7 @@ import { FileText, Search as SearchIcon, Calendar, LayoutGrid, ChevronLeft, Chev
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import PostPreviewModal from "@/components/dashboard/PostPreviewModal";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
-import { apiFireAndForget } from "@/lib/apiClient";
+import { apiFireAndForget, generateContentNow } from "@/lib/apiClient";
 
 interface ContentItem {
   id: string; instagram_caption: string | null; instagram_caption_2: string | null;
@@ -109,21 +109,32 @@ export default function DashboardContent() {
   }, [businessId, isReady]);
 
   const handleGenerateNow = async () => {
-    if (!businessId) return;
-    setGenerating(true); setGenMessage("AI is writing your post...");
-    toast("🤖 AI is creating content...");
-    try {
-      apiFireAndForget("/webhook/instant-content", {
-        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
-        business_id: businessId,
-        email: user?.email ?? "",
+    if (!businessId || !user?.id) {
+      // Never bail silently — this is exactly how broken accounts saw
+      // "buttons that do nothing" (AUDIT_2026-06-10.md §1b).
+      toast.error("No business profile found", {
+        description: "We couldn't load your business yet. Refresh the page, and finish onboarding if you haven't already.",
       });
+      return;
+    }
+    setGenerating(true); setGenMessage("AI is writing your post...");
+    const progressInterval = (() => {
       const msgs = ["Crafting captions...", "Generating image...", "Optimizing for platforms...", "Almost done..."];
-      for (const msg of msgs) { await new Promise(r => setTimeout(r, 5000)); setGenMessage(msg); }
-      await new Promise(r => setTimeout(r, 5000));
-      toast.success(SUCCESS_MESSAGES.GENERATED);
+      let i = 0;
+      return setInterval(() => { setGenMessage(msgs[i % msgs.length]); i += 1; }, 8000);
+    })();
+    try {
+      // Awaits the real backend flow — success/failure reflect reality,
+      // unlike the old fire-and-forget + 25s timer + unconditional success.
+      const row = await generateContentNow(businessId, user.id, user.email ?? "");
+      clearInterval(progressInterval);
+      toast.success(row?.content_theme ? `Done — theme: ${row.content_theme}` : SUCCESS_MESSAGES.GENERATED);
       await fetchContent();
-    } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
+    } catch (err) {
+      clearInterval(progressInterval);
+      const msg = err instanceof Error ? err.message : ERROR_MESSAGES.GENERATION_FAILED;
+      toast.error("Couldn't generate content", { description: msg });
+    }
     finally { setGenerating(false); setGenMessage(""); }
   };
 
