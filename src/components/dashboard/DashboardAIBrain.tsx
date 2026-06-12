@@ -98,7 +98,7 @@ export default function DashboardAIBrain() {
         if (i < msgs.length) setRunMessage(msgs[i]);
       }, 3000);
 
-      await apiPost(`/api/orchestrator/run/${businessId}`, {});
+      await apiPost("/api/orchestrator/run", { business_id: businessId });
 
       clearInterval(interval);
       toast.success(SUCCESS_MESSAGES.GENERATED);

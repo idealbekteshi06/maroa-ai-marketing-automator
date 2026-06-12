@@ -49,7 +49,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { toast } from "sonner";
-import { getApiBase } from "@/lib/apiClient";
+import { getApiBase, getStreamTicket } from "@/lib/apiClient";
 import {
   wf15ListConversations,
   wf15GetConversation,
@@ -174,7 +174,14 @@ export default function AiBrain() {
       const absoluteUrl = streamUrl.startsWith("http")
         ? streamUrl
         : `${getApiBase()}${streamUrl}`;
-      const es = new EventSource(absoluteUrl);
+      // EventSource cannot send an Authorization header — append a short-lived
+      // signed ticket so the backend's /webhook auth accepts the stream. The
+      // stream is one-shot (closed on done/error), so one ticket per open.
+      const ticket = await getStreamTicket(businessId);
+      if (!ticket) throw new Error("Could not authenticate the response stream — please retry");
+      const es = new EventSource(
+        `${absoluteUrl}${absoluteUrl.includes("?") ? "&" : "?"}ticket=${encodeURIComponent(ticket)}`,
+      );
       abortStreamRef.current = es;
 
       const updateAssistant = (fn: (m: LocalMessage) => LocalMessage) => {
