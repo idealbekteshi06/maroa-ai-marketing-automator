@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ReactMarkdown from "react-markdown";
-import { getApiBase } from "@/lib/apiClient";
+import { getApiBase, getAuthHeaders } from "@/lib/apiClient";
 
 interface Message {
   role: "user" | "assistant";
@@ -63,9 +63,10 @@ export default function AIChatAssistant({ externalOpen, onExternalOpenChange }: 
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
     try {
+      const auth = await getAuthHeaders();
       const res = await fetch(`${getApiBase()}/webhook/ai-chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...auth },
         body: JSON.stringify({
           message: text,
           user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id

@@ -87,7 +87,7 @@ export async function apiPost<T>(
   const auth = await getAuthHeaders();
   const res = await fetch(`${API_BASE}${endpoint}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...auth },
+    headers: { "Content-Type": "application/json", ...auth, "Idempotency-Key": crypto.randomUUID() },
     body: JSON.stringify(body),
     signal,
   });
@@ -112,7 +112,7 @@ export function apiFireAndForget(
   void getAuthHeaders().then((auth) =>
     fetch(`${API_BASE}${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...auth },
+      headers: { "Content-Type": "application/json", ...auth, "Idempotency-Key": crypto.randomUUID() },
       body: JSON.stringify(body),
       keepalive: true,
     }).catch((err: unknown) => {
@@ -130,7 +130,7 @@ export async function apiPatch(
   const auth = await getAuthHeaders();
   const res = await fetch(`${API_BASE}${endpoint}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json", ...auth },
+    headers: { "Content-Type": "application/json", ...auth, "Idempotency-Key": crypto.randomUUID() },
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`API error ${res.status}: ${endpoint}`);
@@ -138,6 +138,24 @@ export async function apiPatch(
 
 export function createAbortController(): AbortController {
   return new AbortController();
+}
+
+/**
+ * Browsers cannot attach an Authorization header to an EventSource, so SSE
+ * endpoints (/webhook/dashboard-events, /webhook/wf15-stream/:id) authenticate
+ * with a short-lived signed ticket appended as ?ticket=. Tickets expire in
+ * ~60s — fetch a fresh one for every (re)connect, never cache. Returns null
+ * on failure (signed out, network) so callers can retry instead of throwing.
+ */
+export async function getStreamTicket(businessId: string): Promise<string | null> {
+  try {
+    const { ticket } = await apiPost<{ ticket?: string }>("/api/stream-ticket", {
+      business_id: businessId,
+    });
+    return ticket ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /** server expects user_id — this is auth.user.id = businesses.id */

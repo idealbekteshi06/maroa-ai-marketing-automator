@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { ERROR_MESSAGES } from "@/lib/errorMessages";
 import { toast } from "sonner";
-import { getApiBase } from "@/lib/apiClient";
+import { getApiBase, getStreamTicket } from "@/lib/apiClient";
 
 interface AIStatusBarProps {
   businessId: string | null;
@@ -55,46 +55,89 @@ export default function AIStatusBar({ businessId }: AIStatusBarProps) {
     return () => clearInterval(cycle);
   }, [status]);
 
-  // SSE connection
+  // SSE connection. EventSource cannot send an Authorization header, so each
+  // (re)connect first fetches a short-lived signed ticket (POST /api/stream-ticket)
+  // and appends it as ?ticket=. We manage reconnection ourselves: the browser's
+  // built-in EventSource retry would replay the same URL with a by-then-expired
+  // ticket and 401 forever, so on error we close and re-connect with a fresh
+  // ticket, backing off up to 30s.
   useEffect(() => {
     if (!businessId) return;
     const apiBase = getApiBase();
     if (!apiBase) return;
-    let es: EventSource;
-    try {
-      es = new EventSource(`${apiBase}/webhook/dashboard-events?business_id=${businessId}`);
-      es.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          const type = data.type || "";
-          if (!type || HIDE_EVENTS.has(type.toLowerCase())) return;
-          const humanMsg = EVENT_MESSAGES[type];
-          if (!humanMsg) return;
-          setStatus("success");
-          setMessage(humanMsg);
-          setVisible(true);
-          clearTimeout(timerRef.current);
-          timerRef.current = setTimeout(() => {
-            setStatus("idle");
-            setMessage(IDLE_MESSAGES[0]);
-          }, 5000);
-        } catch (err: unknown) {
-          if (err instanceof Error && err.name === "AbortError") return;
-          toast.error(ERROR_MESSAGES.LOAD_FAILED);
-        }
-      };
-      es.onerror = () => {
-        // EventSource can't send an Authorization header, so an auth-protected
-        // route rejects this with 401. Close to stop the reconnect loop and
-        // surface it once (deduped) instead of dying silently (audit §5).
-        es.close();
+    let es: EventSource | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    let retryDelay = 2000;
+    let cancelled = false;
+
+    const scheduleReconnect = () => {
+      if (cancelled) return;
+      clearTimeout(retryTimer);
+      retryTimer = setTimeout(connect, retryDelay);
+      retryDelay = Math.min(retryDelay * 2, 30000);
+    };
+
+    const connect = async () => {
+      const ticket = await getStreamTicket(businessId);
+      if (cancelled) return;
+      if (!ticket) {
+        // Signed out or backend unreachable — degrade silently (idle bar), retry later.
+        scheduleReconnect();
+        return;
+      }
+      try {
+        es = new EventSource(
+          `${apiBase}/webhook/dashboard-events?business_id=${encodeURIComponent(businessId)}&ticket=${encodeURIComponent(ticket)}`
+        );
+        es.onopen = () => {
+          retryDelay = 2000;
+          // Recovered — clear the deduped "offline" notice if it's still showing.
+          toast.dismiss("sse-offline");
+        };
+        es.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            const type = data.type || "";
+            if (!type || HIDE_EVENTS.has(type.toLowerCase())) return;
+            const humanMsg = EVENT_MESSAGES[type];
+            if (!humanMsg) return;
+            setStatus("success");
+            setMessage(humanMsg);
+            setVisible(true);
+            clearTimeout(timerRef.current);
+            timerRef.current = setTimeout(() => {
+              setStatus("idle");
+              setMessage(IDLE_MESSAGES[0]);
+            }, 5000);
+          } catch (err: unknown) {
+            if (err instanceof Error && err.name === "AbortError") return;
+            toast.error(ERROR_MESSAGES.LOAD_FAILED);
+          }
+        };
+        es.onerror = () => {
+          // The signed ticket is short-lived and EventSource can't send an auth
+          // header, so a dropped/expired stream surfaces here. Surface it once
+          // (deduped) instead of dying silently (audit §5), then close and
+          // reconnect with a fresh ticket, backing off.
+          es?.close();
+          es = null;
+          toast.error("Live updates are offline", { id: "sse-offline" });
+          scheduleReconnect();
+        };
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === "AbortError") return;
         toast.error("Live updates are offline", { id: "sse-offline" });
-      };
-    } catch (err: unknown) {
-      if (err instanceof Error && err.name === "AbortError") return;
-      toast.error(ERROR_MESSAGES.LOAD_FAILED);
-    }
-    return () => { es?.close(); clearTimeout(timerRef.current); };
+        scheduleReconnect();
+      }
+    };
+
+    connect();
+    return () => {
+      cancelled = true;
+      es?.close();
+      clearTimeout(retryTimer);
+      clearTimeout(timerRef.current);
+    };
   }, [businessId]);
 
   const dismiss = () => { setStatus("idle"); setMessage(IDLE_MESSAGES[0]); };
