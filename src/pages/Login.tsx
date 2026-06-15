@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
+import { pickPrimaryBusiness } from "@/lib/business";
 import { toast } from "sonner";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 import {
@@ -83,18 +84,23 @@ export default function Login() {
         throw new Error("Could not create your session. Please try again.");
       }
 
-      const { data: biz, error: bizError } = await withTimeout(
+      // List read, NOT .maybeSingle(): accounts can own multiple businesses
+      // rows, and maybeSingle() errors on multi-row → login hard-failed for
+      // those users (AUDIT_2026-06-10.md §1a). Pick the primary business.
+      const { data: bizRows, error: bizError } = await withTimeout(
         Promise.resolve(
           externalSupabase
             .from("businesses")
             .select("onboarding_complete")
             .eq("user_id", sessionUser.id)
-            .maybeSingle()
+            .order("onboarding_complete", { ascending: false })
+            .order("created_at", { ascending: true })
         ),
         "Loading your account timed out."
       );
 
       if (bizError) throw bizError;
+      const biz = pickPrimaryBusiness(bizRows);
 
       toast.success(SUCCESS_MESSAGES.SIGNED_IN);
       if (biz?.onboarding_complete === false) {

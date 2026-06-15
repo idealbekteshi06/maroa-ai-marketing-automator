@@ -1,0 +1,30 @@
+# CI gate — restores the guardrails wiped by the April-17 tree restore
+# (AUDIT_2026-06-10.md §4): nothing merges without typecheck, lint (errors
+# only), the React hook-order gate, a production build, and unit tests.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Lint (errors only)
+        run: npx eslint . --quiet
+      - name: React hook-order gate (error 310 class)
+        run: npm run lint:hooks
+      - name: Build
+        run: npm run build
+      - name: Unit tests
+        run: npm test

@@ -109,6 +109,12 @@ export default function AdOptimization() {
 
   return (
     <div className="space-y-6">
+      {/* Honesty label: every number on this page is generated demo data
+          (Math.random charts + static deltas) until the real ads API ships
+          (AUDIT_2026-06-10.md §2c). Do not remove without wiring real data. */}
+      <p className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-[11px] font-medium text-muted-foreground">
+        Sample data — this preview uses demo numbers until your ad accounts are connected
+      </p>
       {/* Hero — AI Ad Brain */}
       <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-transparent">
         <CardContent className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pt-6">

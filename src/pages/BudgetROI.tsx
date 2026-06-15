@@ -81,6 +81,11 @@ const trendData = Array.from({ length: 30 }, (_, i) => {
 export default function BudgetROI() {
   return (
     <div className="space-y-8">
+      {/* Honesty label: spend/revenue series here are generated demo data
+          until the budget APIs ship (AUDIT_2026-06-10.md §2c). */}
+      <p className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-[11px] font-medium text-muted-foreground">
+        Sample data — this preview uses demo numbers until your ad spend is tracked
+      </p>
       {/* ── Hero ── */}
       <section className="grid gap-4 sm:grid-cols-3">
         <Card>

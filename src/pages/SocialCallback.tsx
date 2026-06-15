@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
+import { pickPrimaryBusiness } from "@/lib/business";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
@@ -39,12 +40,17 @@ export default function SocialCallback() {
       let bizId = businessId || localStorage.getItem("meta_oauth_business_id");
 
       if (!bizId && user) {
-        const { data: biz } = await externalSupabase
+        // List read, not .maybeSingle(): a user can own multiple businesses
+        // rows and maybeSingle() errors on multi-row, which would fail the
+        // OAuth connect for multi-business accounts (AUDIT_2026-06-10.md §1,
+        // SocialCallback was the 6th site of this class).
+        const { data: bizRows } = await externalSupabase
           .from("businesses")
-          .select("id")
+          .select("id, onboarding_complete")
           .eq("user_id", user.id)
-          .maybeSingle();
-        bizId = biz?.id || null;
+          .order("onboarding_complete", { ascending: false })
+          .order("created_at", { ascending: true });
+        bizId = pickPrimaryBusiness(bizRows)?.id || null;
       }
 
       if (!bizId) {
@@ -86,7 +92,7 @@ export default function SocialCallback() {
       toast.error(errorMsg);
       setTimeout(() => navigate("/dashboard?tab=social"), 4000);
     }
-  }, [businessId, navigate, searchParams, user, user?.id]);
+  }, [businessId, navigate, searchParams, user]);
 
   useEffect(() => {
     void handleOAuthCallback();
