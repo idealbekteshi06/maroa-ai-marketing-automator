@@ -230,6 +230,15 @@ export default function Onboarding() {
           competitors: (form.competitors || []).filter((c: Record<string, unknown>) => Boolean(c?.name)).map((c: Record<string, unknown>) => ({ name: String(c.name), city: String(c.city || form.city) })),
           they_do_better: form.competitor_strengths || "",
           we_do_better: form.competitor_weaknesses || "",
+          // Block 11 "Content Approval Mode" → businesses.wf1_autonomy_mode.
+          // The question was always asked but the answer never left the browser,
+          // so every account silently ran the DB default (hybrid).
+          autonomyMode: form.approval_mode === "Publish automatically" ? "full_autopilot"
+            : form.approval_mode === "Show me everything first" ? "approve_everything"
+            : "hybrid",
+          // Explicit ad-execution consent → businesses.ads_live (migration 095).
+          // Only sent when the user actually answered; absent = safe default (off).
+          ...(form.ads_autopilot ? { adsConsent: form.ads_autopilot.startsWith("Yes") } : {}),
         };
 
         apiFireAndForget("/api/onboarding/save", profilePayload as Record<string, unknown>);
@@ -552,6 +561,12 @@ export default function Onboarding() {
           {/* ── BLOCK 11: AI Preferences ── */}
           {block === 11 && (<>
             <div><Label>Content Approval Mode *</Label><RadioCards options={APPROVAL_OPTIONS} value={form.approval_mode || ""} onChange={v => update("approval_mode", v)} /></div>
+            <div><Label>Can Maroa launch & adjust ads automatically?</Label>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Within your set budget. You can change this anytime in Settings.</p>
+              <div className="flex gap-2 mt-1">{["Yes — run my ads for me", "No — ask me first"].map(v => (
+                <button key={v} type="button" onClick={() => update("ads_autopilot", v)} className={`rounded-full px-4 py-1.5 text-xs font-medium border ${form.ads_autopilot === v ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>{v}</button>
+              ))}</div>
+            </div>
             <div><Label>Content Language *</Label><ChipSelect options={LANGUAGES} selected={form.content_languages || [form.primary_language || "Albanian"]} onChange={v => update("content_languages", v)} /></div>
             <div><Label>Posting Frequency Goal</Label>
               <div className="space-y-2 mt-1">{POSTING_FREQUENCY.map(f => (

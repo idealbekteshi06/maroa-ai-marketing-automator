@@ -126,7 +126,20 @@ export default function DailyContentEngine() {
         decision: vars.decision,
         reason: vars.reason,
       }),
-    onSuccess: () => {
+    onSuccess: (data: unknown, vars) => {
+      // The backend now routes approvals through the optimal-time scheduler:
+      // publish.scheduled=true means the post is parked for its best slot.
+      const pub = (data as { publish?: { ok?: boolean; scheduled?: boolean; scheduledAt?: string } } | null)?.publish;
+      if (vars.decision === "approve") {
+        if (pub?.scheduled && pub.scheduledAt) {
+          const at = new Date(pub.scheduledAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          toast.success(`Approved — publishing at ${at} (your audience's best time)`);
+        } else if (pub?.ok) {
+          toast.success("Approved & published");
+        } else {
+          toast.success("Approved");
+        }
+      }
       qc.invalidateQueries({ queryKey: ["wf1", "plan", businessId] });
     },
   });

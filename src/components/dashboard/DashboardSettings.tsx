@@ -8,9 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Check, ExternalLink, User, CreditCard, Bell, Zap, Palette, Link2, CalendarClock, Loader2, Trash2, Shield } from "lucide-react";
+import { Check, ExternalLink, User, CreditCard, Bell, Zap, Palette, Link2, CalendarClock, Loader2, Trash2, Shield, Copy, Magnet } from "lucide-react";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
-import { apiPost, postCheckout, postBuildBrandDna } from "@/lib/apiClient";
+import { apiPost, apiGet, postCheckout, postBuildBrandDna } from "@/lib/apiClient";
 
 /* ── Tabs ── */
 const tabs = [
@@ -19,8 +19,15 @@ const tabs = [
   { key: "Billing", label: "Plan & Billing", icon: CreditCard },
   { key: "Brand", label: "Brand Voice", icon: Palette },
   { key: "Automation", label: "AI Preferences", icon: Zap },
+  { key: "Leads", label: "Lead Capture", icon: Magnet },
   { key: "Notifications", label: "Notifications", icon: Bell },
   { key: "Account", label: "Account", icon: Shield },
+];
+
+const AUTONOMY_MODES = [
+  { value: "full_autopilot", label: "Full autopilot", desc: "Top-quality posts publish themselves; the rest wait for you" },
+  { value: "hybrid", label: "Hybrid (recommended)", desc: "Best posts publish after a 4h window unless you intervene" },
+  { value: "approve_everything", label: "Approve everything", desc: "Nothing publishes without your click" },
 ];
 
 const PLANS = {
@@ -73,6 +80,10 @@ export default function DashboardSettings() {
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>(defaultNotifs);
   const [autopilot, setAutopilot] = useState(false);
+  const [adsLive, setAdsLive] = useState(false);
+  const [autonomyMode, setAutonomyMode] = useState("hybrid");
+  const [leadEmbed, setLeadEmbed] = useState<{ endpoint: string; snippet: string } | null>(null);
+  const [leadEmbedError, setLeadEmbedError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const [deleteConfirm, setDeleteConfirm] = useState("");
@@ -98,6 +109,8 @@ export default function DashboardSettings() {
         p === "growth" || p === "agency" || p === "starter" ? p : "free"
       );
       setAutopilot(!!data.autopilot_enabled);
+      setAdsLive(!!data.ads_live);
+      setAutonomyMode((data.wf1_autonomy_mode as string) || "hybrid");
       if (data.notification_preferences) {
         try {
           const p = typeof data.notification_preferences === "string" ? JSON.parse(data.notification_preferences) : data.notification_preferences;
@@ -109,6 +122,17 @@ export default function DashboardSettings() {
       }
     });
   }, [businessId, isReady]);
+
+  /* Lead-capture embed: fetched lazily the first time the tab opens */
+  useEffect(() => {
+    if (activeTab !== "Leads" || leadEmbed || leadEmbedError) return;
+    apiGet<{ endpoint: string; snippet: string }>("/api/lead-capture/embed")
+      .then(d => {
+        if (d?.endpoint && d?.snippet) setLeadEmbed({ endpoint: d.endpoint, snippet: d.snippet });
+        else setLeadEmbedError("Lead capture isn't available yet — try again shortly.");
+      })
+      .catch(() => setLeadEmbedError("Couldn't load your embed code. Refresh to retry."));
+  }, [activeTab, leadEmbed, leadEmbedError]);
 
   /* Auto-save profile with debounce */
   const autoSave = useCallback((newForm: Record<string, unknown>) => {
@@ -234,20 +258,32 @@ export default function DashboardSettings() {
             <p className="text-xs text-muted-foreground mb-4">Manage your platform connections in the Social Hub tab for full connect/disconnect controls.</p>
             <div className="space-y-3">
               {[
-                { name: "Facebook", connected: !!business?.facebook_page_id, desc: "Posts to your page automatically" },
-                { name: "Instagram", connected: !!business?.instagram_account_id, desc: "Photos and reels posted daily" },
-                { name: "LinkedIn", connected: !!business?.linkedin_connected, desc: "Professional posts published" },
-                { name: "Google Ads", connected: !!business?.ad_account_id, desc: "Search and display ads managed" },
-                { name: "TikTok", connected: false, desc: "Coming soon — app review pending" },
+                // reconnect: the platform HAS a stored identity but the token-refresh
+                // cron flipped <platform>_connected=false — the token was rejected and
+                // the customer must re-auth (vs "never connected" which has no identity).
+                { name: "Facebook", connected: !!business?.facebook_page_id, reconnect: false, desc: "Posts to your page automatically" },
+                { name: "Instagram", connected: !!business?.instagram_account_id, reconnect: false, desc: "Photos and reels posted daily" },
+                { name: "LinkedIn", connected: !!business?.linkedin_connected, reconnect: !business?.linkedin_connected && !!business?.linkedin_person_id, desc: "Professional posts published" },
+                { name: "X (Twitter)", connected: !!business?.twitter_connected, reconnect: !business?.twitter_connected && !!business?.twitter_user_id, desc: "Tweets posted from your daily content" },
+                { name: "TikTok", connected: !!business?.tiktok_connected, reconnect: !business?.tiktok_connected && !!business?.tiktok_user_id, desc: "Short videos published automatically" },
+                { name: "Google Ads", connected: !!business?.ad_account_id, reconnect: false, desc: "Search and display ads managed" },
               ].map(p => (
                 <div key={p.name} className="flex items-center justify-between rounded-lg bg-muted/50 px-4 py-3">
                   <div>
                     <p className="text-sm font-medium text-foreground">{p.name}</p>
                     <p className="text-[11px] text-muted-foreground">{p.desc}</p>
                   </div>
-                  <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${p.connected ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
-                    {p.connected ? "✓ Connected" : "Not connected"}
-                  </span>
+                  {p.reconnect ? (
+                    <button
+                      onClick={() => window.dispatchEvent(new CustomEvent("dashboard-navigate", { detail: "social" }))}
+                      className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors">
+                      ⚠ Reconnect needed
+                    </button>
+                  ) : (
+                    <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${p.connected ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
+                      {p.connected ? "✓ Connected" : "Not connected"}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
@@ -349,6 +385,54 @@ export default function DashboardSettings() {
               </div>
             </div>
 
+            {/* Content autonomy mode — how much publishes without a click */}
+            <div className="rounded-xl border border-border bg-card p-5">
+              <h3 className="text-sm font-semibold text-foreground mb-1">Content Approval Mode</h3>
+              <p className="text-xs text-muted-foreground mb-3">How much should Maroa publish without asking you first?</p>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {AUTONOMY_MODES.map(m => (
+                  <button key={m.value} type="button"
+                    onClick={async () => {
+                      const prev = autonomyMode;
+                      setAutonomyMode(m.value);
+                      if (businessId) {
+                        const { error } = await externalSupabase.from("businesses").update({ wf1_autonomy_mode: m.value }).eq("id", businessId);
+                        if (error) { toast.error(ERROR_MESSAGES.SAVE_FAILED); setAutonomyMode(prev); }
+                        else toast.success(SUCCESS_MESSAGES.SAVED);
+                      }
+                    }}
+                    className={`rounded-xl border p-3 text-left transition-all ${autonomyMode === m.value ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
+                    <p className="text-[13px] font-medium text-foreground">{m.label}</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">{m.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Ads autopilot — per-business execution consent (migration 095) */}
+            <div className="rounded-xl border border-border bg-card p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-foreground">Ads Autopilot</h3>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                    When ON, Maroa launches and adjusts your ad campaigns automatically — scaling winners, pausing losers —
+                    within your daily budget. When OFF, it only recommends and waits for your approval.
+                  </p>
+                  <p className={`mt-2 text-xs font-medium ${adsLive ? "text-success" : "text-muted-foreground"}`}>
+                    {adsLive ? "✓ Executing within your budget" : "Recommendation-only mode"}
+                  </p>
+                </div>
+                <Switch checked={adsLive} onCheckedChange={async (checked) => {
+                  setAdsLive(checked);
+                  if (businessId) {
+                    const { error } = await externalSupabase.from("businesses").update({ ads_live: checked }).eq("id", businessId);
+                    if (error) { toast.error(ERROR_MESSAGES.SAVE_FAILED); setAdsLive(!checked); }
+                    else toast.success(checked ? "✓ Ads autopilot enabled" : "Ads autopilot paused");
+                  }
+                }} />
+              </div>
+            </div>
+
             {/* Workflow schedules */}
             <div className="rounded-xl border border-border bg-card p-5">
               <div className="flex items-center gap-2 mb-4">
@@ -370,6 +454,65 @@ export default function DashboardSettings() {
                 ))}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ── Lead Capture ── */}
+        {activeTab === "Leads" && (
+          <div className="space-y-4">
+            <div className="rounded-xl bg-muted/50 border border-border p-5">
+              <h3 className="text-sm font-semibold text-foreground mb-2">🧲 Capture leads from your website</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Paste this form on your website. Every submission becomes a contact in your CRM, gets scored instantly,
+                and is enrolled in your welcome email sequence — no manual work.
+              </p>
+            </div>
+            {leadEmbedError && (
+              <div className="rounded-xl border border-destructive/30 bg-card p-4">
+                <p className="text-xs text-destructive">{leadEmbedError}</p>
+              </div>
+            )}
+            {!leadEmbed && !leadEmbedError && (
+              <div className="rounded-xl border border-border bg-card p-6 flex items-center justify-center">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            {leadEmbed && (
+              <>
+                <div className="rounded-xl border border-border bg-card p-5">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-semibold text-foreground">Embed code</h3>
+                    <Button variant="outline" size="sm" onClick={() => {
+                      navigator.clipboard.writeText(leadEmbed.snippet);
+                      toast.success("Copied — paste it into your website's HTML");
+                    }}>
+                      <Copy className="mr-1.5 h-3.5 w-3.5" /> Copy
+                    </Button>
+                  </div>
+                  <pre className="rounded-lg bg-muted p-3 text-[11px] text-foreground font-mono whitespace-pre-wrap leading-relaxed overflow-auto max-h-56">{leadEmbed.snippet}</pre>
+                </div>
+                <div className="rounded-xl border border-border bg-card p-5">
+                  <h3 className="text-sm font-semibold text-foreground mb-1">Direct endpoint</h3>
+                  <p className="text-xs text-muted-foreground mb-2">For custom forms or tools like Webflow/Framer, POST <code className="text-[11px]">email</code>, <code className="text-[11px]">first_name</code>, <code className="text-[11px]">phone</code> to:</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 rounded-lg bg-muted px-3 py-2 text-[11px] font-mono text-foreground truncate">{leadEmbed.endpoint}</code>
+                    <Button variant="outline" size="sm" onClick={() => {
+                      navigator.clipboard.writeText(leadEmbed.endpoint);
+                      toast.success("Endpoint copied");
+                    }}>
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-border bg-card p-5">
+                  <h3 className="text-sm font-semibold text-foreground mb-1">Meta Lead Ads</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Running Lead Ads on Facebook or Instagram? Once your Meta account is connected, leads flow in
+                    automatically — nothing to configure here.
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         )}
 
