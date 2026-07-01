@@ -11,7 +11,7 @@ import {
   Loader2, CheckCircle2, Facebook, Instagram, ImageIcon, X,
   FileText, Linkedin,
 } from "lucide-react";
-import { externalSupabase } from "@/integrations/supabase/external-client";
+import { externalSupabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -172,8 +172,8 @@ export default function DashboardPublish() {
     if (!postText.trim()) { toast.error(ERROR_MESSAGES.GENERATION_FAILED); return; }
     setAiLoading(true);
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const supabaseUrl = SUPABASE_URL;
+      const supabaseKey = SUPABASE_PUBLISHABLE_KEY;
       const response = await fetch(`${supabaseUrl}/functions/v1/chat`, {
         method: "POST",
         headers: {

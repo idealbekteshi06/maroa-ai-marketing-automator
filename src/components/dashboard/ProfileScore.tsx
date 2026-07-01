@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { CheckCircle2, Lock, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { apiGet, normalizeOnboardingScore, type OnboardingScoreApiDto } from "@/lib/apiClient";
+import { toast } from "sonner";
 
 interface ProfileScoreProps {
   businessId: string;
@@ -33,7 +34,11 @@ export default function ProfileScore({ businessId, userId }: ProfileScoreProps) 
     if (!userId) return;
     apiGet<OnboardingScoreApiDto>(`/api/onboarding/score/${userId}`)
       .then((raw) => setData(normalizeOnboardingScore(raw)))
-      .catch(() => {});
+      .catch(() => {
+        // Widget renders null below; surface once instead of vanishing
+        // silently (audit §5). Same id as the compact variant → one toast.
+        toast.error("Couldn't load your profile score", { id: "profile-score-load" });
+      });
   }, [userId]);
 
   if (!data || data.score === 0) return null;

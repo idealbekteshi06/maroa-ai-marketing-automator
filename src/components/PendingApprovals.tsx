@@ -36,18 +36,28 @@ export default function PendingApprovals({ onNavigate }: PendingApprovalsProps) 
 
   const fetchPending = useCallback(async () => {
     if (!businessId || !isReady) { setLoading(false); return; }
-    const { data } = await externalSupabase
+    // generated_content stores per-platform copy (instagram_caption,
+    // facebook_post, …) — there is no bare `caption` column. Selecting it
+    // 400'd the whole query and this widget silently vanished
+    // (AUDIT_2026-06-10.md §2a).
+    const { data, error } = await externalSupabase
       .from("generated_content")
-      .select("id, platform, caption, content_theme, quality_score")
+      .select("id, platform, instagram_caption, facebook_post, content_theme, quality_score")
       .eq("business_id", businessId)
       .in("status", ["pending_approval", "pending"])
       .order("created_at", { ascending: false })
       .limit(5);
 
+    if (error) {
+      toast.error("Couldn't load pending approvals", { id: "pending-approvals-load" });
+      setLoading(false);
+      return;
+    }
+
     setItems((data || []).map((d: Record<string, unknown>) => ({
       id: d.id,
       platform: d.platform || "default",
-      caption: d.caption || d.content_theme || "Untitled post",
+      caption: d.instagram_caption || d.facebook_post || d.content_theme || "Untitled post",
       content_theme: d.content_theme,
       score: d.quality_score,
     })));

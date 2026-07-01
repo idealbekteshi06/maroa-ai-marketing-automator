@@ -63,6 +63,16 @@ import {
 
 type LocalMessage = BrainMessageDto & { isStreaming?: boolean };
 
+/** Parse an SSE frame's data without letting a malformed/partial frame throw
+ *  uncaught inside the event handler and tear down the stream (audit re-sweep). */
+function safeParseSSE<T>(data: string): T | null {
+  try {
+    return JSON.parse(data) as T;
+  } catch {
+    return null;
+  }
+}
+
 export default function AiBrain() {
   const { businessId } = useAuth();
   const qc = useQueryClient();
@@ -191,26 +201,30 @@ export default function AiBrain() {
       };
 
       es.addEventListener("token", (ev: MessageEvent) => {
-        const { delta } = JSON.parse(ev.data) as { delta: string };
-        updateAssistant((m) => ({ ...m, content: m.content + delta }));
+        const parsed = safeParseSSE<{ delta: string }>(ev.data);
+        if (!parsed) return;
+        updateAssistant((m) => ({ ...m, content: m.content + parsed.delta }));
       });
       es.addEventListener("reasoning", (ev: MessageEvent) => {
-        const { delta } = JSON.parse(ev.data) as { delta: string };
-        updateAssistant((m) => ({ ...m, reasoning: (m.reasoning ?? "") + delta }));
+        const parsed = safeParseSSE<{ delta: string }>(ev.data);
+        if (!parsed) return;
+        updateAssistant((m) => ({ ...m, reasoning: (m.reasoning ?? "") + parsed.delta }));
       });
       es.addEventListener("tool_call", (ev: MessageEvent) => {
-        const { toolCall } = JSON.parse(ev.data) as { toolCall: NonNullable<BrainMessageDto["toolCalls"]>[number] };
+        const parsed = safeParseSSE<{ toolCall: NonNullable<BrainMessageDto["toolCalls"]>[number] }>(ev.data);
+        if (!parsed) return;
         updateAssistant((m) => ({
           ...m,
-          toolCalls: [...(m.toolCalls ?? []), toolCall],
+          toolCalls: [...(m.toolCalls ?? []), parsed.toolCall],
         }));
       });
       es.addEventListener("tool_update", (ev: MessageEvent) => {
-        const u = JSON.parse(ev.data) as {
+        const u = safeParseSSE<{
           id: string;
           progress?: { percent: number; note: string };
           status?: LocalMessage["toolCalls"] extends infer T ? (T extends Array<infer U> ? U["status"] : never) : never;
-        };
+        }>(ev.data);
+        if (!u) return;
         updateAssistant((m) => ({
           ...m,
           toolCalls: m.toolCalls?.map((t) =>
@@ -221,11 +235,12 @@ export default function AiBrain() {
         }));
       });
       es.addEventListener("tool_result", (ev: MessageEvent) => {
-        const r = JSON.parse(ev.data) as {
+        const r = safeParseSSE<{
           id: string;
           result?: unknown;
           status?: string;
-        };
+        }>(ev.data);
+        if (!r) return;
         updateAssistant((m) => ({
           ...m,
           toolCalls: m.toolCalls?.map((t) =>
@@ -236,11 +251,12 @@ export default function AiBrain() {
         }));
       });
       es.addEventListener("done", (ev: MessageEvent) => {
-        const d = JSON.parse(ev.data) as {
+        const d = safeParseSSE<{
           messageId: string;
           modelUsed: "haiku" | "sonnet" | "opus";
           costUsd: number;
-        };
+        }>(ev.data);
+        if (!d) return;
         updateAssistant((m) => ({
           ...m,
           modelUsed: d.modelUsed,

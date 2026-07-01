@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Check, ExternalLink, User, CreditCard, Bell, Zap, Palette, Link2, CalendarClock, Loader2, Trash2, Shield } from "lucide-react";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
-import { apiPost, postCheckout, getBrandDna, postBuildBrandDna } from "@/lib/apiClient";
+import { apiPost, postCheckout, postBuildBrandDna } from "@/lib/apiClient";
 
 /* ── Tabs ── */
 const tabs = [
@@ -77,7 +77,6 @@ export default function DashboardSettings() {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [brandTraining, setBrandTraining] = useState(false);
-  const [brandDnaLoading, setBrandDnaLoading] = useState(false);
   const [brandDnaPreview, setBrandDnaPreview] = useState<string | null>(null);
 
   useEffect(() => {
@@ -153,27 +152,15 @@ export default function DashboardSettings() {
     setBrandTraining(true);
     toast("🧠 Training brand voice...");
     try {
-      await postBuildBrandDna(businessId, user.id);
+      // GET /api/business/:id/brand-dna never existed on the backend (always
+      // 404'd — AUDIT_2026-06-10.md §6), so the preview comes straight from
+      // the build response instead of a doomed follow-up fetch.
+      const d = await postBuildBrandDna(businessId, user.id);
       toast.success(SUCCESS_MESSAGES.GENERATED);
-      const d = await getBrandDna(businessId);
-      setBrandDnaPreview(typeof d === "object" && d !== null ? JSON.stringify(d, null, 2) : String(d));
+      setBrandDnaPreview(typeof d === "object" && d !== null ? JSON.stringify(d, null, 2) : null);
     } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
     setBrandTraining(false);
   };
-
-  useEffect(() => {
-    if (activeTab !== "Brand" || !businessId || !isReady) return;
-    let cancelled = false;
-    setBrandDnaLoading(true);
-    getBrandDna(businessId)
-      .then((d) => {
-        if (cancelled) return;
-        setBrandDnaPreview(typeof d === "object" && d !== null ? JSON.stringify(d, null, 2) : String(d));
-      })
-      .catch(() => { if (!cancelled) setBrandDnaPreview(null); })
-      .finally(() => { if (!cancelled) setBrandDnaLoading(false); });
-    return () => { cancelled = true; };
-  }, [activeTab, businessId, isReady]);
 
   return (
     <div className="flex gap-6 pb-20 md:pb-0">
@@ -307,10 +294,7 @@ export default function DashboardSettings() {
                 ))}
               </div>
             </div>
-            {brandDnaLoading && (
-              <p className="text-xs text-muted-foreground flex items-center gap-2"><Loader2 className="h-3 w-3 animate-spin" /> Loading brand intelligence...</p>
-            )}
-            {brandDnaPreview && !brandDnaLoading && (
+            {brandDnaPreview && (
               <div className="rounded-xl border border-border bg-card p-3 max-h-48 overflow-auto">
                 <pre className="text-[10px] text-foreground whitespace-pre-wrap font-mono leading-relaxed">{brandDnaPreview}</pre>
               </div>
@@ -319,7 +303,7 @@ export default function DashboardSettings() {
               <p className="text-xs text-muted-foreground">Content analyzed: 0 pieces</p>
               <p className="text-xs text-muted-foreground">Last trained: Not trained yet</p>
             </div>
-            <Button className="w-full" onClick={handleBrandTrain} disabled={brandTraining || brandDnaLoading}>
+            <Button className="w-full" onClick={handleBrandTrain} disabled={brandTraining}>
               {brandTraining ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Rebuilding...</> : "Rebuild brand intelligence"}
             </Button>
             <p className="text-[11px] text-muted-foreground text-center">Takes about 30 seconds</p>

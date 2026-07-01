@@ -13,7 +13,7 @@ import {
   Linkedin,
   Sparkles,
 } from "lucide-react";
-import { externalSupabase } from "@/integrations/supabase/external-client";
+import { externalSupabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import {
@@ -181,12 +181,12 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
     (async () => {
       try {
         const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/meta-oauth-callback`,
+          `${SUPABASE_URL}/functions/v1/meta-oauth-callback`,
           {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+              Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
             },
             body: JSON.stringify({
               code,

@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { externalSupabase } from "@/integrations/supabase/external-client";
+import { pickPrimaryBusiness } from "@/lib/business";
 import { apiFireAndForget } from "@/lib/apiClient";
 import { toast } from "sonner";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
@@ -93,12 +94,16 @@ export default function SignUp() {
 
       if (bizError) throw new Error(`Businesses insert failed: ${bizError.message}`);
 
-      // Fetch the new business_id for webhooks
-      const { data: newBiz } = await externalSupabase
+      // Fetch the new business_id for webhooks. List read (not .maybeSingle())
+      // so a pre-existing row doesn't error out and skip instant-content
+      // (AUDIT_2026-06-10.md §1 — 7th site of the multi-row class).
+      const { data: bizRows } = await externalSupabase
         .from("businesses")
-        .select("id")
+        .select("id, onboarding_complete")
         .eq("user_id", userId)
-        .maybeSingle();
+        .order("onboarding_complete", { ascending: false })
+        .order("created_at", { ascending: true });
+      const newBiz = pickPrimaryBusiness(bizRows);
 
       apiFireAndForget("/webhook/new-user-signup", {
         user_id: userId, email: form.email, first_name: form.firstName,
