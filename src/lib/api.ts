@@ -951,3 +951,78 @@ export const wf4RequestTestimonialPermission = (data: {
   businessId: string;
   reviewId: string;
 }) => post("/webhook/wf4-testimonial-request-permission", data);
+
+// ═══════════════════════════════════════════════════════════════
+// Batch-workflow routes (services/wf_batch_routes.js). Convention:
+// POST triggers take camelCase businessId in the body; GET reads
+// take snake_case business_id as a query param.
+// ═══════════════════════════════════════════════════════════════
+
+// ─── Ad Optimizer (canonical ads engine) ─────────────────────
+export const adOptimizerAuditCampaign = (data: {
+  businessId: string;
+  campaignId: string;
+  dryRun?: boolean;
+}) => post("/webhook/ad-optimizer-audit-campaign", data);
+
+// ─── WF6 — Local Presence (GBP audit; schema gen lives in ai-seo) ─
+export const wf6RunAudit = (data: { businessId: string; auditInput?: Record<string, unknown> }) =>
+  post("/webhook/wf6-run-audit", data);
+
+export const wf6GetLatestAudit = (params: { business_id: string }) =>
+  get("/webhook/wf6-latest-audit", params);
+
+// ─── WF8 — Customer Insights ─────────────────────────────────
+export const wf8GenerateReport = (data: { businessId: string }) =>
+  post("/webhook/wf8-generate-report", data);
+
+export const wf8GetLatestReport = (params: { business_id: string }) =>
+  get("/webhook/wf8-latest-report", params);
+
+// ─── WF9 — Unified Inbox (advisory only: drafts are copy-only,
+//     the backend has no send path) ──────────────────────────
+export const wf9ListThreads = (params: {
+  business_id: string;
+  status?: string;
+  urgency?: string;
+}) => get("/webhook/wf9-threads-list", params);
+
+export const wf9Triage = (data: { businessId: string; threadId: string }) =>
+  post("/webhook/wf9-triage", data);
+
+export const wf9DraftReply = (data: {
+  businessId: string;
+  threadId: string;
+  triage?: Record<string, unknown>;
+}) => post("/webhook/wf9-draft-reply", data);
+
+// ─── WF12 — Launch Orchestrator ──────────────────────────────
+export const wf12PlanLaunch = (data: { businessId: string; request: Record<string, unknown> }) =>
+  post("/webhook/wf12-plan-launch", data);
+
+export const wf12ListLaunches = (params: { business_id: string }) =>
+  get("/webhook/wf12-launches-list", params);
+
+export const wf12GetLaunchDetail = (params: { business_id: string; launch_id: string }) =>
+  get("/webhook/wf12-launch-detail", params);
+
+export const wf12UpdateActivity = (data: {
+  businessId: string;
+  activityId: string;
+  status: string;
+}) => post("/webhook/wf12-activity-update", data);
+
+// ─── WF14 — Budget & ROI Optimizer ───────────────────────────
+export const wf14Run = (data: { businessId: string; force?: boolean }) =>
+  post("/webhook/wf14-run", data);
+
+export const wf14GetLatest = (params: { business_id: string }) =>
+  get("/webhook/wf14-latest", params);
+
+// ─── Forecasting (canonical: services/forecasting) ───────────
+export const forecastGenerate = (data: { businessId: string; horizonDays?: number }) =>
+  post("/webhook/forecast", data);
+
+// ─── VOC — Voice of Customer ─────────────────────────────────
+export const vocAuto = (data: { businessId: string }) =>
+  post("/webhook/voc-auto", data);

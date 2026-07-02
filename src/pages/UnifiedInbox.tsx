@@ -1,124 +1,256 @@
+/**
+ * Unified Inbox (WF9) — intake, triage + AI-drafted replies.
+ *
+ * ADVISORY ONLY: the backend has no send path for inbox replies
+ * (see CANONICAL_WORKFLOWS.md). Drafts are copy-to-clipboard only —
+ * there must be NO send button on this page.
+ */
+
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Instagram, Facebook, Mail, MessageCircle, Search, Send,
-  Sparkles, User, Phone, ShoppingBag, Tag, Clock, ArrowLeft,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Instagram, Facebook, Mail, MessageCircle, Search, Copy,
+  Sparkles, Clock, ArrowLeft, Loader2, Inbox, ShieldCheck, Route,
 } from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { wf9ListThreads, wf9Triage, wf9DraftReply } from "@/lib/api";
 
-// TODO: wire to real API
-type Channel = "instagram" | "facebook" | "email" | "whatsapp";
+// ---------------------------------------------------------------------------
+// Backend shapes (services/wf9/index.js — inbox_threads / inbox_replies rows)
+// ---------------------------------------------------------------------------
 
-interface Conversation {
+interface InboxThread {
   id: string;
-  name: string;
-  avatar?: string;
-  channel: Channel;
-  lastMessage: string;
-  timestamp: string;
-  unread: number;
+  business_id?: string;
+  channel?: string | null;
+  external_id?: string | null;
+  from_handle?: string | null;
+  subject?: string | null;
+  body?: string | null;
+  attachments?: unknown[] | null;
+  status?: string | null; // 'new' | 'routed'
+  classification?: string | null;
+  sentiment?: string | null;
+  urgency?: string | null; // 'immediate' | 'high' | 'medium' | 'low'
+  sla_deadline?: string | null;
+  route_to?: string | null;
+  created_at?: string | null;
 }
 
-interface Message {
-  id: string;
-  text: string;
-  sent: boolean;
-  time: string;
+interface Wf9ListThreadsResponse {
+  items?: InboxThread[];
 }
 
-const channelIcon: Record<Channel, typeof Instagram> = {
+interface TriageResult {
+  classification?: string;
+  sentiment?: string;
+  urgency?: string;
+  sla_minutes?: number;
+  route_to?: string;
+  ai_can_draft?: boolean;
+  routing?: Record<string, unknown>;
+}
+
+interface DraftReplyResult {
+  replyId?: string;
+  reply?: {
+    subject_line?: string;
+    body?: string;
+    tone?: string;
+    requires_human_review?: boolean;
+    confidence?: number;
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Presentation helpers
+// ---------------------------------------------------------------------------
+
+const channelIcon: Record<string, typeof Instagram> = {
   instagram: Instagram,
   facebook: Facebook,
   email: Mail,
   whatsapp: MessageCircle,
 };
 
-const channelColor: Record<Channel, string> = {
+const channelColor: Record<string, string> = {
   instagram: "text-pink-500",
   facebook: "text-blue-500",
   email: "text-orange-500",
   whatsapp: "text-green-500",
 };
 
-const conversations: Conversation[] = [
-  { id: "1", name: "Arta Krasniqi", channel: "instagram", lastMessage: "Hi! Can I order 5 cases of 1.5L for an event this Saturday?", timestamp: "2 min", unread: 2 },
-  { id: "2", name: "Driton Berisha", channel: "whatsapp", lastMessage: "Do you deliver to Prizren? I need 10 packs.", timestamp: "18 min", unread: 1 },
-  { id: "3", name: "Lindita Gashi", channel: "facebook", lastMessage: "Love the new packaging! Where can I buy in Prishtina?", timestamp: "1h", unread: 0 },
-  { id: "4", name: "Besnik Hoxha", channel: "email", lastMessage: "RE: Wholesale pricing request for HoReCa partnership", timestamp: "2h", unread: 3 },
-  { id: "5", name: "Teuta Shala", channel: "instagram", lastMessage: "Your spring campaign video is amazing. Collab?", timestamp: "3h", unread: 0 },
-  { id: "6", name: "Faton Rugova", channel: "whatsapp", lastMessage: "Received the order, thank you! Quality is great.", timestamp: "5h", unread: 0 },
-  { id: "7", name: "Vlora Mehmeti", channel: "facebook", lastMessage: "Is the glass bottle available in 0.5L?", timestamp: "1d", unread: 0 },
-  { id: "8", name: "Alban Kastrati", channel: "email", lastMessage: "Following up on the invoice for order #4821", timestamp: "2d", unread: 1 },
-];
-
-const activeThread: Message[] = [
-  { id: "m1", text: "Hi there! I saw your new Uje Karadaku premium collection on Instagram.", sent: false, time: "10:23 AM" },
-  { id: "m2", text: "Can I order 5 cases of 1.5L for an event this Saturday?", sent: false, time: "10:23 AM" },
-  { id: "m3", text: "Hello Arta! Of course. We have the 1.5L premium still in stock. 5 cases = 30 bottles, correct?", sent: true, time: "10:25 AM" },
-  { id: "m4", text: "Yes exactly! What's the price for that quantity?", sent: false, time: "10:28 AM" },
-  { id: "m5", text: "For 5 cases, that would be EUR 45.00 total (EUR 1.50 per bottle). We can deliver Friday evening if that works?", sent: true, time: "10:30 AM" },
-  { id: "m6", text: "Perfect, Friday evening works great. I'll send you the address!", sent: false, time: "10:32 AM" },
-];
-
-const customerDetails = {
-  name: "Arta Krasniqi",
-  email: "arta.krasniqi@email.com",
-  phone: "+383 44 123 456",
-  totalOrders: 8,
-  lifetimeValue: "EUR 312.50",
-  tags: ["VIP", "Event Planner", "Prishtina"],
+const urgencyBadge: Record<string, string> = {
+  immediate: "bg-destructive/10 text-destructive border-destructive/30",
+  high: "bg-warning/10 text-warning border-warning/30",
+  medium: "bg-primary/10 text-primary border-primary/30",
+  low: "bg-muted text-muted-foreground border-border",
 };
 
-const aiReplies = [
-  "Great! I'll schedule the delivery for Friday at 6 PM. Could you please share your address?",
-  "We also have a 10% discount for orders over EUR 50 if you'd like to add another case!",
-  "I'll send you a confirmation email with the order details and delivery time.",
+function ChannelIcon({ channel, className = "h-3 w-3" }: { channel?: string | null; className?: string }) {
+  const key = (channel ?? "").toLowerCase();
+  const Icon = channelIcon[key] ?? MessageCircle;
+  const color = channelColor[key] ?? "text-muted-foreground";
+  return <Icon className={`${className} flex-shrink-0 ${color}`} />;
+}
+
+function initials(thread: InboxThread): string {
+  const source = thread.from_handle || thread.subject || thread.channel || "?";
+  return source
+    .replace(/^@/, "")
+    .split(/[\s._-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("") || "?";
+}
+
+function relativeTime(iso?: string | null): string {
+  if (!iso) return "";
+  const ts = new Date(iso).getTime();
+  if (Number.isNaN(ts)) return "";
+  const diffMin = Math.max(0, Math.round((Date.now() - ts) / 60000));
+  if (diffMin < 1) return "now";
+  if (diffMin < 60) return `${diffMin}m`;
+  const diffH = Math.round(diffMin / 60);
+  if (diffH < 24) return `${diffH}h`;
+  return `${Math.round(diffH / 24)}d`;
+}
+
+const STATUS_TABS = [
+  { value: "all", label: "All" },
+  { value: "new", label: "New" },
+  { value: "routed", label: "Routed" },
 ];
 
-const channelCounts: Record<string, number> = {
-  all: 7,
-  instagram: 2,
-  facebook: 2,
-  email: 2,
-  whatsapp: 1,
-};
+const URGENCY_OPTIONS = ["all", "immediate", "high", "medium", "low"];
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
 
 export default function UnifiedInbox() {
-  const [activeConvo, setActiveConvo] = useState(conversations[0]);
-  const [channelFilter, setChannelFilter] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [messageInput, setMessageInput] = useState("");
-  const [showThread, setShowThread] = useState(false);
+  const { businessId } = useAuth();
+  const qc = useQueryClient();
 
-  const filtered = conversations.filter((c) => {
-    const matchesChannel = channelFilter === "all" || c.channel === channelFilter;
-    const matchesSearch =
-      !searchQuery ||
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.lastMessage.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesChannel && matchesSearch;
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [urgencyFilter, setUrgencyFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
+  const [showThread, setShowThread] = useState(false);
+  const [triageByThread, setTriageByThread] = useState<Record<string, TriageResult>>({});
+  const [draftByThread, setDraftByThread] = useState<Record<string, DraftReplyResult>>({});
+
+  const threadsQuery = useQuery({
+    queryKey: ["wf9", "threads", businessId, statusFilter, urgencyFilter],
+    queryFn: () =>
+      wf9ListThreads({
+        business_id: businessId!,
+        ...(statusFilter !== "all" ? { status: statusFilter } : {}),
+        ...(urgencyFilter !== "all" ? { urgency: urgencyFilter } : {}),
+      }) as Promise<Wf9ListThreadsResponse>,
+    enabled: !!businessId,
+    retry: false,
   });
+
+  const threads = threadsQuery.data?.items ?? [];
+
+  const filtered = threads.filter((t) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      (t.from_handle ?? "").toLowerCase().includes(q) ||
+      (t.subject ?? "").toLowerCase().includes(q) ||
+      (t.body ?? "").toLowerCase().includes(q)
+    );
+  });
+
+  const activeThread =
+    filtered.find((t) => t.id === selectedThreadId) ?? filtered[0] ?? null;
+
+  const triageMutation = useMutation({
+    mutationFn: (threadId: string) =>
+      wf9Triage({ businessId: businessId!, threadId }) as Promise<TriageResult>,
+    onSuccess: (data, threadId) => {
+      setTriageByThread((prev) => ({ ...prev, [threadId]: data ?? {} }));
+      qc.invalidateQueries({ queryKey: ["wf9", "threads", businessId] });
+      toast.success("Thread triaged");
+    },
+    onError: (e: Error) => toast.error(e.message || "Triage failed"),
+  });
+
+  const draftMutation = useMutation({
+    mutationFn: (threadId: string) =>
+      wf9DraftReply({
+        businessId: businessId!,
+        threadId,
+        triage: triageByThread[threadId] as Record<string, unknown> | undefined,
+      }) as Promise<DraftReplyResult>,
+    onSuccess: (data, threadId) => {
+      setDraftByThread((prev) => ({ ...prev, [threadId]: data ?? {} }));
+      toast.success("Reply drafted");
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to draft reply"),
+  });
+
+  const copyDraft = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Reply copied to clipboard");
+    } catch {
+      toast.error("Could not copy — select the text manually");
+    }
+  };
+
+  const activeDraft = activeThread ? draftByThread[activeThread.id] : undefined;
+  const activeTriage = activeThread ? triageByThread[activeThread.id] : undefined;
 
   return (
     <div className="flex flex-col h-[calc(100vh-10rem)]">
-      {/* Top bar */}
+      {/* Top bar — status tabs + urgency filter + search */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
-        <Tabs value={channelFilter} onValueChange={setChannelFilter} className="w-full sm:w-auto">
+        <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full sm:w-auto">
           <TabsList className="bg-muted/50">
-            {Object.entries(channelCounts).map(([key, count]) => (
-              <TabsTrigger key={key} value={key} className="text-xs sm:text-sm capitalize">
-                {key === "all" ? "All" : key}
-                <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px]">{count}</Badge>
+            {STATUS_TABS.map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value} className="text-xs sm:text-sm">
+                {tab.label}
+                {tab.value === "all" && (
+                  <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px]">
+                    {threads.length}
+                  </Badge>
+                )}
               </TabsTrigger>
             ))}
           </TabsList>
         </Tabs>
-        <div className="relative w-full sm:w-64">
+        <Select value={urgencyFilter} onValueChange={setUrgencyFilter}>
+          <SelectTrigger className="h-9 w-full sm:w-40 text-xs sm:text-sm">
+            <SelectValue placeholder="Urgency" />
+          </SelectTrigger>
+          <SelectContent>
+            {URGENCY_OPTIONS.map((u) => (
+              <SelectItem key={u} value={u} className="capitalize text-sm">
+                {u === "all" ? "All urgencies" : u}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="relative w-full sm:w-64 sm:ml-auto">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search conversations..."
@@ -131,171 +263,303 @@ export default function UnifiedInbox() {
 
       {/* 3-column layout */}
       <div className="flex flex-1 gap-0 border border-border rounded-lg overflow-hidden bg-card min-h-0">
-        {/* Left — Conversation list */}
+        {/* Left — Thread list */}
         <div className={`w-full md:w-80 md:block border-r border-border flex-shrink-0 ${showThread ? "hidden" : "block"}`}>
           <ScrollArea className="h-full">
-            {filtered.map((convo) => {
-              const Icon = channelIcon[convo.channel];
-              const isActive = convo.id === activeConvo.id;
-              return (
-                <button
-                  key={convo.id}
-                  onClick={() => { setActiveConvo(convo); setShowThread(true); }}
-                  className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50 border-b border-border ${isActive ? "bg-muted/70" : ""}`}
-                >
-                  <Avatar className="h-10 w-10 flex-shrink-0">
-                    <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                      {convo.name.split(" ").map((n) => n[0]).join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className={`text-sm font-medium truncate ${convo.unread ? "text-foreground" : "text-muted-foreground"}`}>
-                        {convo.name}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground ml-2 flex-shrink-0">{convo.timestamp}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <Icon className={`h-3 w-3 flex-shrink-0 ${channelColor[convo.channel]}`} />
-                      <span className="text-xs text-muted-foreground truncate">{convo.lastMessage}</span>
+            {threadsQuery.isLoading ? (
+              <div className="p-4 space-y-4">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <Skeleton className="h-10 w-10 rounded-full flex-shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-3.5 w-2/3" />
+                      <Skeleton className="h-3 w-full" />
                     </div>
                   </div>
-                  {convo.unread > 0 && (
-                    <Badge className="h-5 w-5 rounded-full p-0 flex items-center justify-center text-[10px] flex-shrink-0 bg-primary text-primary-foreground">
-                      {convo.unread}
-                    </Badge>
-                  )}
-                </button>
-              );
-            })}
+                ))}
+              </div>
+            ) : threadsQuery.isError ? (
+              <div className="p-6 text-center">
+                <p className="text-sm text-muted-foreground">
+                  {(threadsQuery.error as Error)?.message || "Failed to load inbox."}
+                </p>
+                <Button size="sm" variant="outline" className="mt-3" onClick={() => threadsQuery.refetch()}>
+                  Retry
+                </Button>
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-8 text-center">
+                <Inbox className="h-8 w-8 text-muted-foreground/50 mb-3" />
+                <p className="text-sm font-medium">Inbox is clear</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Inbox is clear — connected channels will appear here
+                </p>
+              </div>
+            ) : (
+              filtered.map((thread) => {
+                const isActive = activeThread?.id === thread.id;
+                const preview = thread.subject || thread.body || "(no content)";
+                return (
+                  <button
+                    key={thread.id}
+                    onClick={() => { setSelectedThreadId(thread.id); setShowThread(true); }}
+                    className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50 border-b border-border ${isActive ? "bg-muted/70" : ""}`}
+                  >
+                    <Avatar className="h-10 w-10 flex-shrink-0">
+                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                        {initials(thread)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium truncate">
+                          {thread.from_handle || thread.subject || "Unknown sender"}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground ml-2 flex-shrink-0">
+                          {relativeTime(thread.created_at)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <ChannelIcon channel={thread.channel} />
+                        <span className="text-xs text-muted-foreground truncate">{preview}</span>
+                      </div>
+                    </div>
+                    {thread.urgency && (
+                      <Badge
+                        variant="outline"
+                        className={`text-[9px] capitalize flex-shrink-0 ${urgencyBadge[thread.urgency] ?? "border-border text-muted-foreground"}`}
+                      >
+                        {thread.urgency}
+                      </Badge>
+                    )}
+                  </button>
+                );
+              })
+            )}
           </ScrollArea>
         </div>
 
-        {/* Center — Thread */}
+        {/* Center — Thread detail */}
         <div className={`flex-1 flex flex-col min-w-0 ${!showThread ? "hidden md:flex" : "flex"}`}>
-          {/* Thread header */}
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
-            <Button variant="ghost" size="icon" className="md:hidden h-8 w-8" onClick={() => setShowThread(false)}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                {activeConvo.name.split(" ").map((n) => n[0]).join("")}
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0">
-              <p className="text-sm font-medium truncate">{activeConvo.name}</p>
-              <div className="flex items-center gap-1">
-                {(() => { const Icon = channelIcon[activeConvo.channel]; return <Icon className={`h-3 w-3 ${channelColor[activeConvo.channel]}`} />; })()}
-                <span className="text-[11px] text-muted-foreground capitalize">{activeConvo.channel}</span>
-              </div>
+          {!activeThread ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+              <MessageCircle className="h-8 w-8 text-muted-foreground/50 mb-3" />
+              <p className="text-sm text-muted-foreground">
+                Select a conversation to view its details.
+              </p>
             </div>
-          </div>
-
-          {/* Messages */}
-          <ScrollArea className="flex-1 px-4 py-4">
-            <div className="space-y-3">
-              <p className="text-center text-[11px] text-muted-foreground">Today, 10:23 AM</p>
-              {activeThread.map((msg) => (
-                <div key={msg.id} className={`flex ${msg.sent ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${msg.sent ? "bg-primary text-primary-foreground rounded-br-md" : "bg-muted text-foreground rounded-bl-md"}`}>
-                    <p className="text-sm leading-relaxed">{msg.text}</p>
-                    <p className={`text-[10px] mt-1 ${msg.sent ? "text-primary-foreground/70" : "text-muted-foreground"}`}>{msg.time}</p>
+          ) : (
+            <>
+              {/* Thread header */}
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+                <Button variant="ghost" size="icon" className="md:hidden h-8 w-8" onClick={() => setShowThread(false)}>
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                    {initials(activeThread)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {activeThread.from_handle || activeThread.subject || "Unknown sender"}
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <ChannelIcon channel={activeThread.channel} />
+                    <span className="text-[11px] text-muted-foreground capitalize">
+                      {activeThread.channel || "unknown channel"}
+                    </span>
+                    {activeThread.status && (
+                      <Badge variant="secondary" className="ml-1.5 h-4 px-1.5 text-[9px] capitalize">
+                        {activeThread.status}
+                      </Badge>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          </ScrollArea>
+              </div>
 
-          {/* Compose */}
-          <div className="border-t border-border px-4 py-3">
-            <div className="flex items-center gap-2">
-              <Input
-                placeholder="Type a message..."
-                value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-                className="flex-1 h-9"
-                onKeyDown={(e) => { if (e.key === "Enter") { /* TODO: wire to real API */ } }}
-              />
-              <Button size="icon" className="h-9 w-9 flex-shrink-0">
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+              {/* Message body + draft */}
+              <ScrollArea className="flex-1 px-4 py-4">
+                <div className="space-y-4">
+                  {activeThread.created_at && (
+                    <p className="text-center text-[11px] text-muted-foreground">
+                      {new Date(activeThread.created_at).toLocaleString()}
+                    </p>
+                  )}
+                  {activeThread.subject && (
+                    <p className="text-sm font-medium">{activeThread.subject}</p>
+                  )}
+                  <div className="flex justify-start">
+                    <div className="max-w-[75%] rounded-2xl px-4 py-2.5 bg-muted text-foreground rounded-bl-md">
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                        {activeThread.body || "(no message body)"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* AI draft (copy-only) */}
+                  {activeDraft?.reply?.body && (
+                    <div className="flex justify-end">
+                      <div className="max-w-[75%] rounded-2xl px-4 py-2.5 bg-primary/10 border border-primary/20 rounded-br-md">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <Sparkles className="h-3 w-3 text-primary" />
+                          <span className="text-[10px] font-medium text-primary">AI draft</span>
+                          {activeDraft.reply.tone && (
+                            <Badge variant="secondary" className="h-4 px-1.5 text-[9px] capitalize">
+                              {activeDraft.reply.tone}
+                            </Badge>
+                          )}
+                          {typeof activeDraft.reply.confidence === "number" && (
+                            <span className="text-[10px] text-muted-foreground">
+                              {(activeDraft.reply.confidence * 100).toFixed(0)}% confidence
+                            </span>
+                          )}
+                        </div>
+                        {activeDraft.reply.subject_line && (
+                          <p className="text-xs font-medium mb-1">{activeDraft.reply.subject_line}</p>
+                        )}
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                          {activeDraft.reply.body}
+                        </p>
+                        {activeDraft.reply.requires_human_review !== false && (
+                          <p className="text-[10px] text-muted-foreground mt-1.5 flex items-center gap-1">
+                            <ShieldCheck className="h-3 w-3" /> Needs human review before use
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+
+              {/* Actions — advisory only, NO send */}
+              <div className="border-t border-border px-4 py-3 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => triageMutation.mutate(activeThread.id)}
+                    disabled={triageMutation.isPending}
+                  >
+                    {triageMutation.isPending ? (
+                      <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Route className="mr-1.5 h-4 w-4" />
+                    )}
+                    Run triage
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => draftMutation.mutate(activeThread.id)}
+                    disabled={draftMutation.isPending}
+                  >
+                    {draftMutation.isPending ? (
+                      <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="mr-1.5 h-4 w-4" />
+                    )}
+                    {activeDraft?.reply?.body ? "Redraft reply" : "Draft AI reply"}
+                  </Button>
+                  {activeDraft?.reply?.body && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => copyDraft(activeDraft.reply?.body ?? "")}
+                    >
+                      <Copy className="mr-1.5 h-4 w-4" />
+                      Copy reply
+                    </Button>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Drafts are copy-only — sending from Maroa is coming later.
+                </p>
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Right — Customer details (hidden on mobile) */}
+        {/* Right — Triage details (hidden on mobile) */}
         <div className="hidden lg:flex w-72 flex-col border-l border-border flex-shrink-0">
           <ScrollArea className="flex-1">
-            <div className="p-4 space-y-5">
-              {/* Profile */}
-              <div className="flex flex-col items-center text-center">
-                <Avatar className="h-16 w-16 mb-3">
-                  <AvatarFallback className="text-lg bg-primary/10 text-primary">AK</AvatarFallback>
-                </Avatar>
-                <h3 className="text-sm font-semibold">{customerDetails.name}</h3>
-                <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                  <Mail className="h-3 w-3" />{customerDetails.email}
-                </div>
-                <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
-                  <Phone className="h-3 w-3" />{customerDetails.phone}
-                </div>
+            {!activeThread ? (
+              <div className="p-4">
+                <p className="text-xs text-muted-foreground">No conversation selected.</p>
               </div>
+            ) : (
+              <div className="p-4 space-y-5">
+                {/* Profile */}
+                <div className="flex flex-col items-center text-center">
+                  <Avatar className="h-16 w-16 mb-3">
+                    <AvatarFallback className="text-lg bg-primary/10 text-primary">
+                      {initials(activeThread)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <h3 className="text-sm font-semibold break-all">
+                    {activeThread.from_handle || "Unknown sender"}
+                  </h3>
+                  <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground capitalize">
+                    <ChannelIcon channel={activeThread.channel} />
+                    {activeThread.channel || "unknown channel"}
+                  </div>
+                </div>
 
-              {/* Stats */}
-              <div className="grid grid-cols-2 gap-3">
-                <Card className="bg-muted/30">
-                  <CardContent className="p-3 text-center">
-                    <ShoppingBag className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-                    <p className="text-lg font-bold">{customerDetails.totalOrders}</p>
-                    <p className="text-[10px] text-muted-foreground">Orders</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/30">
-                  <CardContent className="p-3 text-center">
-                    <Clock className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-                    <p className="text-lg font-bold">{customerDetails.lifetimeValue}</p>
-                    <p className="text-[10px] text-muted-foreground">LTV</p>
-                  </CardContent>
-                </Card>
-              </div>
+                {/* Triage details */}
+                <div>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Route className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-xs font-medium text-muted-foreground">Triage</span>
+                  </div>
+                  <dl className="space-y-2 text-xs">
+                    <TriageRow label="Classification" value={activeTriage?.classification ?? activeThread.classification} />
+                    <TriageRow label="Sentiment" value={activeTriage?.sentiment ?? activeThread.sentiment} />
+                    <TriageRow label="Urgency" value={activeTriage?.urgency ?? activeThread.urgency} />
+                    <TriageRow label="Route to" value={activeTriage?.route_to ?? activeThread.route_to} />
+                    <TriageRow label="Status" value={activeThread.status} />
+                  </dl>
+                  {activeThread.sla_deadline && (
+                    <div className="flex items-center gap-1.5 mt-3 text-[11px] text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      SLA: {new Date(activeThread.sla_deadline).toLocaleString()}
+                    </div>
+                  )}
+                  {!activeTriage &&
+                    !activeThread.classification &&
+                    !activeThread.urgency && (
+                      <p className="mt-2 text-[11px] text-muted-foreground">
+                        Not triaged yet — run triage to classify and route this thread.
+                      </p>
+                    )}
+                </div>
 
-              {/* Tags */}
-              <div>
-                <div className="flex items-center gap-1.5 mb-2">
-                  <Tag className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs font-medium text-muted-foreground">Tags</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {customerDetails.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-[11px]">{tag}</Badge>
-                  ))}
-                </div>
-              </div>
-
-              {/* AI Suggested Replies */}
-              <div>
-                <div className="flex items-center gap-1.5 mb-2">
-                  <Sparkles className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-xs font-medium">AI Suggested Replies</span>
-                </div>
-                <div className="space-y-2">
-                  {aiReplies.map((reply, i) => (
-                    <Button
-                      key={i}
-                      variant="outline"
-                      className="w-full h-auto text-left text-xs py-2 px-3 whitespace-normal leading-relaxed"
-                      onClick={() => setMessageInput(reply)}
-                    >
-                      {reply}
-                    </Button>
-                  ))}
+                {/* Advisory note */}
+                <div className="rounded border border-border bg-muted/30 p-3">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Sparkles className="h-3.5 w-3.5 text-primary" />
+                    <span className="text-xs font-medium">AI drafts</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Maroa drafts replies for you to review and paste into the
+                    original channel. Drafts are copy-only — sending from Maroa
+                    is coming later.
+                  </p>
                 </div>
               </div>
-            </div>
+            )}
           </ScrollArea>
         </div>
       </div>
+    </div>
+  );
+}
+
+function TriageRow({ label, value }: { label: string; value?: string | null }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="capitalize text-foreground">
+        {value ? <Badge variant="secondary" className="text-[10px] capitalize">{value}</Badge> : "—"}
+      </dd>
     </div>
   );
 }

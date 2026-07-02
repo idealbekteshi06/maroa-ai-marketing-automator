@@ -1,309 +1,527 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Card, CardHeader, CardTitle, CardDescription, CardContent,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Users, UserCheck, UserX, UserPlus, Heart, Star,
-  MessageSquare, TrendingUp, TrendingDown, Brain, Target,
-  ShoppingBag,
+  UserCheck, Heart, MessageSquare, TrendingUp, Brain, Target,
+  Sparkles, Loader2, RefreshCw, Lightbulb, AlertTriangle,
 } from "lucide-react";
-import Sparkline from "@/components/Sparkline";
+import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { wf8GetLatestReport, wf8GenerateReport, vocAuto } from "@/lib/api";
 
-/* ── Mock data ── */
-// TODO: wire to real API
+/* ── WF8 insight report shapes (services/wf8 → insight_reports row) ── */
 
-const personas = [
-  {
-    name: "Lira Krasniqi",
-    role: "Health-Conscious Professional",
-    avatar: "👩‍💼",
-    description:
-      "Mid-30s professional in Prishtina who tracks macros and hydration. Prefers premium, locally-sourced water and shares wellness tips on Instagram.",
-    needs: ["Mineral content transparency", "Subscription delivery", "Eco-friendly packaging"],
-  },
-  {
-    name: "Blerim Hoti",
-    role: "Restaurant Owner",
-    avatar: "👨‍🍳",
-    description:
-      "Runs two restaurants in Peja. Orders in bulk for table service and values consistent supply, competitive wholesale pricing, and branded bottles for events.",
-    needs: ["Bulk pricing tiers", "Reliable weekly delivery", "Custom-label options"],
-  },
-  {
-    name: "Arta Berisha",
-    role: "Fitness Studio Manager",
-    avatar: "🏋️‍♀️",
-    description:
-      "Operates a CrossFit gym in Prizren. Stocks 500ml bottles for members and runs co-branded hydration challenges on social media.",
-    needs: ["Sport-cap bottles", "Co-marketing opportunities", "Volume discounts"],
-  },
-];
-
-const segments = [
-  {
-    label: "VIP Customers",
-    count: 23,
-    ltv: 847,
-    icon: Star,
-    color: "text-yellow-500",
-    bgColor: "bg-yellow-500/10",
-    sparkline: [620, 670, 710, 780, 810, 847],
-  },
-  {
-    label: "At-Risk",
-    count: 8,
-    ltv: 234,
-    icon: UserX,
-    color: "text-red-500",
-    bgColor: "bg-red-500/10",
-    sparkline: [310, 290, 270, 260, 245, 234],
-  },
-  {
-    label: "New Signups",
-    count: 34,
-    ltv: 0,
-    icon: UserPlus,
-    color: "text-blue-500",
-    bgColor: "bg-blue-500/10",
-    sparkline: [12, 18, 22, 26, 30, 34],
-  },
-  {
-    label: "Inactive 30d",
-    count: 12,
-    ltv: 156,
-    icon: Users,
-    color: "text-gray-500",
-    bgColor: "bg-gray-500/10",
-    sparkline: [18, 16, 15, 14, 13, 12],
-  },
-];
-
-const insights = [
-  {
-    quote: "The glass bottle feels premium — I always refill it at work and people ask about the brand.",
-    source: "Google Review — Lira K.",
-    sentiment: "positive" as const,
-  },
-  {
-    quote: "Delivery was two days late last month. If it happens again I will switch to Rugova Water.",
-    source: "WhatsApp Support Chat",
-    sentiment: "negative" as const,
-  },
-  {
-    quote: "Would love a sparkling option. I currently mix Uje Karadaku still water with SodaStream.",
-    source: "Instagram DM",
-    sentiment: "neutral" as const,
-  },
-  {
-    quote: "Best water in Kosovo, hands down. My gym members request it by name.",
-    source: "Facebook Review — Arta B.",
-    sentiment: "positive" as const,
-  },
-  {
-    quote: "The 1.5L bottle cap leaks if you tilt it in a bag. Happened three times now.",
-    source: "Email Support Ticket #1042",
-    sentiment: "negative" as const,
-  },
-];
-
-const cohortMonths = ["Oct", "Nov", "Dec", "Jan", "Feb", "Mar"];
-const cohortData = [
-  [100, 82, 71, 64, 58, 52],
-  [100, 79, 68, 60, 53, 0],
-  [100, 85, 74, 67, 0, 0],
-  [100, 80, 70, 0, 0, 0],
-  [100, 88, 0, 0, 0, 0],
-  [100, 0, 0, 0, 0, 0],
-];
-
-function retentionColor(value: number): string {
-  if (value === 0) return "transparent";
-  if (value >= 80) return "hsl(142 71% 45% / 0.85)";
-  if (value >= 60) return "hsl(142 71% 45% / 0.55)";
-  if (value >= 40) return "hsl(142 71% 45% / 0.30)";
-  if (value >= 20) return "hsl(0 84% 60% / 0.35)";
-  return "hsl(0 84% 60% / 0.60)";
+interface Wf8Theme {
+  theme?: string;
+  jtbd_functional?: string;
+  jtbd_emotional?: string;
+  jtbd_social?: string;
+  evidence_count?: number;
+  sample_quotes?: string[];
 }
 
-const sentimentBadge = {
+interface Wf8PainPoint {
+  pain?: string;
+  severity?: number;
+  frequency?: number;
+  quotes?: string[];
+}
+
+interface Wf8DelightMoment {
+  moment?: string;
+  frequency?: number;
+  quotes?: string[];
+}
+
+interface Wf8UnmetNeed {
+  need?: string;
+  signal_strength?: number;
+  expected_value?: string;
+}
+
+interface Wf8Persona {
+  name?: string;
+  demographics?: string;
+  primary_jtbd?: string;
+  key_pains?: string[];
+  channels?: string[];
+  words_they_use?: string[];
+}
+
+interface Wf8ActionItem {
+  action?: string;
+  workflow?: string;
+  why_now?: string;
+}
+
+interface Wf8Report {
+  id?: string;
+  created_at?: string;
+  window_start?: string;
+  window_end?: string;
+  top_themes?: Wf8Theme[];
+  pain_points?: Wf8PainPoint[];
+  delight_moments?: Wf8DelightMoment[];
+  unmet_needs?: Wf8UnmetNeed[];
+  personas?: Wf8Persona[];
+  language_patterns?: string[];
+  action_items?: Wf8ActionItem[];
+}
+
+/* ── VOC shapes (services/voc engine → synthesizeVoc result) ── */
+
+interface VocPainPoint {
+  theme?: string;
+  frequency?: number;
+  severity?: string;
+  verbatim_quotes?: string[];
+  languages?: string[];
+}
+
+interface VocJtbdSignal {
+  job?: string;
+  evidence_quotes?: string[];
+}
+
+interface VocResult {
+  total_reviews_analyzed?: number;
+  primary_language?: string;
+  pain_points?: VocPainPoint[];
+  jtbd_signals?: VocJtbdSignal[];
+  persona_refinement?: {
+    demographics_observed?: string;
+    common_use_cases?: string[];
+    vocabulary_clusters?: string[];
+  } | null;
+  sentiment?: {
+    positive_pct?: number;
+    neutral_pct?: number;
+    negative_pct?: number;
+  } | null;
+  recommendations_for_marketing?: string[];
+  data_quality?: string;
+  caveats?: string[];
+  short_circuited?: boolean;
+  short_circuit_reason?: string;
+}
+
+type Sentiment = "positive" | "neutral" | "negative";
+
+interface QuoteCard {
+  quote: string;
+  source: string;
+  sentiment: Sentiment;
+}
+
+const sentimentBadge: Record<Sentiment, string> = {
   positive: "bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/30",
   neutral: "bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 border-yellow-500/30",
   negative: "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30",
 };
 
+/** Flatten VOC output into quote cards — ONLY quotes the backend returned. */
+function vocToQuoteCards(voc: VocResult | null | undefined): QuoteCard[] {
+  if (!voc) return [];
+  const cards: QuoteCard[] = [];
+  voc.pain_points?.forEach((p) => {
+    p.verbatim_quotes?.forEach((q) => {
+      if (q) cards.push({ quote: q, source: p.theme || "Pain point", sentiment: "negative" });
+    });
+  });
+  voc.jtbd_signals?.forEach((j) => {
+    j.evidence_quotes?.forEach((q) => {
+      if (q) cards.push({ quote: q, source: j.job || "Job to be done", sentiment: "neutral" });
+    });
+  });
+  return cards;
+}
+
+function SectionSkeleton({ cards = 3 }: { cards?: number }) {
+  return (
+    <div className="grid gap-4 md:grid-cols-3">
+      {Array.from({ length: cards }).map((_, i) => (
+        <Card key={i}>
+          <CardHeader className="pb-2">
+            <Skeleton className="h-5 w-2/3" />
+            <Skeleton className="h-4 w-1/2" />
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+            <Skeleton className="h-4 w-3/4" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 export default function CustomerInsights() {
+  const { businessId } = useAuth();
+  const qc = useQueryClient();
   const [expandedPersona, setExpandedPersona] = useState<number | null>(null);
+  const [vocResult, setVocResult] = useState<VocResult | null>(null);
+
+  const reportQuery = useQuery({
+    queryKey: ["wf8", "latest-report", businessId],
+    queryFn: async () =>
+      (await wf8GetLatestReport({ business_id: businessId! })) as Wf8Report | null,
+    enabled: !!businessId,
+    retry: false,
+  });
+
+  const generate = useMutation({
+    mutationFn: () => wf8GenerateReport({ businessId: businessId! }),
+    onSuccess: () => {
+      toast.success("Insights report generated");
+      qc.invalidateQueries({ queryKey: ["wf8", "latest-report", businessId] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to generate report"),
+  });
+
+  const mineVoc = useMutation({
+    mutationFn: async () => (await vocAuto({ businessId: businessId! })) as VocResult,
+    onMutate: () => {
+      toast.info("Mining customer language from reviews and comments — this can take a minute…");
+    },
+    onSuccess: (data) => {
+      setVocResult(data ?? null);
+      if (data?.short_circuited) {
+        toast.warning(data.short_circuit_reason || "Not enough reviews to mine customer language yet.");
+      } else {
+        toast.success(
+          `Customer language mined from ${data?.total_reviews_analyzed ?? 0} reviews`,
+        );
+      }
+    },
+    onError: (e: Error) => toast.error(e.message || "Customer-language mining failed"),
+  });
+
+  const report = reportQuery.data ?? null;
+  const personas = report?.personas ?? [];
+  const themes = report?.top_themes ?? [];
+  const actionItems = report?.action_items ?? [];
+  const quoteCards = vocToQuoteCards(vocResult);
+
+  const generateButton = (
+    <Button
+      size="sm"
+      onClick={() => generate.mutate()}
+      disabled={generate.isPending || !businessId}
+    >
+      {generate.isPending ? (
+        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+      ) : (
+        <Sparkles className="mr-1.5 h-4 w-4" />
+      )}
+      {generate.isPending ? "Generating…" : report ? "Regenerate report" : "Generate report"}
+    </Button>
+  );
 
   return (
     <div className="space-y-8">
-      {/* Honesty label: personas/quotes below are hardcoded demo content —
-          the wf8 customer-voice backend isn't wired on this tree
-          (AUDIT_2026-06-10.md §2c addendum F-10). */}
-      <p className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-[11px] font-medium text-muted-foreground">
-        Sample data — example personas until your customer-voice analysis is connected
-      </p>
-      {/* ── Hero: AI Personas ── */}
-      <section>
-        <div className="flex items-center gap-2 mb-1">
-          <Brain className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold text-foreground">Customer personas (example preview)</h2>
+      {/* ── Header ── */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <Brain className="h-5 w-5 text-primary" />
+            <h1 className="text-2xl font-semibold text-foreground">Customer insights</h1>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            AI-mined personas, themes, and verbatim customer language from your reviews and messages.
+          </p>
+          {report?.window_start && report?.window_end && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Window: {report.window_start} → {report.window_end}
+            </p>
+          )}
         </div>
-        <p className="text-sm text-muted-foreground mb-4">
-          An illustration of what Maroa builds from your order history, reviews, and support conversations.
-        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => reportQuery.refetch()}
+            disabled={reportQuery.isFetching || !businessId}
+          >
+            <RefreshCw className={`h-4 w-4 ${reportQuery.isFetching ? "animate-spin" : ""}`} />
+          </Button>
+          {generateButton}
+        </div>
+      </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          {personas.map((p, i) => (
-            <Card
-              key={i}
-              className={`cursor-pointer transition-shadow hover:shadow-md ${expandedPersona === i ? "ring-2 ring-primary" : ""}`}
-              onClick={() => setExpandedPersona(expandedPersona === i ? null : i)}
-            >
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl">{p.avatar}</span>
-                  <div>
-                    <CardTitle className="text-base">{p.name}</CardTitle>
-                    <CardDescription>{p.role}</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground space-y-3">
-                <p>{p.description}</p>
-                <div>
-                  <span className="font-medium text-foreground text-xs uppercase tracking-wider">Top Needs</span>
-                  <ul className="mt-1 space-y-1">
-                    {p.needs.map((n, j) => (
-                      <li key={j} className="flex items-center gap-1.5">
-                        <Target className="h-3 w-3 text-primary shrink-0" />
-                        {n}
+      {reportQuery.isLoading ? (
+        <>
+          <SectionSkeleton />
+          <SectionSkeleton cards={4} />
+        </>
+      ) : reportQuery.isError ? (
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
+            <AlertTriangle className="h-6 w-6 text-warning" />
+            <p className="text-sm text-muted-foreground">
+              Could not load your insights report. Try again in a moment.
+            </p>
+            <Button size="sm" variant="outline" onClick={() => reportQuery.refetch()}>
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      ) : !report ? (
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+            <Brain className="h-8 w-8 text-muted-foreground" />
+            <p className="text-sm font-medium text-foreground">
+              No insights report yet — generate your first one
+            </p>
+            <p className="max-w-md text-xs text-muted-foreground">
+              Maroa mines your last 30 days of reviews and inbox messages for personas,
+              pain points, and the exact language your customers use.
+            </p>
+            {generateButton}
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* ── AI Personas ── */}
+          <section>
+            <div className="flex items-center gap-2 mb-1">
+              <Brain className="h-5 w-5 text-primary" />
+              <h2 className="text-xl font-semibold text-foreground">Customer personas</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Built from your order history, reviews, and support conversations.
+            </p>
+
+            {personas.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                  No personas detected in this window yet. More reviews and messages sharpen these.
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-3">
+                {personas.map((p, i) => (
+                  <Card
+                    key={i}
+                    className={`cursor-pointer transition-shadow hover:shadow-md ${expandedPersona === i ? "ring-2 ring-primary" : ""}`}
+                    onClick={() => setExpandedPersona(expandedPersona === i ? null : i)}
+                  >
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-base font-semibold text-primary">
+                          {(p.name || "?").charAt(0).toUpperCase()}
+                        </span>
+                        <div>
+                          <CardTitle className="text-base">{p.name || "Persona"}</CardTitle>
+                          {p.demographics && <CardDescription>{p.demographics}</CardDescription>}
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="text-sm text-muted-foreground space-y-3">
+                      {p.primary_jtbd && <p>{p.primary_jtbd}</p>}
+                      {(p.key_pains?.length ?? 0) > 0 && (
+                        <div>
+                          <span className="font-medium text-foreground text-xs uppercase tracking-wider">Key pains</span>
+                          <ul className="mt-1 space-y-1">
+                            {p.key_pains?.map((n, j) => (
+                              <li key={j} className="flex items-center gap-1.5">
+                                <Target className="h-3 w-3 text-primary shrink-0" />
+                                {n}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {expandedPersona === i && (p.words_they_use?.length ?? 0) > 0 && (
+                        <div>
+                          <span className="font-medium text-foreground text-xs uppercase tracking-wider">Words they use</span>
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {p.words_they_use?.map((w, j) => (
+                              <Badge key={j} variant="outline" className="text-[10px]">
+                                {w}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {expandedPersona === i && (p.channels?.length ?? 0) > 0 && (
+                        <p className="text-xs">
+                          <span className="font-medium text-foreground">Channels:</span>{" "}
+                          {p.channels?.join(", ")}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* ── Top Themes ── */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <UserCheck className="h-5 w-5 text-primary" />
+              <h2 className="text-xl font-semibold text-foreground">Top themes</h2>
+            </div>
+
+            {themes.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                  No recurring themes surfaced in this window.
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {themes.map((t, i) => (
+                  <Card key={i}>
+                    <CardContent className="pt-5 pb-4 flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <TrendingUp className="h-5 w-5 text-primary" />
+                        </div>
+                        {typeof t.evidence_count === "number" && (
+                          <Badge variant="outline" className="text-[10px]">
+                            {t.evidence_count} signals
+                          </Badge>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{t.theme || "Theme"}</p>
+                        {t.jtbd_functional && (
+                          <p className="mt-1 text-xs text-muted-foreground">{t.jtbd_functional}</p>
+                        )}
+                      </div>
+                      {t.sample_quotes?.[0] && (
+                        <p className="text-xs italic text-muted-foreground">
+                          "{t.sample_quotes[0]}"
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* ── Recommended actions ── */}
+          {actionItems.length > 0 && (
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <Lightbulb className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-semibold text-foreground">Recommended actions</h2>
+              </div>
+              <Card>
+                <CardContent className="pt-5">
+                  <ul className="space-y-3">
+                    {actionItems.map((a, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <Target className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                        <div>
+                          <p className="text-sm text-foreground">{a.action}</p>
+                          {a.why_now && (
+                            <p className="text-xs text-muted-foreground">{a.why_now}</p>
+                          )}
+                        </div>
                       </li>
                     ))}
                   </ul>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Customer Segments ── */}
-      <section>
-        <div className="flex items-center gap-2 mb-4">
-          <UserCheck className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold text-foreground">Customer segments (example preview)</h2>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {segments.map((s, i) => {
-            const Icon = s.icon;
-            return (
-              <Card key={i}>
-                <CardContent className="pt-5 pb-4 flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <div className={`p-2 rounded-lg ${s.bgColor}`}>
-                      <Icon className={`h-5 w-5 ${s.color}`} />
-                    </div>
-                    <Sparkline data={s.sparkline} width={64} height={28} />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-foreground">{s.count}</p>
-                    <p className="text-sm text-muted-foreground">{s.label}</p>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Avg LTV: <span className="font-medium text-foreground">€{s.ltv}</span>
-                  </p>
                 </CardContent>
               </Card>
-            );
-          })}
-        </div>
-      </section>
+            </section>
+          )}
+        </>
+      )}
 
-      {/* ── What Your Customers Want ── */}
+      {/* ── What Your Customers Say (VOC — verbatim only) ── */}
       <section>
-        <div className="flex items-center gap-2 mb-1">
-          <Heart className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold text-foreground">What your customers want (example preview)</h2>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between mb-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Heart className="h-5 w-5 text-primary" />
+              <h2 className="text-xl font-semibold text-foreground">What your customers say</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Verbatim language mined from real reviews and comments — never invented.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => mineVoc.mutate()}
+            disabled={mineVoc.isPending || !businessId}
+          >
+            {mineVoc.isPending ? (
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+            ) : (
+              <MessageSquare className="mr-1.5 h-4 w-4" />
+            )}
+            {mineVoc.isPending ? "Mining…" : "Mine customer language"}
+          </Button>
         </div>
-        <p className="text-sm text-muted-foreground mb-4">
-          AI-extracted insights from reviews, messages, and support tickets.
-        </p>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {insights.map((ins, i) => (
-            <Card key={i}>
-              <CardContent className="pt-5 space-y-3">
-                <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                <blockquote className="text-sm italic text-foreground leading-relaxed">
-                  "{ins.quote}"
-                </blockquote>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">{ins.source}</span>
-                  <Badge variant="outline" className={sentimentBadge[ins.sentiment]}>
-                    {ins.sentiment}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
+        {mineVoc.isPending ? (
+          <SectionSkeleton />
+        ) : quoteCards.length === 0 ? (
+          <Card>
+            <CardContent className="py-10 text-center">
+              <MessageSquare className="mx-auto h-6 w-6 text-muted-foreground" />
+              <p className="mt-2 text-sm text-muted-foreground">
+                {vocResult
+                  ? vocResult.short_circuit_reason ||
+                    "No verbatim customer quotes found yet — collect more reviews and run again."
+                  : "No customer language mined yet. Run the miner to pull real quotes from your reviews and comments."}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {quoteCards.map((ins, i) => (
+                <Card key={i}>
+                  <CardContent className="pt-5 space-y-3">
+                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                    <blockquote className="text-sm italic text-foreground leading-relaxed">
+                      "{ins.quote}"
+                    </blockquote>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">{ins.source}</span>
+                      <Badge variant="outline" className={sentimentBadge[ins.sentiment]}>
+                        {ins.sentiment}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
 
-      {/* ── Cohort Retention Heatmap ── */}
-      <section>
-        <div className="flex items-center gap-2 mb-1">
-          <TrendingUp className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold text-foreground">Cohort retention (example preview)</h2>
-        </div>
-        <p className="text-sm text-muted-foreground mb-4">
-          Monthly retention rates for Uje Karadaku subscriber cohorts.
-        </p>
-
-        <Card>
-          <CardContent className="pt-5 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr>
-                  <th className="text-left text-muted-foreground font-medium pb-2 pr-3">Cohort</th>
-                  {cohortMonths.map((m) => (
-                    <th key={m} className="text-center text-muted-foreground font-medium pb-2 px-2 min-w-[56px]">
-                      {m}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {cohortData.map((row, ri) => (
-                  <tr key={ri}>
-                    <td className="pr-3 py-1 font-medium text-foreground whitespace-nowrap">
-                      {cohortMonths[ri]} '25
-                    </td>
-                    {row.map((val, ci) => (
-                      <td key={ci} className="px-2 py-1 text-center">
-                        {val > 0 ? (
-                          <span
-                            className="inline-block w-full rounded px-2 py-1 text-xs font-medium"
-                            style={{
-                              backgroundColor: retentionColor(val),
-                              color: val >= 60 ? "#fff" : val > 0 ? "hsl(var(--foreground))" : "transparent",
-                            }}
-                          >
-                            {val}%
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground/40">—</span>
-                        )}
-                      </td>
+            {(vocResult?.recommendations_for_marketing?.length ?? 0) > 0 && (
+              <Card className="mt-4">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Use it in your marketing</CardTitle>
+                  <CardDescription className="text-xs">
+                    From {vocResult?.total_reviews_analyzed ?? 0} reviews analyzed
+                    {vocResult?.data_quality ? ` · data quality: ${vocResult.data_quality}` : ""}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-1.5">
+                    {vocResult?.recommendations_for_marketing?.map((r, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-foreground">
+                        <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                        {r}
+                      </li>
                     ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+          </>
+        )}
       </section>
     </div>
   );

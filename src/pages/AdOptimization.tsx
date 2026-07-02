@@ -1,120 +1,233 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter,
+  Card, CardHeader, CardTitle, CardDescription, CardContent,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import Sparkline from "@/components/Sparkline";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-import {
-  TrendingUp, TrendingDown, DollarSign, Target, Zap, PauseCircle,
-  PlayCircle, ArrowUpRight, Lightbulb, BarChart3,
+  TrendingUp, DollarSign, Target, Zap, PauseCircle, PlayCircle,
+  ArrowUpRight, Lightbulb, BarChart3, Loader2, RefreshCw,
 } from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  getMetaCampaigns,
+  getGoogleCampaigns,
+  adOptimizerAuditCampaign,
+} from "@/lib/api";
 
-/* ── Mock Data ── */
+/* ── Backend response shapes ──────────────────────────────────────────
+ * GET /webhook/meta-campaigns-get   → { campaigns, creatives, summary }
+ * GET /webhook/google-campaigns-get → { campaigns, summary }
+ * Rows come straight from the ad_campaigns / ad_creatives tables —
+ * every field may be null/missing, so everything is optional + guarded.
+ */
 
-const metrics = [
-  {
-    label: "Total Spend",
-    value: "€2,847",
-    delta: "+12.4%",
-    up: true,
-    icon: DollarSign,
-    spark: [1800, 1950, 2100, 2000, 2300, 2500, 2650, 2847],
-  },
-  {
-    label: "ROAS",
-    value: "3.2x",
-    delta: "+0.4x",
-    up: true,
-    icon: TrendingUp,
-    spark: [2.1, 2.4, 2.5, 2.8, 2.6, 3.0, 3.1, 3.2],
-  },
-  {
-    label: "Avg CPC",
-    value: "€0.42",
-    delta: "-8.7%",
-    up: true,
-    icon: Target,
-    spark: [0.56, 0.52, 0.49, 0.48, 0.45, 0.44, 0.43, 0.42],
-  },
-  {
-    label: "Conversions",
-    value: "187",
-    delta: "+23",
-    up: true,
-    icon: Zap,
-    spark: [110, 125, 130, 145, 155, 160, 172, 187],
-  },
-];
+interface AdCampaign {
+  id?: string;
+  business_id?: string;
+  business_name?: string | null;
+  platform?: string | null; // 'meta' | 'google'
+  status?: string | null; // 'active' | 'paused' | 'draft'
+  daily_budget?: number | string | null;
+  objective?: string | null;
+  /** JSONB on live path, JSON *string* on the meta draft path — parse both. */
+  ai_strategy?: unknown;
+  last_decision?: string | null;
+  last_decision_reason?: string | null;
+  last_optimized_at?: string | null;
+  impressions?: number | string | null;
+  clicks?: number | string | null;
+  conversions?: number | string | null;
+  total_spend?: number | string | null;
+  roas?: number | string | null;
+  paused_reason?: string | null;
+  created_at?: string | null;
+}
 
-const campaigns = [
-  { name: "Uje Karadaku — Spring Launch", status: "active", spend: 980, budget: 1200, impressions: 124_500, clicks: 2_870, ctr: 2.3, cpa: 4.12 },
-  { name: "Brand Awareness — Kosovo", status: "active", spend: 650, budget: 800, impressions: 98_200, clicks: 1_540, ctr: 1.57, cpa: 5.41 },
-  { name: "Retargeting — Cart Abandoners", status: "active", spend: 520, budget: 600, impressions: 45_300, clicks: 1_890, ctr: 4.17, cpa: 2.89 },
-  { name: "Summer Hydration Promo", status: "paused", spend: 420, budget: 700, impressions: 67_800, clicks: 980, ctr: 1.44, cpa: 6.23 },
-  { name: "Lookalike — High-Value Buyers", status: "active", spend: 277, budget: 500, impressions: 31_200, clicks: 720, ctr: 2.31, cpa: 3.78 },
-];
+interface AdCreative {
+  id?: string;
+  campaign_id?: string | null;
+  headline?: string | null;
+  status?: string | null;
+  is_winner?: boolean | null;
+}
 
-const optimizations = [
-  {
-    id: 1,
-    title: "Shift €200 from Brand Awareness to Retargeting",
-    description: "Retargeting campaign has 2x better ROAS. Reallocating budget could increase conversions by ~18%.",
-    impact: "+18%",
-    type: "budget",
-  },
-  {
-    id: 2,
-    title: "Pause Summer Hydration — below break-even",
-    description: "CPA of €6.23 exceeds target of €5.00. Recommend pausing and refreshing creative.",
-    impact: "-€120/wk",
-    type: "pause",
-  },
-  {
-    id: 3,
-    title: "Test video creative on Spring Launch",
-    description: "Similar brands see 35% higher CTR with short-form video ads. AI-generated storyboard ready.",
-    impact: "+35% CTR",
-    type: "creative",
-  },
-  {
-    id: 4,
-    title: "Expand Lookalike audience to 3%",
-    description: "Current 1% lookalike is saturating. Expanding to 3% should maintain ROAS above 2.8x.",
-    impact: "+40% reach",
-    type: "audience",
-  },
-];
+interface CampaignsSummary {
+  total?: number;
+  active?: number;
+  paused?: number;
+  total_spend?: string; // .toFixed(2) string from the backend
+  avg_roas?: string; // .toFixed(2) string from the backend
+}
 
-const chartData = Array.from({ length: 30 }, (_, i) => ({
-  day: `Apr ${i + 1}`,
-  spend: Math.round(70 + Math.random() * 40 + i * 1.2),
-  conversions: Math.round(3 + Math.random() * 5 + i * 0.3),
-}));
+interface MetaCampaignsResponse {
+  campaigns?: AdCampaign[];
+  creatives?: AdCreative[];
+  summary?: CampaignsSummary;
+}
+
+interface GoogleCampaignsResponse {
+  campaigns?: AdCampaign[];
+  summary?: CampaignsSummary;
+}
+
+/** POST /webhook/ad-optimizer-audit-campaign response (canonical engine) */
+interface AuditResult {
+  decision?: string | null;
+  decision_reason?: string | null;
+  new_daily_budget?: number | null;
+  audit_score?: number | null;
+  critical_issues?: string[] | null;
+  warnings?: string[] | null;
+  opportunities?: string[] | null;
+  short_circuited?: boolean;
+  short_circuit_reason?: string | null;
+  action_taken?: string | null;
+}
+
+/* ── Helpers ── */
+
+const num = (v: unknown): number => {
+  const n = typeof v === "number" ? v : parseFloat(String(v ?? ""));
+  return Number.isFinite(n) ? n : 0;
+};
+
+const money = (v: number) =>
+  `$${v.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+
+/** ai_strategy is jsonb on the live path but a JSON string on the draft path. */
+function parseStrategy(raw: unknown): Record<string, unknown> | null {
+  if (!raw) return null;
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+  return typeof raw === "object" ? (raw as Record<string, unknown>) : null;
+}
+
+function campaignName(c: AdCampaign): string {
+  const strategy = parseStrategy(c?.ai_strategy);
+  const strategyName = strategy?.campaign_name;
+  if (typeof strategyName === "string" && strategyName.trim()) return strategyName;
+  const parts = [c?.business_name, c?.objective].filter(Boolean);
+  if (parts.length) return parts.join(" — ");
+  return `${c?.platform === "google" ? "Google" : "Meta"} campaign`;
+}
 
 /* ── Component ── */
 
 export default function AdOptimization() {
-  const [dismissed, setDismissed] = useState<Set<number>>(new Set());
+  const { businessId } = useAuth();
+  const qc = useQueryClient();
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
-  // TODO: wire to real API — fetch campaigns, metrics, AI suggestions
+  const metaQuery = useQuery({
+    queryKey: ["ad-optimization", "meta", businessId],
+    queryFn: () =>
+      getMetaCampaigns({ business_id: businessId! }) as Promise<MetaCampaignsResponse>,
+    enabled: !!businessId,
+    retry: false,
+  });
+
+  const googleQuery = useQuery({
+    queryKey: ["ad-optimization", "google", businessId],
+    queryFn: () =>
+      getGoogleCampaigns({ business_id: businessId! }) as Promise<GoogleCampaignsResponse>,
+    enabled: !!businessId,
+    retry: false,
+  });
+
+  const audit = useMutation({
+    mutationFn: (campaignId: string) =>
+      adOptimizerAuditCampaign({
+        businessId: businessId!,
+        campaignId,
+      }) as Promise<AuditResult>,
+    onSuccess: (d) => {
+      const decision = d?.decision ?? d?.action_taken ?? "complete";
+      toast.success(`Audit complete — ${decision}`, {
+        description: d?.decision_reason ?? d?.short_circuit_reason ?? undefined,
+      });
+      qc.invalidateQueries({ queryKey: ["ad-optimization"] });
+    },
+    onError: (e: Error) => toast.error(e?.message || "Audit failed"),
+  });
+
+  const campaigns = useMemo<AdCampaign[]>(
+    () => [
+      ...(Array.isArray(metaQuery.data?.campaigns) ? metaQuery.data!.campaigns! : []),
+      ...(Array.isArray(googleQuery.data?.campaigns) ? googleQuery.data!.campaigns! : []),
+    ],
+    [metaQuery.data, googleQuery.data],
+  );
+
+  // Aggregate metrics from real campaign rows (no time-series endpoint yet,
+  // so these are current totals rather than deltas).
+  const totals = useMemo(() => {
+    const spend = campaigns.reduce((s, c) => s + num(c?.total_spend), 0);
+    const clicks = campaigns.reduce((s, c) => s + num(c?.clicks), 0);
+    const impressions = campaigns.reduce((s, c) => s + num(c?.impressions), 0);
+    const conversions = campaigns.reduce((s, c) => s + num(c?.conversions), 0);
+    const roasRows = campaigns.filter((c) => num(c?.roas) > 0);
+    const roas = roasRows.length
+      ? roasRows.reduce((s, c) => s + num(c?.roas), 0) / roasRows.length
+      : 0;
+    return { spend, clicks, impressions, conversions, roas };
+  }, [campaigns]);
+
+  // Optimization suggestions come from the canonical ad-optimizer's last
+  // recorded decision on each campaign (last_decision + reason).
+  const opportunities = useMemo(
+    () =>
+      campaigns
+        .filter(
+          (c) =>
+            !!c?.id &&
+            !!c?.last_decision &&
+            String(c.last_decision).toLowerCase() !== "keep" &&
+            !dismissed.has(c.id!),
+        )
+        .map((c) => ({
+          id: c.id!,
+          title: `${campaignName(c)} — ${c.last_decision}`,
+          description: c?.last_decision_reason ?? "No reason recorded.",
+          impact: c?.last_decision ?? "",
+        })),
+    [campaigns, dismissed],
+  );
+
+  const isLoading =
+    !!businessId && (metaQuery.isLoading || googleQuery.isLoading);
+  const loadFailed = metaQuery.isError && googleQuery.isError;
+
+  const metrics = [
+    { label: "Total Spend", value: money(totals.spend), icon: DollarSign },
+    {
+      label: "ROAS",
+      value: totals.roas > 0 ? `${totals.roas.toFixed(2)}x` : "—",
+      icon: TrendingUp,
+    },
+    {
+      label: "Avg CPC",
+      value: totals.clicks > 0 ? money(totals.spend / totals.clicks) : "—",
+      icon: Target,
+    },
+    { label: "Conversions", value: totals.conversions.toLocaleString(), icon: Zap },
+  ];
 
   return (
     <div className="space-y-6">
-      {/* Honesty label: every number on this page is generated demo data
-          (Math.random charts + static deltas) until the real ads API ships
-          (AUDIT_2026-06-10.md §2c). Do not remove without wiring real data. */}
-      <p className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-[11px] font-medium text-muted-foreground">
-        Sample data — this preview uses demo numbers until your ad accounts are connected
-      </p>
       {/* Hero — AI Ad Brain */}
       <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-transparent">
         <CardContent className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pt-6">
@@ -125,95 +238,184 @@ export default function AdOptimization() {
             <div>
               <h2 className="text-lg font-semibold text-foreground">AI Ad Brain</h2>
               <p className="text-sm text-muted-foreground max-w-lg">
-                4 optimization opportunities detected across your Meta campaigns.
-                Estimated impact: <span className="font-medium text-primary">+22% ROAS</span> if all are applied.
+                {isLoading
+                  ? "Loading your campaigns…"
+                  : campaigns.length === 0
+                    ? "Connect your ad accounts and the optimizer audits every campaign daily."
+                    : `${opportunities.length} optimization ${
+                        opportunities.length === 1 ? "suggestion" : "suggestions"
+                      } across ${campaigns.length} ${
+                        campaigns.length === 1 ? "campaign" : "campaigns"
+                      }. The optimizer re-audits daily at 08:00 UTC.`}
               </p>
             </div>
           </div>
-          <Button className="shrink-0">
-            <Zap className="mr-2 h-4 w-4" /> Apply All Recommendations
+          <Button
+            variant="outline"
+            className="shrink-0"
+            onClick={() => {
+              metaQuery.refetch();
+              googleQuery.refetch();
+            }}
+            disabled={isLoading || metaQuery.isFetching || googleQuery.isFetching}
+          >
+            <RefreshCw
+              className={`mr-2 h-4 w-4 ${
+                metaQuery.isFetching || googleQuery.isFetching ? "animate-spin" : ""
+              }`}
+            />
+            Refresh
           </Button>
         </CardContent>
       </Card>
 
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {metrics.map((m) => {
-          const Icon = m.icon;
-          return (
-            <Card key={m.label}>
-              <CardContent className="pt-5 pb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">{m.label}</span>
-                  <Icon className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div className="flex items-end justify-between">
-                  <div>
+        {isLoading
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i}>
+                <CardContent className="pt-5 pb-4">
+                  <Skeleton className="h-4 w-24 mb-3" />
+                  <Skeleton className="h-8 w-20" />
+                </CardContent>
+              </Card>
+            ))
+          : metrics.map((m) => {
+              const Icon = m.icon;
+              return (
+                <Card key={m.label}>
+                  <CardContent className="pt-5 pb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-muted-foreground">{m.label}</span>
+                      <Icon className="h-4 w-4 text-muted-foreground" />
+                    </div>
                     <p className="text-2xl font-bold text-foreground">{m.value}</p>
-                    <Badge variant={m.up ? "default" : "destructive"} className="mt-1 text-xs">
-                      {m.up ? <TrendingUp className="mr-1 h-3 w-3" /> : <TrendingDown className="mr-1 h-3 w-3" />}
-                      {m.delta}
-                    </Badge>
-                  </div>
-                  <Sparkline data={m.spark} />
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+                  </CardContent>
+                </Card>
+              );
+            })}
       </div>
 
       {/* Campaign Table */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" /> Active Campaigns
+            <BarChart3 className="h-5 w-5" /> Campaigns
           </CardTitle>
-          <CardDescription>Meta Ads campaigns for Uje Karadaku</CardDescription>
+          <CardDescription>
+            Meta + Google Ads campaigns managed by Maroa
+          </CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Campaign</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Spend</TableHead>
-                <TableHead className="hidden md:table-cell">Budget</TableHead>
-                <TableHead className="hidden lg:table-cell text-right">Impressions</TableHead>
-                <TableHead className="text-right">Clicks</TableHead>
-                <TableHead className="text-right">CTR</TableHead>
-                <TableHead className="text-right">CPA</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {campaigns.map((c) => (
-                <TableRow key={c.name}>
-                  <TableCell className="font-medium max-w-[200px] truncate">{c.name}</TableCell>
-                  <TableCell>
-                    <Badge variant={c.status === "active" ? "default" : "secondary"} className="text-xs">
-                      {c.status === "active" ? (
-                        <PlayCircle className="mr-1 h-3 w-3" />
-                      ) : (
-                        <PauseCircle className="mr-1 h-3 w-3" />
-                      )}
-                      {c.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">€{c.spend}</TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <div className="flex items-center gap-2">
-                      <Progress value={(c.spend / c.budget) * 100} className="h-2 w-20" />
-                      <span className="text-xs text-muted-foreground">{Math.round((c.spend / c.budget) * 100)}%</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell text-right">{c.impressions.toLocaleString()}</TableCell>
-                  <TableCell className="text-right">{c.clicks.toLocaleString()}</TableCell>
-                  <TableCell className="text-right">{c.ctr}%</TableCell>
-                  <TableCell className="text-right">€{c.cpa.toFixed(2)}</TableCell>
-                </TableRow>
+          {isLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full" />
               ))}
-            </TableBody>
-          </Table>
+            </div>
+          ) : loadFailed ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              Could not load campaigns. Try refreshing in a moment.
+            </p>
+          ) : campaigns.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No campaigns yet — connect Meta/Google in Settings to launch your
+              first AI-managed campaign.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Campaign</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Spend</TableHead>
+                  <TableHead className="hidden md:table-cell">Budget</TableHead>
+                  <TableHead className="hidden lg:table-cell text-right">Impressions</TableHead>
+                  <TableHead className="text-right">Clicks</TableHead>
+                  <TableHead className="text-right">CTR</TableHead>
+                  <TableHead className="text-right">ROAS</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {campaigns.map((c, idx) => {
+                  const impressions = num(c?.impressions);
+                  const clicks = num(c?.clicks);
+                  const spend = num(c?.total_spend);
+                  const dailyBudget = num(c?.daily_budget);
+                  const monthlyBudget = dailyBudget * 30;
+                  const budgetPct =
+                    monthlyBudget > 0
+                      ? Math.min(100, Math.round((spend / monthlyBudget) * 100))
+                      : 0;
+                  const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
+                  const roas = num(c?.roas);
+                  const status = c?.status ?? "unknown";
+                  const isAuditing =
+                    audit.isPending && audit.variables === c?.id;
+                  return (
+                    <TableRow key={c?.id ?? idx}>
+                      <TableCell className="font-medium max-w-[220px]">
+                        <span className="block truncate">{campaignName(c)}</span>
+                        <span className="text-[11px] uppercase text-muted-foreground">
+                          {c?.platform ?? "meta"}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={status === "active" ? "default" : "secondary"}
+                          className="text-xs"
+                        >
+                          {status === "active" ? (
+                            <PlayCircle className="mr-1 h-3 w-3" />
+                          ) : (
+                            <PauseCircle className="mr-1 h-3 w-3" />
+                          )}
+                          {status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">{money(spend)}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {monthlyBudget > 0 ? (
+                          <div className="flex items-center gap-2">
+                            <Progress value={budgetPct} className="h-2 w-20" />
+                            <span className="text-xs text-muted-foreground">
+                              {money(dailyBudget)}/day
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-right">
+                        {impressions.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right">{clicks.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">{ctr.toFixed(2)}%</TableCell>
+                      <TableCell className="text-right">
+                        {roas > 0 ? `${roas.toFixed(2)}x` : "—"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={!c?.id || audit.isPending}
+                          onClick={() => c?.id && audit.mutate(c.id)}
+                        >
+                          {isAuditing ? (
+                            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Zap className="mr-1.5 h-3.5 w-3.5" />
+                          )}
+                          Run audit
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
@@ -223,12 +425,25 @@ export default function AdOptimization() {
           <CardTitle className="flex items-center gap-2">
             <Lightbulb className="h-5 w-5 text-primary" /> Optimization Opportunities
           </CardTitle>
-          <CardDescription>AI-detected improvements based on the last 14 days of data</CardDescription>
+          <CardDescription>
+            Latest decisions from the AI ad optimizer for each campaign
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {optimizations
-            .filter((o) => !dismissed.has(o.id))
-            .map((o) => (
+          {isLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
+            </div>
+          ) : opportunities.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              {campaigns.length === 0
+                ? "Suggestions appear here once your first campaign is running."
+                : "No optimization suggestions right now — run an audit on a campaign above, or wait for the daily 08:00 UTC sweep."}
+            </p>
+          ) : (
+            opportunities.map((o) => (
               <div
                 key={o.id}
                 className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-lg border border-border p-4"
@@ -243,79 +458,29 @@ export default function AdOptimization() {
                   <p className="text-sm text-muted-foreground">{o.description}</p>
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  <Button size="sm">Accept</Button>
+                  <Button
+                    size="sm"
+                    disabled={audit.isPending}
+                    onClick={() => audit.mutate(o.id)}
+                  >
+                    {audit.isPending && audit.variables === o.id ? (
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    ) : null}
+                    Re-audit
+                  </Button>
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => setDismissed((prev) => new Set([...prev, o.id]))}
+                    onClick={() =>
+                      setDismissed((prev) => new Set([...prev, o.id]))
+                    }
                   >
                     Dismiss
                   </Button>
                 </div>
               </div>
-            ))}
-        </CardContent>
-      </Card>
-
-      {/* 30-Day Spend vs Conversions Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Spend vs Conversions — Last 30 Days</CardTitle>
-          <CardDescription>Daily ad spend (€) and conversion count</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis
-                  dataKey="day"
-                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                  tickLine={false}
-                  interval={4}
-                />
-                <YAxis
-                  yAxisId="spend"
-                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  yAxisId="conv"
-                  orientation="right"
-                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: 8,
-                    color: "hsl(var(--foreground))",
-                  }}
-                />
-                <Line
-                  yAxisId="spend"
-                  type="monotone"
-                  dataKey="spend"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth={2}
-                  dot={false}
-                  name="Spend (€)"
-                />
-                <Line
-                  yAxisId="conv"
-                  type="monotone"
-                  dataKey="conversions"
-                  stroke="hsl(var(--success, 142 71% 45%))"
-                  strokeWidth={2}
-                  dot={false}
-                  name="Conversions"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+            ))
+          )}
         </CardContent>
       </Card>
     </div>
