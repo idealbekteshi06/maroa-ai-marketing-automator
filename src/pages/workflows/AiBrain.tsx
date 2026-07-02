@@ -49,12 +49,11 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { toast } from "sonner";
-import { getApiBase, getStreamTicket } from "@/lib/apiClient";
+import { getApiBase, getAuthHeaders } from "@/lib/apiClient";
 import {
   wf15ListConversations,
   wf15GetConversation,
   wf15CreateConversation,
-  wf15SendMessage,
   wf15ToolDecision,
   wf15DecisionLog,
   wf15ExplainDecision,
@@ -82,7 +81,7 @@ export default function AiBrain() {
   const [streaming, setStreaming] = useState(false);
   const [showDecisionLog, setShowDecisionLog] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const abortStreamRef = useRef<EventSource | null>(null);
+  const abortStreamRef = useRef<AbortController | null>(null);
 
   const conversationsQuery = useQuery({
     queryKey: ["wf15", "conversations", businessId],
@@ -163,133 +162,154 @@ export default function AiBrain() {
     setInput("");
     setStreaming(true);
 
-    try {
-      const { assistantMessageId, streamUrl } = await wf15SendMessage({
-        businessId,
-        conversationId: convId!,
-        content,
-      });
+    // The assistant message is created locally and updated as frames stream in.
+    // Its id is reconciled to the server's when the `meta` frame arrives.
+    let assistantId = `tmp-assistant-${Date.now()}`;
+    const assistantMsg: LocalMessage = {
+      id: assistantId,
+      role: "assistant",
+      content: "",
+      reasoning: "",
+      toolCalls: [],
+      createdAt: new Date().toISOString(),
+      isStreaming: true,
+    };
+    setMessages((prev) => [...prev, assistantMsg]);
+    const updateAssistant = (fn: (m: LocalMessage) => LocalMessage) => {
+      setMessages((prev) => prev.map((m) => (m.id === assistantId ? fn(m) : m)));
+    };
 
-      const assistantMsg: LocalMessage = {
-        id: assistantMessageId,
-        role: "assistant",
-        content: "",
-        reasoning: "",
-        toolCalls: [],
-        createdAt: new Date().toISOString(),
-        isStreaming: true,
-      };
-      setMessages((prev) => [...prev, assistantMsg]);
+    const ac = new AbortController();
+    abortStreamRef.current = ac;
 
-      const absoluteUrl = streamUrl.startsWith("http")
-        ? streamUrl
-        : `${getApiBase()}${streamUrl}`;
-      // EventSource cannot send an Authorization header — append a short-lived
-      // signed ticket so the backend's /webhook auth accepts the stream. The
-      // stream is one-shot (closed on done/error), so one ticket per open.
-      const ticket = await getStreamTicket(businessId);
-      if (!ticket) throw new Error("Could not authenticate the response stream — please retry");
-      const es = new EventSource(
-        `${absoluteUrl}${absoluteUrl.includes("?") ? "&" : "?"}ticket=${encodeURIComponent(ticket)}`,
-      );
-      abortStreamRef.current = es;
-
-      const updateAssistant = (fn: (m: LocalMessage) => LocalMessage) => {
-        setMessages((prev) =>
-          prev.map((m) => (m.id === assistantMessageId ? fn(m) : m)),
-        );
-      };
-
-      es.addEventListener("token", (ev: MessageEvent) => {
-        const parsed = safeParseSSE<{ delta: string }>(ev.data);
-        if (!parsed) return;
-        updateAssistant((m) => ({ ...m, content: m.content + parsed.delta }));
-      });
-      es.addEventListener("reasoning", (ev: MessageEvent) => {
-        const parsed = safeParseSSE<{ delta: string }>(ev.data);
-        if (!parsed) return;
-        updateAssistant((m) => ({ ...m, reasoning: (m.reasoning ?? "") + parsed.delta }));
-      });
-      es.addEventListener("tool_call", (ev: MessageEvent) => {
-        const parsed = safeParseSSE<{ toolCall: NonNullable<BrainMessageDto["toolCalls"]>[number] }>(ev.data);
-        if (!parsed) return;
-        updateAssistant((m) => ({
-          ...m,
-          toolCalls: [...(m.toolCalls ?? []), parsed.toolCall],
-        }));
-      });
-      es.addEventListener("tool_update", (ev: MessageEvent) => {
-        const u = safeParseSSE<{
-          id: string;
-          progress?: { percent: number; note: string };
-          status?: LocalMessage["toolCalls"] extends infer T ? (T extends Array<infer U> ? U["status"] : never) : never;
-        }>(ev.data);
-        if (!u) return;
-        updateAssistant((m) => ({
-          ...m,
-          toolCalls: m.toolCalls?.map((t) =>
-            t.id === u.id
-              ? { ...t, progress: u.progress ?? t.progress, status: (u.status as typeof t.status) ?? t.status }
-              : t,
-          ),
-        }));
-      });
-      es.addEventListener("tool_result", (ev: MessageEvent) => {
-        const r = safeParseSSE<{
-          id: string;
-          result?: unknown;
-          status?: string;
-        }>(ev.data);
-        if (!r) return;
-        updateAssistant((m) => ({
-          ...m,
-          toolCalls: m.toolCalls?.map((t) =>
-            t.id === r.id
-              ? { ...t, result: r.result, status: (r.status as typeof t.status) ?? t.status }
-              : t,
-          ),
-        }));
-      });
-      es.addEventListener("done", (ev: MessageEvent) => {
-        const d = safeParseSSE<{
-          messageId: string;
-          modelUsed: "haiku" | "sonnet" | "opus";
-          costUsd: number;
-        }>(ev.data);
-        if (!d) return;
-        updateAssistant((m) => ({
-          ...m,
-          modelUsed: d.modelUsed,
-          costUsd: d.costUsd,
-          isStreaming: false,
-        }));
-        es.close();
-        abortStreamRef.current = null;
-        setStreaming(false);
-      });
-      es.addEventListener("error", (ev: MessageEvent) => {
-        let errorMsg = "Stream error";
-        try {
-          if (ev.data) {
-            errorMsg = (JSON.parse(ev.data) as { message?: string }).message ?? errorMsg;
-          }
-        } catch {
-          // EventSource passes empty error events on disconnect
-        }
-        toast.error(errorMsg);
+    // Dispatch one parsed SSE frame. The backend streams over the POST response
+    // itself (not a separate EventSource), so we read the body as a stream and
+    // parse `event:`/`data:` frames by hand. Text arrives as unnamed frames
+    // carrying {text}; [DONE] ends the turn.
+    const handleFrame = (eventName: string, data: string) => {
+      if (data === "[DONE]") {
         updateAssistant((m) => ({ ...m, isStreaming: false }));
-        es.close();
-        abortStreamRef.current = null;
-        setStreaming(false);
+        return;
+      }
+      const parsed = safeParseSSE<Record<string, unknown>>(data);
+      if (!parsed) return;
+      switch (eventName) {
+        case "meta": {
+          const realId = parsed.assistantMessageId as string | undefined;
+          if (realId) {
+            setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, id: realId } : m)));
+            assistantId = realId;
+          }
+          break;
+        }
+        case "message": {
+          // Streamed assistant text.
+          const text = (parsed.text ?? parsed.delta) as string | undefined;
+          if (text) updateAssistant((m) => ({ ...m, content: m.content + text }));
+          break;
+        }
+        case "reasoning": {
+          const delta = parsed.delta as string | undefined;
+          if (delta) updateAssistant((m) => ({ ...m, reasoning: (m.reasoning ?? "") + delta }));
+          break;
+        }
+        case "tool_call": {
+          const tc = (parsed.toolCall ?? parsed) as NonNullable<BrainMessageDto["toolCalls"]>[number];
+          if (tc?.id) updateAssistant((m) => ({ ...m, toolCalls: [...(m.toolCalls ?? []), tc] }));
+          break;
+        }
+        case "tool_update": {
+          const id = parsed.id as string;
+          updateAssistant((m) => ({
+            ...m,
+            toolCalls: m.toolCalls?.map((t) =>
+              t.id === id
+                ? { ...t, progress: (parsed.progress as typeof t.progress) ?? t.progress, status: (parsed.status as typeof t.status) ?? t.status }
+                : t,
+            ),
+          }));
+          break;
+        }
+        case "tool_result": {
+          const id = parsed.id as string;
+          // The `navigate` tool returns { navigate: "<tab-key>" } — act on it so
+          // Ask Maroa can actually move the user across the app, not just say it.
+          const navTarget = (parsed.result as { navigate?: string } | undefined)?.navigate;
+          if (navTarget && typeof navTarget === "string") {
+            window.dispatchEvent(new CustomEvent("dashboard-navigate", { detail: navTarget }));
+          }
+          updateAssistant((m) => ({
+            ...m,
+            toolCalls: m.toolCalls?.map((t) =>
+              t.id === id ? { ...t, result: parsed.result, status: (parsed.status as typeof t.status) ?? t.status } : t,
+            ),
+          }));
+          break;
+        }
+        case "done": {
+          updateAssistant((m) => ({
+            ...m,
+            modelUsed: (parsed.modelUsed as LocalMessage["modelUsed"]) ?? m.modelUsed,
+            costUsd: (parsed.costUsd as number) ?? m.costUsd,
+            isStreaming: false,
+          }));
+          break;
+        }
+        case "error": {
+          toast.error((parsed.message as string) || "Ask Maroa hit an error");
+          updateAssistant((m) => ({ ...m, isStreaming: false }));
+          break;
+        }
+      }
+    };
+
+    try {
+      const auth = await getAuthHeaders();
+      const res = await fetch(`${getApiBase()}/webhook/wf15-send-message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...auth },
+        body: JSON.stringify({ businessId, conversationId: convId!, content }),
+        signal: ac.signal,
       });
+      if (!res.ok || !res.body) {
+        throw new Error(`Ask Maroa is unavailable (${res.status}) — please retry`);
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        // SSE frames are separated by a blank line.
+        let sep: number;
+        while ((sep = buffer.indexOf("\n\n")) !== -1) {
+          const rawFrame = buffer.slice(0, sep);
+          buffer = buffer.slice(sep + 2);
+          let eventName = "message";
+          const dataLines: string[] = [];
+          for (const line of rawFrame.split("\n")) {
+            if (line.startsWith("event:")) eventName = line.slice(6).trim();
+            else if (line.startsWith("data:")) dataLines.push(line.slice(5).replace(/^ /, ""));
+          }
+          if (dataLines.length) handleFrame(eventName, dataLines.join("\n"));
+        }
+      }
     } catch (e) {
-      toast.error((e as Error).message || "Failed to send message");
+      if ((e as Error).name !== "AbortError") {
+        toast.error((e as Error).message || "Failed to send message");
+        updateAssistant((m) => ({ ...m, isStreaming: false }));
+      }
+    } finally {
+      abortStreamRef.current = null;
       setStreaming(false);
     }
   }, [input, businessId, conversationId]);
 
   const stopStream = useCallback(() => {
-    abortStreamRef.current?.close();
+    abortStreamRef.current?.abort();
     abortStreamRef.current = null;
     setStreaming(false);
     setMessages((prev) =>
@@ -383,7 +403,7 @@ export default function AiBrain() {
         <Card className="flex flex-1 flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto p-4">
             {messages.length === 0 ? (
-              <EmptyChat />
+              <EmptyChat onPick={setInput} />
             ) : (
               <div className="space-y-6">
                 {messages.map((m) => (
@@ -588,32 +608,63 @@ function ToolCallCard({
   );
 }
 
-function EmptyChat() {
-  const suggestions = [
-    "How did last week go?",
-    "Why is my Meta CPA climbing?",
-    "Write a LinkedIn post about our Q4 launch",
-    "Pause all ads if CTR drops below 1% tonight",
-    "Show me our top 5 customers by LTV",
-    "Should I raise prices 15%?",
+function EmptyChat({ onPick }: { onPick: (text: string) => void }) {
+  // Grouped to teach the three things Ask Maroa can do: DO real work (gated by
+  // approval), ANALYZE across every dataset, and NAVIGATE the whole app.
+  const groups: { label: string; items: string[] }[] = [
+    {
+      label: "Do it for me",
+      items: [
+        "Create a Meta campaign for new customers at €20/day",
+        "Write and schedule a post about our weekend offer",
+        "Generate a product video for our bestseller",
+      ],
+    },
+    {
+      label: "Tell me",
+      items: [
+        "How did last week go?",
+        "Why is my Meta CPA climbing?",
+        "Forecast my ROAS for the next 60 days",
+      ],
+    },
+    {
+      label: "Take me there",
+      items: ["Open my Paid Ads", "Show my competitor report", "Go to Studio"],
+    },
   ];
   return (
     <div className="flex h-full flex-col items-center justify-center gap-6 p-6 text-center">
       <div className="rounded-full bg-primary/10 p-3">
         <Bot className="h-6 w-6 text-primary" />
       </div>
-      <div>
-        <h2 className="text-lg font-medium text-foreground">Your Chief of Staff is ready</h2>
+      <div className="max-w-md">
+        <h2 className="text-lg font-medium text-foreground">Ask Maroa can run your whole marketing</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Ask anything. Brain synthesizes across every dataset and can execute
-          via your other workflows — with approval gates on anything destructive.
+          Tell it what you want in plain words. It asks anything it needs, does the
+          work across every part of the app, and checks with you before anything
+          that spends money or goes live.
         </p>
       </div>
-      <div className="flex flex-wrap justify-center gap-1.5">
-        {suggestions.map((s) => (
-          <Badge key={s} variant="outline" className="text-[11px]">
-            "{s}"
-          </Badge>
+      <div className="w-full max-w-md space-y-3 text-left">
+        {groups.map((g) => (
+          <div key={g.label}>
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60">
+              {g.label}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {g.items.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => onPick(s)}
+                  className="rounded-full border border-border bg-card px-3 py-1 text-[11px] text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     </div>
