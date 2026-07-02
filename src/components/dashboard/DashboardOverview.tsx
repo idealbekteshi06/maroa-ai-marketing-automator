@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, Send, Users, Zap, CalendarClock, CheckCircle2, Circle, Loader2, BarChart2, TrendingUp, ArrowUpRight, ShieldCheck, Bell, Sparkles } from "lucide-react";
+import { Eye, Send, Users, Zap, CalendarClock, CheckCircle2, Circle, Loader2, BarChart2 } from "lucide-react";
 import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { pickPrimaryBusiness } from "@/lib/business";
 import { toast } from "sonner";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import PendingApprovals from "@/components/PendingApprovals";
 import Sparkline from "@/components/Sparkline";
 import AIBrainStatus from "@/components/AIBrainStatus";
@@ -355,80 +355,15 @@ export default function DashboardOverview() {
     { label: "AI Actions Today", sub: todayActions > 0 ? "actions today" : "AI will take actions today", value: todayActions, icon: Zap, color: "text-purple-500 bg-purple-500/10", spark: [] as number[] },
   ];
 
-  // Reach trend for the hero + KPI badge — first vs last of the sparkline window.
-  const reachTrendPct = (() => {
-    if (reachSpark.length < 2) return null;
-    const first = reachSpark.find((v) => v > 0);
-    const last = reachSpark[reachSpark.length - 1];
-    if (!first || first === 0) return null;
-    return Math.round(((last - first) / first) * 100);
-  })();
-
-  const autopilotOn = !!businessData?.autopilot_enabled;
-  const needsReview = pendingApprovalCount;
-  const setupIncomplete = setupPct < 100 && !setupComplete;
-
   return (
     <div className="space-y-5 page-enter">
-      {/* ── Command hero: is it working · what needs me ── */}
-      <section className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/[0.07] via-card to-card p-5 sm:p-6 shadow-meta">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-primary/10 blur-3xl" aria-hidden="true" />
-        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <h2 className="text-2xl font-bold tracking-tight text-foreground animate-fade-in">
-              {getGreeting()}{firstName ? `, ${firstName}` : ""}
-            </h2>
-            <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground animate-fade-in" style={{ animationDelay: "150ms" }}>
-              {autopilotOn ? (
-                <><ShieldCheck className="h-4 w-4 text-success shrink-0" /> Your AI is running your marketing — here's the picture.</>
-              ) : (
-                <><Bell className="h-4 w-4 text-orange-500 shrink-0" /> Autopilot is paused — turn it on to let Maroa run on its own.</>
-              )}
-            </p>
-          </div>
+      {/* ── Greeting ── */}
+      <div>
+        <h2 className="text-xl font-bold text-foreground animate-fade-in">{getGreeting()}{firstName ? `, ${firstName}` : ""}</h2>
+        <p className="text-sm text-success mt-0.5 animate-fade-in" style={{ animationDelay: "200ms" }}>✓ Your AI is handling everything — sit back and watch it work</p>
+      </div>
 
-          {/* Live status chips */}
-          <div className="flex flex-wrap items-stretch gap-2.5">
-            <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card/70 px-3.5 py-2.5 backdrop-blur">
-              <span className={`relative flex h-2.5 w-2.5 shrink-0`}>
-                <span className={`absolute inline-flex h-full w-full rounded-full ${autopilotOn ? "bg-success/60 animate-ping" : "bg-orange-400/50"}`} />
-                <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${autopilotOn ? "bg-success" : "bg-orange-400"}`} />
-              </span>
-              <div className="leading-tight">
-                <p className="text-[13px] font-semibold text-foreground">{autopilotOn ? "Autopilot on" : "Paused"}</p>
-                <p className="text-[10px] text-muted-foreground">{autopilotOn ? "running now" : "you're in manual"}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card/70 px-3.5 py-2.5 backdrop-blur">
-              <Zap className="h-4 w-4 shrink-0 text-purple-500" />
-              <div className="leading-tight">
-                <p className="text-[13px] font-semibold text-foreground" style={{ fontVariantNumeric: "tabular-nums" }}>{todayActions}</p>
-                <p className="text-[10px] text-muted-foreground">actions today</p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => needsReview > 0 && navTo("content")}
-              className={`flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-left transition-colors ${
-                needsReview > 0
-                  ? "border-orange-400/40 bg-orange-500/10 hover:bg-orange-500/15 cursor-pointer"
-                  : "border-border bg-card/70 backdrop-blur"
-              }`}
-            >
-              {needsReview > 0 ? <Bell className="h-4 w-4 shrink-0 text-orange-500" /> : <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />}
-              <div className="leading-tight">
-                <p className="text-[13px] font-semibold text-foreground" style={{ fontVariantNumeric: "tabular-nums" }}>
-                  {needsReview > 0 ? `${needsReview} to review` : "All caught up"}
-                </p>
-                <p className="text-[10px] text-muted-foreground">{needsReview > 0 ? "waiting for you →" : "nothing needs you"}</p>
-              </div>
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Headline KPIs ── */}
+      {/* ── Metric cards (FIX 10) ── */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {metricCards.map((m, i) => (
           <div key={m.label} className={`rounded-xl border border-border bg-card p-4 card-hover card-stagger-${i + 1}`}>
@@ -436,162 +371,30 @@ export default function DashboardOverview() {
               <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${m.color}`}>
                 <m.icon className="h-4 w-4" />
               </div>
-              {m.label === "Total Reach" && reachTrendPct !== null ? (
-                <span className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${reachTrendPct >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
-                  <ArrowUpRight className={`h-3 w-3 ${reachTrendPct < 0 ? "rotate-90" : ""}`} />
-                  {Math.abs(reachTrendPct)}%
-                </span>
-              ) : m.spark.length >= 2 ? <Sparkline data={m.spark} /> : null}
+              {m.spark.length >= 2 && <Sparkline data={m.spark} />}
             </div>
             <p className="text-2xl font-bold text-foreground" style={{ fontVariantNumeric: "tabular-nums" }}><AnimatedCounter target={m.value} /></p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">{m.label}</p>
-            <p className="text-[10px] text-muted-foreground/70 mt-0.5">{m.sub}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">{m.sub}</p>
           </div>
         ))}
       </div>
 
-      {/* ── Performance ── */}
-      <div className="rounded-xl border border-border bg-card p-5 shadow-meta">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold text-foreground">Performance</h3>
-          </div>
-          <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">Last 7 days</SelectItem>
-              <SelectItem value="14">Last 14 days</SelectItem>
-              <SelectItem value="30">Last 30 days</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        {chartData.length > 0 ? (
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="reachFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.28} />
-                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} width={45} />
-              <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }} />
-              <Area type="monotone" dataKey="reach" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#reachFill)" dot={false} activeDot={{ r: 4 }} />
-            </AreaChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <BarChart2 className="h-10 w-10 text-muted-foreground/20" />
-            <p className="mt-4 text-sm font-medium text-foreground">Performance tracking starts today</p>
-            <p className="mt-1 text-xs text-muted-foreground max-w-xs">Your metrics appear after the first week</p>
-            <div className="mt-4 flex flex-wrap justify-center gap-2">
-              {["📊 Daily reach", "💬 Engagement", "👥 New leads", "📧 Email opens"].map(t => (
-                <span key={t} className="rounded-full bg-muted px-3 py-1 text-[11px] text-muted-foreground">{t}</span>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+      {/* ── Profile completeness ── */}
+      <ProfileScore businessId={businessId} userId={user?.id} />
 
-      {/* ── What needs you ── */}
-      {(needsReview > 0 || setupIncomplete) && (
-        <div>
-          <div className="mb-2.5 flex items-center gap-2">
-            <Bell className="h-4 w-4 text-orange-500" />
-            <h3 className="text-sm font-semibold text-foreground">Needs your attention</h3>
-          </div>
-          <div className="space-y-4">
-            <PendingApprovals onNavigate={navTo} />
-            {setupIncomplete && (
-              <div className="rounded-xl border border-border bg-card p-5 shadow-meta">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-foreground">Finish your setup</h3>
-                  <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">{setupDone}/{setupSteps.length}</span>
-                </div>
-                <div className="h-1.5 w-full rounded-full bg-border overflow-hidden mb-4">
-                  <div className="h-full rounded-full progress-shimmer transition-all duration-700" style={{ width: `${setupPct}%` }} />
-                </div>
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {setupSteps.map(s => (
-                    <button
-                      key={s.label}
-                      onClick={() => !s.done && navTo(s.tab)}
-                      className={`flex items-center gap-2 rounded-md px-3 py-2 text-left transition-colors ${!s.done ? "hover:bg-muted/50 cursor-pointer" : ""}`}
-                    >
-                      {s.done ? <CheckCircle2 className="h-4 w-4 text-success shrink-0" /> : <Circle className="h-4 w-4 text-muted-foreground/30 shrink-0" />}
-                      <span className={`text-xs ${s.done ? "text-muted-foreground line-through" : "text-foreground"}`}>{s.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* ── Pending approvals ── */}
+      <PendingApprovals onNavigate={navTo} />
 
-      {/* ── What your AI is doing ── */}
+      {/* ── AI Brain (FIX 3) ── */}
+      <AIBrainStatus businessId={businessId} aiDecisions={aiDecisions} />
+
+      {/* ── Quick Actions (FIX 4) ── */}
       <div>
-        <div className="mb-2.5 flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-semibold text-foreground">What your AI is doing</h3>
-        </div>
-        <AIBrainStatus businessId={businessId} aiDecisions={aiDecisions} />
-      </div>
-
-      {/* ── Live activity + schedule ── */}
-      <div className="grid gap-4 lg:grid-cols-5">
-        <div className="lg:col-span-3 rounded-xl border border-border bg-card shadow-meta">
-          <div className="flex items-center gap-2 px-5 py-3 border-b border-border">
-            <span className="live-dot" />
-            <h3 className="text-sm font-semibold text-foreground">Recent Activity</h3>
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Quick Actions</h3>
+            <p className="text-[11px] text-muted-foreground">Trigger your AI manually</p>
           </div>
-          {feed.length === 0 ? (
-            <div className="p-6 text-center">
-              <p className="text-xs text-muted-foreground">No activity yet — actions appear here as your AI works.</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-border">
-              {feed.map((f, i) => {
-                const borderColor = f.type === "content" ? "border-l-primary" : f.type === "lead" ? "border-l-success" : f.type === "competitor" ? "border-l-purple-500" : f.type === "seo" ? "border-l-orange-500" : f.type === "email" ? "border-l-teal-500" : f.type === "error" ? "border-l-destructive" : "border-l-transparent";
-                return (
-                  <div key={i} className={`flex items-center gap-3 px-5 py-2.5 hover:bg-muted/20 transition-colors border-l-2 ${borderColor}`}>
-                    <span className="text-sm shrink-0">{f.emoji}</span>
-                    <span className="text-[13px] text-foreground truncate flex-1">{formatActivityText(f.message)}</span>
-                    <span className="text-[11px] text-muted-foreground shrink-0 whitespace-nowrap">{formatTimeAgo(f.time)}</span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        <div className="lg:col-span-2 rounded-xl border border-border bg-card p-4 shadow-meta">
-          <div className="flex items-center gap-2 mb-3">
-            <CalendarClock className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold text-foreground">Next Scheduled Tasks</h3>
-          </div>
-          <div className="space-y-2">
-            {scheduledTasks.map(t => (
-              <div key={t.name} className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">{t.icon}</span>
-                  <span className="text-xs text-foreground">{t.name}</span>
-                </div>
-                <span className="text-[11px] font-medium text-primary">{t.time}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Do it now: manual triggers ── */}
-      <div>
-        <div className="mb-3">
-          <h3 className="text-sm font-semibold text-foreground">Do it now</h3>
-          <p className="text-[11px] text-muted-foreground">Trigger any engine manually — the AI still does the work</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {quickActions.map(a => (
@@ -617,8 +420,115 @@ export default function DashboardOverview() {
         </div>
       </div>
 
-      {/* ── Profile completeness (foot) ── */}
-      <ProfileScore businessId={businessId} userId={user?.id} />
+      {/* ── Performance chart (FIX 5) ── */}
+      <div className="rounded-lg border border-border bg-card p-5 shadow-meta">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-foreground">Performance</h3>
+          <Select value={dateRange} onValueChange={setDateRange}>
+            <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">Last 7 days</SelectItem>
+              <SelectItem value="14">Last 14 days</SelectItem>
+              <SelectItem value="30">Last 30 days</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {chartData.length > 0 ? (
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="date" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} width={45} />
+              <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }} />
+              <Line type="monotone" dataKey="reach" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <BarChart2 className="h-10 w-10 text-muted-foreground/20" />
+            <p className="mt-4 text-sm font-medium text-foreground">Performance tracking starts today</p>
+            <p className="mt-1 text-xs text-muted-foreground max-w-xs">Your metrics appear after the first week</p>
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              {["📊 Daily reach", "💬 Engagement", "👥 New leads", "📧 Email opens"].map(t => (
+                <span key={t} className="rounded-full bg-muted px-3 py-1 text-[11px] text-muted-foreground">{t}</span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Activity + Schedule ── */}
+      <div className="grid gap-4 lg:grid-cols-5">
+        {/* FIX 2: Activity feed with formatted text */}
+        <div className="lg:col-span-3 rounded-lg border border-border bg-card shadow-meta">
+          <div className="flex items-center gap-2 px-5 py-3 border-b border-border">
+            <span className="live-dot" />
+            <h3 className="text-sm font-semibold text-foreground">Recent Activity</h3>
+          </div>
+          {feed.length === 0 ? (
+            <div className="p-6 text-center">
+              <p className="text-xs text-muted-foreground">No activity yet — actions appear here as your AI works.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {feed.map((f, i) => {
+                const borderColor = f.type === "content" ? "border-l-primary" : f.type === "lead" ? "border-l-success" : f.type === "competitor" ? "border-l-purple-500" : f.type === "seo" ? "border-l-orange-500" : f.type === "email" ? "border-l-teal-500" : f.type === "error" ? "border-l-destructive" : "border-l-transparent";
+                return (
+                  <div key={i} className={`flex items-center gap-3 px-5 py-2.5 hover:bg-muted/20 transition-colors border-l-2 ${borderColor}`}>
+                    <span className="text-sm shrink-0">{f.emoji}</span>
+                    <span className="text-[13px] text-foreground truncate flex-1">{formatActivityText(f.message)}</span>
+                    <span className="text-[11px] text-muted-foreground shrink-0 whitespace-nowrap">{formatTimeAgo(f.time)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* FIX 8: Scheduled tasks */}
+        <div className="lg:col-span-2 rounded-lg border border-border bg-card p-4 shadow-meta">
+          <div className="flex items-center gap-2 mb-3">
+            <CalendarClock className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold text-foreground">Next Scheduled Tasks</h3>
+          </div>
+          <div className="space-y-2">
+            {scheduledTasks.map(t => (
+              <div key={t.name} className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">{t.icon}</span>
+                  <span className="text-xs text-foreground">{t.name}</span>
+                </div>
+                <span className="text-[11px] font-medium text-primary">{t.time}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Setup checklist (FIX 6) ── */}
+      {setupPct < 100 && !setupComplete && (
+        <div className="rounded-lg border border-border bg-card p-5 shadow-meta">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-foreground">Complete your setup</h3>
+            <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">{setupDone}/{setupSteps.length}</span>
+          </div>
+          <div className="h-1.5 w-full rounded-full bg-border overflow-hidden mb-4">
+            <div className="h-full rounded-full progress-shimmer transition-all duration-700" style={{ width: `${setupPct}%` }} />
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {setupSteps.map(s => (
+              <button
+                key={s.label}
+                onClick={() => !s.done && navTo(s.tab)}
+                className={`flex items-center gap-2 rounded-md px-3 py-2 text-left transition-colors ${!s.done ? "hover:bg-muted/50 cursor-pointer" : ""}`}
+              >
+                {s.done ? <CheckCircle2 className="h-4 w-4 text-success shrink-0" /> : <Circle className="h-4 w-4 text-muted-foreground/30 shrink-0" />}
+                <span className={`text-xs ${s.done ? "text-muted-foreground line-through" : "text-foreground"}`}>{s.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
