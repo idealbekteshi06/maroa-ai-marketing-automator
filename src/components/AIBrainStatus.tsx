@@ -30,11 +30,13 @@ function GradientBorderCard({ children }: { children: React.ReactNode }) {
 
   return (
     <div style={{
-      borderRadius: 16,
-      padding: 2,
-      background: `conic-gradient(from ${angle}deg, #0A84FF, #BF5AF2, #30D158, #FF9F0A, #FF375F, #0A84FF)`,
+      borderRadius: 20,
+      padding: 1.5,
+      // Apple-restrained: a single-hue blue sheen that rotates to feel alive,
+      // instead of the full-spectrum rainbow.
+      background: `conic-gradient(from ${angle}deg, hsl(211 100% 50%), hsl(211 100% 72%), hsl(211 90% 60%), hsl(211 100% 72%), hsl(211 100% 50%))`,
     }}>
-      <div style={{ borderRadius: 14, background: "hsl(var(--card))", padding: 20 }}>
+      <div style={{ borderRadius: 18.5, background: "hsl(var(--card))", padding: 20 }}>
         {children}
       </div>
     </div>

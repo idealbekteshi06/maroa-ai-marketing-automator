@@ -141,13 +141,15 @@ const scheduledTasks = [
 ];
 
 /* ── FIX 4: Specific button labels per action ── */
+// Apple-restrained: neutral icon chips (no rainbow of tints). The accent
+// lives in the buttons, not scattered across every card.
 const quickActions = [
-  { icon: "📝", name: "Generate Post", desc: "AI writes and schedules a new post", color: "bg-primary/10 text-primary", endpoint: "/webhook/instant-content", btnLabel: "Generate Now", loadingText: "Creating post...", successMsg: "✓ Post created! Check Content tab" },
-  { icon: "🔍", name: "SEO Audit", desc: "Find new keyword opportunities", color: "bg-success/10 text-success", endpoint: "/webhook/seo-audit", btnLabel: "Start Audit", loadingText: "Starting audit...", successMsg: "✓ Audit started! Check SEO tab in ~60s" },
-  { icon: "📣", name: "Launch Campaign", desc: "AI creates and targets an ad campaign", color: "bg-warning/10 text-warning", endpoint: "/webhook/meta-campaign-create", btnLabel: "Launch Campaign", loadingText: "Building campaign...", successMsg: "✓ Campaign created! Check Campaigns tab" },
-  { icon: "🎯", name: "Competitor Analysis", desc: "See what competitors are doing", color: "bg-purple-500/10 text-purple-500", endpoint: "/webhook/competitor-analyze", btnLabel: "Analyze Now", loadingText: "Analyzing...", successMsg: "✓ Analysis started! Check Competitors tab" },
-  { icon: "🎬", name: "Video Script", desc: "AI writes a TikTok or Reel script", color: "bg-destructive/10 text-destructive", endpoint: "/webhook/video-script-generate", btnLabel: "Write Script", loadingText: "Writing script...", successMsg: "✓ Script ready! Check Content > Videos" },
-  { icon: "⭐", name: "Review Request", desc: "Ask a customer to leave a review", color: "bg-yellow-500/10 text-yellow-600", endpoint: "/webhook/review-request-send", btnLabel: "Send Request", loadingText: "Sending...", successMsg: "✓ Request sent!" },
+  { icon: "📝", name: "Generate Post", desc: "AI writes and schedules a new post", color: "bg-muted text-foreground", endpoint: "/webhook/instant-content", btnLabel: "Generate Now", loadingText: "Creating post...", successMsg: "✓ Post created! Check Content tab" },
+  { icon: "🔍", name: "SEO Audit", desc: "Find new keyword opportunities", color: "bg-muted text-foreground", endpoint: "/webhook/seo-audit", btnLabel: "Start Audit", loadingText: "Starting audit...", successMsg: "✓ Audit started! Check SEO tab in ~60s" },
+  { icon: "📣", name: "Launch Campaign", desc: "AI creates and targets an ad campaign", color: "bg-muted text-foreground", endpoint: "/webhook/meta-campaign-create", btnLabel: "Launch Campaign", loadingText: "Building campaign...", successMsg: "✓ Campaign created! Check Campaigns tab" },
+  { icon: "🎯", name: "Competitor Analysis", desc: "See what competitors are doing", color: "bg-muted text-foreground", endpoint: "/webhook/competitor-analyze", btnLabel: "Analyze Now", loadingText: "Analyzing...", successMsg: "✓ Analysis started! Check Competitors tab" },
+  { icon: "🎬", name: "Video Script", desc: "AI writes a TikTok or Reel script", color: "bg-muted text-foreground", endpoint: "/webhook/video-script-generate", btnLabel: "Write Script", loadingText: "Writing script...", successMsg: "✓ Script ready! Check Content > Videos" },
+  { icon: "⭐", name: "Review Request", desc: "Ask a customer to leave a review", color: "bg-muted text-foreground", endpoint: "/webhook/review-request-send", btnLabel: "Send Request", loadingText: "Sending...", successMsg: "✓ Request sent!" },
 ];
 
 export default function DashboardOverview() {
@@ -349,10 +351,12 @@ export default function DashboardOverview() {
 
   /* ── FIX 10.3: Empty metric subtexts ── */
   const metricCards = [
+    // Apple-restrained: the primary metric carries the blue accent; the rest
+    // are neutral so the row reads calm, not like a paint sample.
     { label: "Total Reach", sub: totalReach > 0 ? "people reached" : "Increases as AI publishes content", value: totalReach, icon: Eye, color: "text-primary bg-primary/10", spark: reachSpark },
-    { label: "Posts Published", sub: publishedCount > 0 ? "posts this month" : "First post generating soon", value: publishedCount, icon: Send, color: "text-success bg-success/10", spark: [] as number[] },
-    { label: "Active Leads", sub: leadCount > 0 ? "leads in pipeline" : "Leads appear as campaigns run", value: leadCount, icon: Users, color: "text-orange-500 bg-orange-500/10", spark: [] as number[] },
-    { label: "AI Actions Today", sub: todayActions > 0 ? "actions today" : "AI will take actions today", value: todayActions, icon: Zap, color: "text-purple-500 bg-purple-500/10", spark: [] as number[] },
+    { label: "Posts Published", sub: publishedCount > 0 ? "posts this month" : "First post generating soon", value: publishedCount, icon: Send, color: "text-foreground bg-muted", spark: [] as number[] },
+    { label: "Active Leads", sub: leadCount > 0 ? "leads in pipeline" : "Leads appear as campaigns run", value: leadCount, icon: Users, color: "text-foreground bg-muted", spark: [] as number[] },
+    { label: "AI Actions Today", sub: todayActions > 0 ? "actions today" : "AI will take actions today", value: todayActions, icon: Zap, color: "text-foreground bg-muted", spark: [] as number[] },
   ];
 
   return (
@@ -472,7 +476,9 @@ export default function DashboardOverview() {
           ) : (
             <div className="divide-y divide-border">
               {feed.map((f, i) => {
-                const borderColor = f.type === "content" ? "border-l-primary" : f.type === "lead" ? "border-l-success" : f.type === "competitor" ? "border-l-purple-500" : f.type === "seo" ? "border-l-orange-500" : f.type === "email" ? "border-l-teal-500" : f.type === "error" ? "border-l-destructive" : "border-l-transparent";
+                // Two meaningful accents (new leads/wins = green, errors = red);
+                // everything else stays neutral instead of a colour per type.
+                const borderColor = f.type === "lead" || f.type === "win" ? "border-l-success" : f.type === "error" ? "border-l-destructive" : "border-l-border";
                 return (
                   <div key={i} className={`flex items-center gap-3 px-5 py-2.5 hover:bg-muted/20 transition-colors border-l-2 ${borderColor}`}>
                     <span className="text-sm shrink-0">{f.emoji}</span>
