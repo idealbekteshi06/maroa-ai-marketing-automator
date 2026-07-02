@@ -89,7 +89,11 @@ export default function AIStatusBar({ businessId }: AIStatusBarProps) {
         es = new EventSource(
           `${apiBase}/webhook/dashboard-events?business_id=${encodeURIComponent(businessId)}&ticket=${encodeURIComponent(ticket)}`
         );
-        es.onopen = () => { retryDelay = 2000; };
+        es.onopen = () => {
+          retryDelay = 2000;
+          // Recovered — clear the deduped "offline" notice if it's still showing.
+          toast.dismiss("sse-offline");
+        };
         es.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
@@ -111,12 +115,18 @@ export default function AIStatusBar({ businessId }: AIStatusBarProps) {
           }
         };
         es.onerror = () => {
+          // The signed ticket is short-lived and EventSource can't send an auth
+          // header, so a dropped/expired stream surfaces here. Surface it once
+          // (deduped) instead of dying silently (audit §5), then close and
+          // reconnect with a fresh ticket, backing off.
           es?.close();
           es = null;
+          toast.error("Live updates are offline", { id: "sse-offline" });
           scheduleReconnect();
         };
       } catch (err: unknown) {
         if (err instanceof Error && err.name === "AbortError") return;
+        toast.error("Live updates are offline", { id: "sse-offline" });
         scheduleReconnect();
       }
     };
