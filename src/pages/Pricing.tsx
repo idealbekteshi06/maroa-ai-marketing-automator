@@ -7,41 +7,27 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { postCheckout } from "@/lib/apiClient";
-
-const PLANS = [
-  {
-    key: "free", name: "Free", monthlyPrice: 0, annualPrice: 0,
-    desc: "Try it out with one business.",
-    features: ["1 business", "5 posts per month", "Basic dashboard", "Email support"],
-    popular: false,
-  },
-  {
-    key: "growth", name: "Growth", monthlyPrice: 59, annualPrice: 49,
-    desc: "Everything you need to grow.",
-    features: ["Unlimited content generation", "All social platforms", "Meta ad management", "Daily AI optimization", "Weekly strategy reports", "Competitor tracking", "AI image generation", "Priority support"],
-    popular: true,
-  },
-  {
-    key: "agency", name: "Agency", monthlyPrice: 99, annualPrice: 83,
-    desc: "For agencies managing multiple brands.",
-    features: ["Everything in Growth", "Unlimited businesses", "White label dashboard", "Client-facing reports", "Custom integrations", "Dedicated account manager", "API access", "Custom branding"],
-    popular: false,
-  },
-];
+import { BILLING_PLANS, type BillingPlanKey } from "@/lib/plans";
 
 export default function Pricing() {
   const [annual, setAnnual] = useState(false);
   const [loading, setLoading] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { user, businessId } = useAuth();
   const navigate = useNavigate();
 
-  const handleCheckout = async (plan: typeof PLANS[number]) => {
-    if (plan.key === "free") { navigate("/signup"); return; }
-    if (!user?.id) { navigate("/signup"); return; }
+  const handleCheckout = async (planKey: BillingPlanKey) => {
+    if (!user?.id) {
+      navigate("/signup");
+      return;
+    }
+    if (!businessId) {
+      toast.error("Loading your business profile — try again in a moment.");
+      return;
+    }
 
-    setLoading(plan.key);
+    setLoading(planKey);
     try {
-      const result = await postCheckout(user.id, plan.key);
+      const result = await postCheckout(businessId, planKey);
       if (result.checkout_url) window.location.href = result.checkout_url;
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to start checkout.");
@@ -66,15 +52,15 @@ export default function Pricing() {
             </div>
           </div>
           <div className="mx-auto mt-16 grid max-w-5xl gap-8 md:grid-cols-3">
-            {PLANS.map((plan) => {
-              const price = annual ? plan.annualPrice : plan.monthlyPrice;
+            {BILLING_PLANS.map((plan) => {
+              const price = annual ? Math.round(plan.annualPrice / 12) : plan.monthlyPrice;
               return (
-                <div key={plan.name} className={`relative rounded-2xl p-8 ${plan.popular ? "bg-foreground text-background ring-2 ring-foreground" : "bg-card text-card-foreground border border-border"}`}>
+                <div key={plan.key} className={`relative rounded-2xl p-8 ${plan.popular ? "bg-foreground text-background ring-2 ring-foreground" : "bg-card text-card-foreground border border-border"}`}>
                   {plan.popular && <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-1 text-xs font-medium text-primary-foreground">Most popular</span>}
                   <h3 className="text-xl font-semibold">{plan.name}</h3>
                   <div className="mt-4 flex items-baseline gap-1">
                     <span className="text-5xl font-bold">${price}</span>
-                    {price > 0 && <span className={`text-sm ${plan.popular ? "opacity-60" : "text-muted-foreground"}`}>/month</span>}
+                    <span className={`text-sm ${plan.popular ? "opacity-60" : "text-muted-foreground"}`}>/month</span>
                   </div>
                   <p className={`mt-3 text-sm ${plan.popular ? "opacity-70" : "text-muted-foreground"}`}>{plan.desc}</p>
                   <ul className="mt-8 space-y-3">
@@ -82,8 +68,8 @@ export default function Pricing() {
                       <li key={f} className="flex items-start gap-3 text-sm"><Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />{f}</li>
                     ))}
                   </ul>
-                  <Button className="mt-8 w-full" variant={plan.popular ? "default" : "outline"} size="lg" disabled={loading !== null} onClick={() => handleCheckout(plan)}>
-                    {loading === plan.key ? "Redirecting..." : price === 0 ? "Get started free" : "Start free trial"}
+                  <Button className="mt-8 w-full" variant={plan.popular ? "default" : "outline"} size="lg" disabled={loading !== null} onClick={() => handleCheckout(plan.key)}>
+                    {loading === plan.key ? "Redirecting..." : "Start free trial"}
                   </Button>
                 </div>
               );

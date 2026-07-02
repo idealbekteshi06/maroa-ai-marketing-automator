@@ -4,15 +4,9 @@ import { toast } from "sonner";
 import { apiPost } from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Check, Bot, Calendar, Target, BarChart3, Globe, Zap, ArrowRight, Sun, Moon, Sparkles, Search, MessageCircle, Mail, Link2, Cpu } from "lucide-react";
+import { BILLING_PLANS } from "@/lib/plans";
 
-const LAUNCH_DATE = new Date("2026-04-28T00:00:00Z").getTime();
 const FLAGS = ["🇽🇰", "🇦🇱", "🇬🇧", "🇩🇪", "🇦🇪", "🇺🇸", "🇫🇷", "🇮🇹"];
-
-const PLANS = [
-  { key: "starter", name: "Starter", was: 29, now: 19, save: "34%", popular: false, features: ["1 platform", "20 AI images/mo", "AI brain 1×/day", "Content calendar", "Email support"] },
-  { key: "growth", name: "Growth", was: 59, now: 39, save: "34%", popular: true, features: ["3 platforms", "60 AI images/mo", "25 Kling videos", "5 Sora videos", "AI brain 3×/day", "Paid ads", "Competitor tracking", "Analytics"] },
-  { key: "agency", name: "Agency", was: 99, now: 69, save: "30%", popular: false, features: ["Unlimited platforms", "120 AI images/mo", "50 Kling + 15 Sora videos", "3 brands", "White-label", "API access", "AI brain 5×/day"] },
-];
 
 const BIZ_TYPES = ["Restaurant", "Gym/Fitness", "Retail", "Beauty/Salon", "Real Estate", "Agency", "Café/Bar", "Medical", "Education", "Other"];
 const COUNTRIES = ["Kosovo", "Albania", "USA", "UK", "Germany", "UAE", "Turkey", "Italy", "France", "Other"];
@@ -38,20 +32,6 @@ const PROOF_STATS = [
   { value: "99%", label: "Uptime" },
   { value: "10min", label: "Setup time" },
 ];
-
-function useCountdown() {
-  const [t, setT] = useState({ d: 0, h: 0, m: 0, s: 0 });
-  useEffect(() => {
-    const tick = () => {
-      const diff = Math.max(0, LAUNCH_DATE - Date.now());
-      setT({ d: Math.floor(diff / 864e5), h: Math.floor((diff % 864e5) / 36e5), m: Math.floor((diff % 36e5) / 6e4), s: Math.floor((diff % 6e4) / 1e3) });
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, []);
-  return t;
-}
 
 function useFadeIn() {
   const ref = useRef<HTMLDivElement>(null);
@@ -89,7 +69,6 @@ const c = {
 };
 
 export default function Index() {
-  const cd = useCountdown();
   const navigate = useNavigate();
   const { user, onboardingComplete, isReady } = useAuth();
 
@@ -155,7 +134,7 @@ export default function Index() {
       <section className="pt-16 sm:pt-28 pb-20 px-6">
         <div className="max-w-3xl mx-auto text-center">
           <span className={`inline-flex items-center gap-2 rounded-full border ${c.cardBorder} ${c.card} px-4 py-1.5 text-xs ${c.textSub} mb-8`}>
-            🚀 Launching April 28, 2026
+            ✨ Now live — start your free trial
           </span>
 
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.08]">
@@ -170,21 +149,13 @@ export default function Index() {
             maroa.ai creates your posts, writes your ads, tracks your competitors, and grows your business — automatically.
           </p>
 
-          {/* Countdown */}
-          <div className="mt-10 inline-flex items-center gap-3 sm:gap-4">
-            {[{ v: cd.d, l: "Days" }, { v: cd.h, l: "Hours" }, { v: cd.m, l: "Min" }, { v: cd.s, l: "Sec" }].map((u, i) => (
-              <div key={u.l} className="flex items-center gap-3 sm:gap-4">
-                {i > 0 && <span className={c.textFaint}>:</span>}
-                <div className="flex flex-col items-center">
-                  <div className={`rounded-xl ${c.card} border ${c.cardBorder} px-3 sm:px-4 py-2`}>
-                    <span className="text-2xl sm:text-3xl font-bold" style={{ fontVariantNumeric: "tabular-nums" }}>
-                      {String(u.v).padStart(2, "0")}
-                    </span>
-                  </div>
-                  <span className={`text-[10px] uppercase tracking-widest ${c.textFaint} mt-1.5`}>{u.l}</span>
-                </div>
-              </div>
-            ))}
+          <div className="mt-8 flex justify-center">
+            <Link
+              to="/signup"
+              className={`inline-flex items-center gap-2 rounded-xl px-8 py-3.5 text-sm font-semibold text-white ${c.primaryBg} ${c.primaryBgHover} transition-all`}
+            >
+              Start free trial <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
 
           <div className="mt-8 flex justify-center gap-2 text-lg">{FLAGS.map((f, i) => <span key={i} className="opacity-60">{f}</span>)}</div>
@@ -194,12 +165,12 @@ export default function Index() {
       {/* ── PRICING ── */}
       <Fade className="px-6 pb-24">
         <div className="max-w-5xl mx-auto">
-          <p className={`text-xs uppercase tracking-[0.2em] ${c.primary} text-center mb-3`}>Pre-Launch Offer</p>
-          <h2 className="text-3xl sm:text-4xl font-bold text-center tracking-tight">Lock in your price before April 28.</h2>
-          <p className={`text-center ${c.textSub} mt-2 text-sm`}>These prices disappear at launch. Forever.</p>
+          <p className={`text-xs uppercase tracking-[0.2em] ${c.primary} text-center mb-3`}>Pricing</p>
+          <h2 className="text-3xl sm:text-4xl font-bold text-center tracking-tight">Simple plans that scale with you.</h2>
+          <p className={`text-center ${c.textSub} mt-2 text-sm`}>7-day free trial · Cancel anytime</p>
 
           <div className="mt-12 grid gap-4 sm:gap-5 lg:grid-cols-3">
-            {PLANS.map(p => (
+            {BILLING_PLANS.map(p => (
               <div key={p.key}
                 className={`relative group rounded-2xl border p-6 sm:p-7 transition-all duration-300 ${
                   p.popular
@@ -215,16 +186,11 @@ export default function Index() {
                 )}
                 <p className={`text-[11px] uppercase tracking-[0.15em] ${c.textSub}`}>{p.name}</p>
                 <div className="mt-4">
-                  <span className={`text-sm line-through ${c.textFaint}`}>€{p.was}/mo</span>
-                  <div className="flex items-baseline gap-1 mt-1">
-                    <span className="text-4xl font-bold">€{p.now}</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-bold">${p.monthlyPrice}</span>
                     <span className={`text-sm ${c.textSub}`}>/mo</span>
                   </div>
-                  <p className={`text-[11px] ${c.textFaint} mt-1`}>per month · billed annually</p>
                 </div>
-                <span className="inline-block mt-3 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
-                  Save {p.save}
-                </span>
                 <ul className="mt-5 space-y-2.5">
                   {p.features.map(f => (
                     <li key={f} className={`flex items-start gap-2.5 text-[13px] ${c.textSub}`}>
@@ -232,19 +198,19 @@ export default function Index() {
                     </li>
                   ))}
                 </ul>
-                <button onClick={scrollToForm}
-                  className={`mt-6 w-full rounded-xl py-3 text-sm font-medium transition-all ${
+                <Link to="/signup"
+                  className={`mt-6 block w-full text-center rounded-xl py-3 text-sm font-medium transition-all ${
                     p.popular
                       ? `${c.primaryBg} text-white ${c.primaryBgHover}`
                       : `${c.card} border ${c.cardBorder} ${c.text} ${c.cardHover}`
                   }`}>
-                  Get Early Access
-                </button>
+                  Start free trial
+                </Link>
               </div>
             ))}
           </div>
           <p className={`mt-8 text-center text-xs ${c.textFaint}`}>
-            ⏰ Pre-launch prices expire April 28 at midnight · 1 week free trial · No credit card needed
+            Billed monthly · Annual plans save 2 months
           </p>
         </div>
       </Fade>

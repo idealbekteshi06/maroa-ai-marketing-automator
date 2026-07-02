@@ -48,6 +48,12 @@ const keyValid = envKey.length > 20;
 export const SUPABASE_URL = urlValid ? envUrl : FALLBACK_URL;
 export const SUPABASE_PUBLISHABLE_KEY = keyValid ? envKey : FALLBACK_KEY;
 
+if (import.meta.env.PROD && (!urlValid || !keyValid)) {
+  console.error(
+    "[maroa] Missing VITE_SUPABASE_URL or VITE_SUPABASE_PUBLISHABLE_KEY — set them in Vercel and redeploy.",
+  );
+}
+
 // The fallbacks are public publishable values kept as a deploy safety net
 // (.env is no longer committed), but silently masking a missing/garbage env var
 // made misconfiguration invisible (audit §7) — so say exactly what's wrong and

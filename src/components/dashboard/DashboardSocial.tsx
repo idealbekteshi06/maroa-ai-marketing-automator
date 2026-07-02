@@ -27,8 +27,7 @@ import ContentCalendar from "@/components/ContentCalendar";
 import { timeAgo } from "@/lib/format";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 import { apiPost, apiFireAndForget, getApiBase } from "@/lib/apiClient";
-
-const META_APP_ID = "26551713411132003";
+import { getOAuthRedirectUri, META_APP_ID } from "@/lib/oauth";
 const META_PERMISSIONS =
   "email,public_profile,pages_show_list,pages_read_engagement,pages_manage_posts,pages_manage_engagement,pages_read_user_content,instagram_basic,instagram_content_publish,ads_read,ads_management,business_management,read_insights";
 interface AccountConfig {
@@ -162,7 +161,7 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
 
   /* ---- Meta OAuth ---- */
   const handleMetaOAuth = useCallback(() => {
-    const redirectUri = "https://maroa-ai-marketing-automator.lovable.app/social-callback";
+    const redirectUri = getOAuthRedirectUri();
     const url = `https://www.facebook.com/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${META_PERMISSIONS}&response_type=code&state=maroa_oauth`;
     localStorage.setItem("meta_oauth_business_id", businessId || "");
     window.location.href = url;
@@ -190,7 +189,7 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
             },
             body: JSON.stringify({
               code,
-              redirect_uri: "https://maroa-ai-marketing-automator.lovable.app/social-callback",
+              redirect_uri: getOAuthRedirectUri(),
             }),
           }
         );

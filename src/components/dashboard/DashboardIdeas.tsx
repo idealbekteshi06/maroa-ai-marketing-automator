@@ -3,7 +3,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Lightbulb, Loader2, Sparkles, ChevronDown, ArrowRight, Check } from "lucide-react";
-import { DEMO_IDEAS } from "@/lib/demoData";
 import { apiGet, apiPost, apiPatch, createAbortController } from "@/lib/apiClient";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 import type { MarketingIdea } from "@/types";
@@ -29,49 +28,59 @@ export default function DashboardIdeas() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [isDemo, setIsDemo] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const fetchIdeasList = useCallback(async (signal?: AbortSignal): Promise<MarketingIdea[]> => {
+    if (!user?.id) return [];
+    const data = await apiGet<IdeasResponse | MarketingIdea[]>(`/api/ideas/${user.id}`, signal);
+    return Array.isArray(data) ? data : data?.items || data?.ideas || data?.data || [];
+  }, [user?.id]);
 
   useEffect(() => {
-    if (!businessId || !isReady) { setLoading(false); return; }
+    if (!user?.id || !isReady) { setLoading(false); return; }
     const controller = createAbortController();
     const fetchIdeas = async (): Promise<void> => {
       setLoading(true);
+      setLoadError(null);
       try {
-        const data = await apiGet<IdeasResponse | MarketingIdea[]>(`/api/ideas/${businessId}`, controller.signal);
-        const items = Array.isArray(data) ? data : data?.items || data?.ideas || data?.data || [];
-        if (items.length > 0) { setIdeas(items); setIsDemo(false); }
-        else { setIdeas(DEMO_IDEAS as MarketingIdea[]); setIsDemo(true); }
+        const items = await fetchIdeasList(controller.signal);
+        setIdeas(items);
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") return;
-        setIdeas(DEMO_IDEAS as MarketingIdea[]);
-        setIsDemo(true);
+        setIdeas([]);
+        setLoadError(ERROR_MESSAGES.LOAD_FAILED);
       } finally {
         setLoading(false);
       }
     };
     void fetchIdeas();
     return () => controller.abort();
-  }, [businessId, isReady]);
+  }, [user?.id, isReady, fetchIdeasList]);
 
   const handleGenerate = useCallback(async (): Promise<void> => {
-    if (!businessId) { toast.error(ERROR_MESSAGES.NO_BUSINESS_ID); return; }
+    if (!user?.id) { toast.error(ERROR_MESSAGES.NO_BUSINESS_ID); return; }
     setGenerating(true);
     try {
-      const data = await apiPost<IdeasResponse | MarketingIdea[]>("/api/ideas/generate", {
-        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
-        business_id: businessId,
+      await apiPost<{ received?: boolean; message?: string }>("/api/ideas/generate", {
+        userId: user.id,
       });
-      const newIdeas = Array.isArray(data) ? data : data?.ideas || data?.items || [];
-      if (newIdeas.length > 0) { setIdeas(newIdeas); setIsDemo(false); }
-      toast.success(SUCCESS_MESSAGES.GENERATED);
+      toast.success("Generating ideas — this takes about 30 seconds.");
+      await new Promise((r) => setTimeout(r, 8000));
+      const items = await fetchIdeasList();
+      setIdeas(items);
+      if (items.length === 0) {
+        toast.message("Still working — hit refresh in a moment if ideas don't appear.");
+      } else {
+        toast.success(SUCCESS_MESSAGES.GENERATED);
+      }
     } catch { toast.error(ERROR_MESSAGES.GENERATION_FAILED); }
     finally { setGenerating(false); }
-  }, [businessId, user?.id]);
+  }, [user?.id, fetchIdeasList]);
 
   const moveIdea = (id: string, newStatus: "new" | "in_progress" | "completed"): void => {
     const previous = ideas;
     setIdeas(prev => (prev || []).map(i => i.id === id ? { ...i, status: newStatus } : i));
-    if (!isDemo && businessId) {
+    if (businessId) {
       // Optimistic update with rollback — the old silent .catch(() => {})
       // let the server reject the move while the UI claimed it stuck,
       // losing the change on next refresh (audit §5).
@@ -90,10 +99,11 @@ export default function DashboardIdeas() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          {isDemo && (
-            <span className="inline-block rounded-full bg-muted px-2.5 py-0.5 text-[10px] text-muted-foreground mb-2">
-              Sample data — generate real ideas to replace
-            </span>
+          {loadError && (
+            <p className="text-xs text-destructive mb-2">{loadError}</p>
+          )}
+          {!loadError && ideas.length === 0 && (
+            <p className="text-xs text-muted-foreground mb-2">No ideas yet — generate your first batch below.</p>
           )}
         </div>
         <Button onClick={handleGenerate} disabled={generating} className="h-9 text-sm">

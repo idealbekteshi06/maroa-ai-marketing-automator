@@ -80,8 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           brand_tone: "",
           marketing_goal: "",
           is_active: true,
-          plan: "free",
-          plan_price: 0,
+        plan: "starter",
+        plan_price: 0,
           daily_budget: 0,
           onboarding_complete: false,
           social_accounts_connected: false,
@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setOnboardingComplete(false);
           apiFireAndForget("/webhook/new-user-signup", {
             user_id: userId, email, first_name: firstName,
-            business_name: "", industry: "", location: "", plan: "free",
+            business_name: "", industry: "", location: "", plan: "starter",
           });
         } else {
           setBusinessId(null);

@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Check, ExternalLink, User, CreditCard, Bell, Zap, Palette, Link2, CalendarClock, Loader2, Trash2, Shield, Copy, Magnet } from "lucide-react";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 import { apiPost, apiGet, postCheckout, postBuildBrandDna } from "@/lib/apiClient";
+import { BILLING_PLANS, type BillingPlanKey } from "@/lib/plans";
 
 /* ── Tabs ── */
 const tabs = [
@@ -30,13 +31,10 @@ const AUTONOMY_MODES = [
   { value: "approve_everything", label: "Approve everything", desc: "Nothing publishes without your click" },
 ];
 
-const PLANS = {
-  free: { name: "Free", price: 0, features: ["3 posts/week", "1 platform", "Basic analytics"] },
-  starter: { name: "Starter", price: 29, features: ["20 images/mo", "1 platform (Instagram)", "Content calendar", "Email support"] },
-  growth: { name: "Growth", price: 59, popular: true, features: ["60 images/mo", "Kling + Sora videos", "3 platforms", "Analytics", "Competitor tracking", "CRM & leads"] },
-  agency: { name: "Agency", price: 99, features: ["120 images/mo", "All platforms", "3 brands", "White-label", "Priority support"] },
-} as const;
-type PlanKey = keyof typeof PLANS;
+const PLANS = Object.fromEntries(
+  BILLING_PLANS.map((p) => [p.key, { name: p.name, price: p.monthlyPrice, popular: p.popular, features: p.features }]),
+) as Record<BillingPlanKey, { name: string; price: number; popular?: boolean; features: string[] }>;
+type PlanKey = BillingPlanKey;
 
 const industries = ["Restaurant", "Café & Coffee", "Bakery", "Bar & Nightlife", "Fitness & Gym", "Beauty & Salon", "Spa & Wellness", "Retail & Shop", "Fashion", "Jewelry", "Real Estate", "Construction", "IT & Software", "Marketing Agency", "Consulting", "Education", "Healthcare", "Legal", "Automotive", "Photography", "Other"];
 const toneOptions = ["Professional", "Friendly", "Playful", "Inspirational", "Luxury", "Educational"];
@@ -76,7 +74,7 @@ export default function DashboardSettings() {
     business_name: "", email: "", location: "", industry: "", website_url: "", description: "", phone: "",
     target_audience: "", brand_tone: "", marketing_goal: "", competitors: "", daily_budget: 0,
   });
-  const [currentPlan, setCurrentPlan] = useState<PlanKey>("free");
+  const [currentPlan, setCurrentPlan] = useState<PlanKey>("starter");
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>(defaultNotifs);
   const [autopilot, setAutopilot] = useState(false);
@@ -106,7 +104,7 @@ export default function DashboardSettings() {
       });
       const p = data.plan as string;
       setCurrentPlan(
-        p === "growth" || p === "agency" || p === "starter" ? p : "free"
+        p === "growth" || p === "agency" || p === "starter" ? p : "starter",
       );
       setAutopilot(!!data.autopilot_enabled);
       setAdsLive(!!data.ads_live);
@@ -153,10 +151,13 @@ export default function DashboardSettings() {
   };
 
   const handleUpgrade = async (planKey: PlanKey) => {
-    if (planKey === "free" || !user?.id) return;
+    if (!businessId) {
+      toast.error("Business profile not loaded — refresh and try again.");
+      return;
+    }
     setCheckoutLoading(planKey);
     try {
-      const result = await postCheckout(user.id, planKey);
+      const result = await postCheckout(businessId, planKey);
       if (result.checkout_url) window.location.href = result.checkout_url;
     } catch (err: unknown) { toast.error(err instanceof Error ? err.message : ERROR_MESSAGES.SAVE_FAILED); }
     setCheckoutLoading(null);
@@ -307,8 +308,8 @@ export default function DashboardSettings() {
                   <p className="mt-1 text-2xl font-bold text-foreground">${plan.price}<span className="text-sm font-normal text-muted-foreground">/mo</span></p>
                   <ul className="mt-3 space-y-1.5">{plan.features.map(f => <li key={f} className="flex items-center gap-2 text-xs text-muted-foreground"><Check className="h-3 w-3 text-success shrink-0" />{f}</li>)}</ul>
                   <Button variant={currentPlan === key ? "outline" : "default"} size="sm" className="mt-4 w-full"
-                    disabled={currentPlan === key || !!checkoutLoading || key === "free"} onClick={() => handleUpgrade(key)}>
-                    {checkoutLoading === key ? "Opening checkout..." : currentPlan === key ? "Current Plan" : key === "free" ? (currentPlan === "free" ? "Current Plan" : "Included") : `Upgrade to ${plan.name}`}
+                    disabled={currentPlan === key || !!checkoutLoading} onClick={() => handleUpgrade(key)}>
+                    {checkoutLoading === key ? "Opening checkout..." : currentPlan === key ? "Current Plan" : `Upgrade to ${plan.name}`}
                   </Button>
                 </div>
               ))}

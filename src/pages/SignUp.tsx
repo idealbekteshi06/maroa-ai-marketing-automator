@@ -80,7 +80,7 @@ export default function SignUp() {
         brand_tone: "",
         marketing_goal: "",
         is_active: true,
-        plan: "free",
+        plan: "starter",
         plan_price: 0,
         daily_budget: 0,
         onboarding_complete: false,
@@ -108,7 +108,7 @@ export default function SignUp() {
       apiFireAndForget("/webhook/new-user-signup", {
         user_id: userId, email: form.email, first_name: form.firstName,
         last_name: form.lastName, business_name: form.businessName,
-        industry: form.industry, location: form.location, plan: "free",
+        industry: form.industry, location: form.location, plan: "starter",
       });
 
       // Trigger instant content generation

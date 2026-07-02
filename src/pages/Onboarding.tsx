@@ -259,7 +259,7 @@ export default function Onboarding() {
         });
 
         apiFireAndForget("/api/ideas/generate", {
-          user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
+          userId: user?.id ?? "",
           business_id: businessId,
         });
       }

@@ -48,6 +48,7 @@ export default function DashboardCampaign() {
   const [duration, setDuration] = useState(14);
   const [generating, setGenerating] = useState(false);
   const [genMessage, setGenMessage] = useState("");
+  const [queuedMessage, setQueuedMessage] = useState<string | null>(null);
   const [result, setResult] = useState<CampaignResult | null>(null);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     schedule: true,
@@ -60,13 +61,14 @@ export default function DashboardCampaign() {
   };
 
   const handleGenerate = useCallback(async (): Promise<void> => {
-    if (!businessId || !goal.trim()) {
+    if (!user?.id || !goal.trim()) {
       toast.error(ERROR_MESSAGES.PROFILE_INCOMPLETE);
       return;
     }
 
     setGenerating(true);
     setResult(null);
+    setQueuedMessage(null);
     setGenMessage("Understanding your goal...");
 
     try {
@@ -84,23 +86,21 @@ export default function DashboardCampaign() {
         if (i < msgs.length) setGenMessage(msgs[i]);
       }, 4000);
 
-      const data = await apiPost<CampaignResult>("/api/campaigns/instant", {
-        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
-        business_id: businessId,
+      const data = await apiPost<{ received?: boolean; message?: string }>("/api/campaigns/instant", {
+        userId: user.id,
         goal: goal.trim(),
         duration,
       });
       clearInterval(interval);
-      setResult(data);
-      setExpandedSections({ schedule: true, emails: true, ads: true });
-      toast.success(SUCCESS_MESSAGES.CAMPAIGN_LAUNCHED);
+      setQueuedMessage(data.message || "Your campaign is being generated in the background.");
+      toast.success("Campaign started — we'll email you when it's ready.");
     } catch {
       toast.error(ERROR_MESSAGES.GENERATION_FAILED);
     } finally {
       setGenerating(false);
       setGenMessage("");
     }
-  }, [businessId, duration, goal, user?.id]);
+  }, [duration, goal, user?.id]);
 
   const schedule = result?.schedule || result?.day_by_day || [];
   const emails = result?.emails || result?.email_sequence || [];
@@ -189,6 +189,12 @@ export default function DashboardCampaign() {
             <div className="h-full rounded-full bg-primary/50 animate-pulse" style={{ width: "60%" }} />
           </div>
           <p className="text-[11px] text-muted-foreground mt-2">Building your complete multi-channel campaign...</p>
+        </div>
+      )}
+
+      {queuedMessage && !generating && (
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-5">
+          <p className="text-sm text-foreground">{queuedMessage}</p>
         </div>
       )}
 

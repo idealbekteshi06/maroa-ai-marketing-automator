@@ -5,6 +5,12 @@ const RAW_API_BASE = (import.meta.env.VITE_API_BASE as string) ?? "";
 /** In dev, use same-origin requests + Vite proxy so Railway CORS does not block the browser. */
 const API_BASE = import.meta.env.DEV ? "" : RAW_API_BASE;
 
+if (import.meta.env.PROD && !RAW_API_BASE) {
+  console.error(
+    "[maroa] VITE_API_BASE is missing — set it to https://maroa-api-production.up.railway.app in Vercel and redeploy.",
+  );
+}
+
 export function getApiBase(): string {
   return API_BASE;
 }
@@ -158,7 +164,7 @@ export async function getStreamTicket(businessId: string): Promise<string | null
   }
 }
 
-/** server expects user_id — this is auth.user.id = businesses.id */
+/** Auth user id for legacy /api/generate. */
 export async function postGenerate(
   userId: string,
   action: string,
@@ -171,11 +177,16 @@ export async function postGenerate(
   });
 }
 
+/**
+ * Paddle checkout — backend looks up businesses by id (body field is named user_id).
+ * Pass the business row UUID from AuthContext.businessId, not auth.users.id.
+ */
 export async function postCheckout(
-  userId: string,
+  businessId: string,
   plan: string
 ): Promise<{ checkout_url: string; transaction_id?: string }> {
-  return apiPost("/api/checkout", { user_id: userId, plan });
+  if (!businessId) throw new Error("Business profile not loaded — refresh and try again.");
+  return apiPost("/api/checkout", { user_id: businessId, plan });
 }
 
 // NOTE: GET /api/business/:id/brand-dna was removed — that route never
@@ -230,7 +241,7 @@ export async function postProductUpload(
 ): Promise<unknown> {
   return apiPost("/webhook/product-upload", {
     business_id: businessId,
-    user_id: userId, // server expects user_id — this is auth.user.id = businesses.id
+    user_id: userId,
     plan,
     product_images: imageUrls,
   });
@@ -242,7 +253,7 @@ export async function postBuildBrandDna(
 ): Promise<unknown> {
   return apiPost("/webhook/build-brand-dna", {
     business_id: businessId,
-    user_id: userId, // server expects user_id — this is auth.user.id = businesses.id
+    user_id: userId,
   });
 }
 
@@ -255,7 +266,7 @@ export async function postBuildCalendar(
 ): Promise<unknown> {
   return apiPost("/webhook/build-calendar", {
     business_id: businessId,
-    user_id: userId, // server expects user_id — this is auth.user.id = businesses.id
+    user_id: userId,
     plan,
     month,
     year,

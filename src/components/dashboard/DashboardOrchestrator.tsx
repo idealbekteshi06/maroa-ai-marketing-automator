@@ -49,13 +49,12 @@ export default function DashboardOrchestrator() {
   }, [businessId, isReady]);
 
   const handleRun = async () => {
-    if (!businessId) return;
+    if (!user?.id) return;
     setRunning(true);
     toast("Running full AI cycle...", { description: "This may take a few minutes" });
     try {
-      const data = await apiPost<{ logs?: LogEntry[]; error?: string }>(`/api/orchestrator/run/${businessId}`, {
-        user_id: user?.id ?? "", // server expects user_id — this is auth.user.id = businesses.id
-        business_id: businessId,
+      const data = await apiPost<{ logs?: LogEntry[]; error?: string }>("/api/orchestrator/run", {
+        userId: user.id,
       });
       setLogs(data.logs ?? []);
       toast.success(SUCCESS_MESSAGES.GENERATED);
