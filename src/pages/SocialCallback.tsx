@@ -8,7 +8,13 @@ import { toast } from "sonner";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 import { apiPost } from "@/lib/apiClient";
 
-const REDIRECT_URI = "https://maroa-ai-marketing-automator.lovable.app/social-callback";
+// Must exactly match the redirect URI registered in each platform's OAuth app
+// (Meta / TikTok / LinkedIn). Env-overridable so cutting over to the maroa.ai
+// domain is a config change, not a code change — set VITE_OAUTH_REDIRECT_URI
+// AND register the same URI in every platform app before switching.
+const REDIRECT_URI =
+  (import.meta.env.VITE_OAUTH_REDIRECT_URI as string) ??
+  "https://maroa-ai-marketing-automator.lovable.app/social-callback";
 
 export default function SocialCallback() {
   const [searchParams] = useSearchParams();
