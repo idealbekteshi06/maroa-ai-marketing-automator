@@ -13,7 +13,7 @@ import {
   Users, Home, MoreHorizontal, Gift, Magnet, Rocket,
   Lightbulb, Brain, Code, FileSearch, DollarSign,
   MessageSquare, Briefcase, BarChart3, Wrench, MousePointer,
-  UserPlus, TrendingUp, CreditCard, Bot, Palette, Inbox,
+  UserPlus, TrendingUp, CreditCard, Activity, Palette, Inbox,
   ChevronRight, Sparkles, Scale, BadgeDollarSign, ShoppingBag,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -106,51 +106,94 @@ const BudgetROI = lazy(() => import("@/pages/BudgetROI"));
  * per the V2 spec. Legacy pages are kept reachable via direct URL (?tab=key)
  * but removed from sidebar to eliminate cognitive overload (Hick's Law).
  */
-type NavItem = { key: string; label: string; icon: typeof Home };
-type WorkflowGroup = { label: string; items: NavItem[] };
+/**
+ * Automation posture per feature — the core organizing idea of the new IA.
+ *   "auto"     — runs itself on a schedule (a firing Inngest cron). The user
+ *                sees results; they don't have to press anything.
+ *   "assisted" — the user starts it, the AI does the heavy lifting.
+ *   undefined  — a plain tool/screen.
+ * This is surfaced in the sidebar as a pill so "what's on autopilot" is
+ * legible at a glance instead of buried in a static footer label.
+ */
+type AutoKind = "auto" | "assisted";
+type NavItem = { key: string; label: string; icon: typeof Home; auto?: AutoKind };
+type NavCategory = { label: string; blurb: string; items: NavItem[] };
 
+/* Daily drivers — always visible, no category. Ordered by how often they're touched. */
 const primaryNav: NavItem[] = [
   { key: "overview", label: "Home", icon: Home },
-  { key: "inbox", label: "Inbox", icon: Inbox },
-  { key: "studio", label: "Studio", icon: Palette },
-  { key: "insights", label: "Insights", icon: BarChart3 },
-  { key: "crm", label: "Customers", icon: Users },
   { key: "ai-brain", label: "Ask Maroa", icon: Sparkles },
+  { key: "inbox", label: "Inbox", icon: Inbox },
+  { key: "studio", label: "Studio", icon: Palette, auto: "assisted" },
 ];
 
-const workflowGroups: WorkflowGroup[] = [
+/**
+ * Everything else, organized into ranked categories. Order is deliberate:
+ * revenue first (what pays), then the content that feeds it, then the
+ * intelligence that steers it, then the relationships, then the long tail of
+ * conversion tools. Within a category, autopilot engines lead.
+ */
+const navCategories: NavCategory[] = [
   {
-    label: "Audience Growth",
+    label: "Grow revenue",
+    blurb: "Ads, store & money",
     items: [
-      { key: "wf1-daily-content", label: "Daily Content Engine", icon: FileText },
-      { key: "wf6-local-presence", label: "Local + Digital Presence", icon: Globe },
-      { key: "wf12-launch", label: "Launch Orchestrator", icon: Rocket },
+      { key: "paid-ads", label: "Paid Ads", icon: BadgeDollarSign, auto: "assisted" },
+      { key: "wf3-ads", label: "Ad Optimization", icon: Megaphone, auto: "auto" },
+      { key: "wf14-budget", label: "Budget & ROI", icon: DollarSign, auto: "auto" },
+      { key: "store", label: "Store Connect", icon: ShoppingBag, auto: "assisted" },
+      { key: "wf7-email", label: "Email Lifecycle", icon: Mail, auto: "auto" },
+      { key: "wf2-leads", label: "Lead Scoring", icon: TrendingUp, auto: "auto" },
     ],
   },
   {
-    label: "Revenue Generation",
+    label: "Create content",
+    blurb: "What goes out, daily",
     items: [
-      { key: "paid-ads", label: "Paid Ads", icon: BadgeDollarSign },
-      { key: "store", label: "Store Connect", icon: ShoppingBag },
-      { key: "wf3-ads", label: "Ad Optimization", icon: Megaphone },
-      { key: "wf7-email", label: "Email Lifecycle", icon: Mail },
-      { key: "wf2-leads", label: "Lead Scoring", icon: TrendingUp },
+      { key: "wf1-daily-content", label: "Daily Content Engine", icon: FileText, auto: "auto" },
+      { key: "ideas", label: "Marketing Ideas", icon: Lightbulb, auto: "assisted" },
+      { key: "community", label: "Community Posts", icon: MessageSquare, auto: "assisted" },
+      { key: "wf12-launch", label: "Launch Orchestrator", icon: Rocket, auto: "assisted" },
     ],
   },
   {
-    label: "Customer Operations",
+    label: "Know your market",
+    blurb: "Intelligence that steers",
     items: [
-      { key: "wf4-reviews", label: "Reviews & Reputation", icon: Star },
-      { key: "wf11-inbox", label: "Unified Inbox", icon: MessageSquare },
-      { key: "wf8-insights", label: "Customer Insights", icon: FileSearch },
+      { key: "wf5-competitors", label: "Competitor Intelligence", icon: Target, auto: "auto" },
+      { key: "wf13-brief", label: "Weekly Strategy Brief", icon: Scale, auto: "auto" },
+      { key: "wf8-insights", label: "Customer Insights", icon: FileSearch, auto: "assisted" },
+      { key: "health", label: "Health Score", icon: Activity },
     ],
   },
   {
-    label: "Intelligence",
+    label: "Win customers",
+    blurb: "Relationships & reputation",
     items: [
-      { key: "wf5-competitors", label: "Competitor Intelligence", icon: Target },
-      { key: "wf13-brief", label: "Weekly Strategy Brief", icon: Scale },
-      { key: "wf14-budget", label: "Budget & ROI Optimizer", icon: DollarSign },
+      { key: "wf4-reviews", label: "Reviews & Reputation", icon: Star, auto: "auto" },
+      { key: "crm", label: "CRM & Pipeline", icon: Users },
+      { key: "wf6-local-presence", label: "Local Presence", icon: Globe, auto: "assisted" },
+    ],
+  },
+  {
+    label: "Convert & optimize",
+    blurb: "Turn traffic into signups",
+    items: [
+      { key: "ai-seo", label: "AI SEO", icon: Search, auto: "assisted" },
+      { key: "seo-pages", label: "Landing Pages", icon: Code, auto: "assisted" },
+      { key: "ab-tests", label: "A/B Tests", icon: FileSearch, auto: "assisted" },
+      { key: "popup-cro", label: "Popups & CRO", icon: MousePointer, auto: "assisted" },
+      { key: "pricing", label: "Pricing Strategy", icon: CreditCard, auto: "assisted" },
+      { key: "sales", label: "Sales Assets", icon: Briefcase, auto: "assisted" },
+    ],
+  },
+  {
+    label: "Grow the funnel",
+    blurb: "Top-of-funnel & referrals",
+    items: [
+      { key: "lead-magnets", label: "Lead Magnets", icon: Magnet, auto: "assisted" },
+      { key: "free-tools", label: "Free Tools", icon: Wrench, auto: "assisted" },
+      { key: "referral", label: "Referral Program", icon: Gift },
     ],
   },
 ];
@@ -158,9 +201,14 @@ const workflowGroups: WorkflowGroup[] = [
 /* Every key reachable anywhere in the app — used for route resolution and shortcuts */
 const allNavItems: NavItem[] = [
   ...primaryNav,
-  ...workflowGroups.flatMap((g) => g.items),
+  ...navCategories.flatMap((g) => g.items),
   { key: "settings", label: "Settings", icon: Settings },
 ];
+
+/* How many features genuinely run on a schedule (firing Inngest crons) —
+   surfaced in the sidebar footer so "autopilot" is a real number, not a label. */
+const autoWorkflowCount =
+  [...primaryNav, ...navCategories.flatMap((g) => g.items)].filter((i) => i.auto === "auto").length;
 
 /* Mobile bottom tab bar — 5 items per REFACTOR_BRIEF_V2 section 2.7 */
 const mobileNav: NavItem[] = [
@@ -371,19 +419,50 @@ export default function Dashboard() {
    * REFACTOR_BRIEF_V2 section 2.1). Expanded state persists per user in
    * localStorage. Keyboard navigation is handled by useKeyboardShortcuts.
    */
-  const [workflowsOpen, setWorkflowsOpen] = useState<boolean>(
-    () => localStorage.getItem("maroa.nav.workflowsOpen") === "1",
-  );
+  // Per-category collapse state. Defaults: the top two ranked categories open,
+  // the rest collapsed — so the money + content engines are visible on load
+  // without the full ~25-item list overwhelming the pane.
+  const [openCats, setOpenCats] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem("maroa.nav.openCats");
+      if (saved) return JSON.parse(saved);
+    } catch {
+      /* ignore malformed */
+    }
+    return { "Grow revenue": true, "Create content": true };
+  });
   useEffect(() => {
-    localStorage.setItem("maroa.nav.workflowsOpen", workflowsOpen ? "1" : "0");
-  }, [workflowsOpen]);
+    localStorage.setItem("maroa.nav.openCats", JSON.stringify(openCats));
+  }, [openCats]);
 
-  const activeIsWorkflow = workflowGroups.some((g) =>
-    g.items.some((i) => i.key === active),
-  );
+  // Whichever category holds the active tab auto-expands so the highlight is
+  // never hidden inside a collapsed section.
+  const activeCat = navCategories.find((c) => c.items.some((i) => i.key === active))?.label;
   useEffect(() => {
-    if (activeIsWorkflow && !workflowsOpen) setWorkflowsOpen(true);
-  }, [activeIsWorkflow, workflowsOpen]);
+    if (activeCat && !openCats[activeCat]) {
+      setOpenCats((prev) => ({ ...prev, [activeCat]: true }));
+    }
+  }, [activeCat]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Small pill that tells the user, at a glance, what runs itself vs what they
+  // start. This is the heart of the "automation is legible" redesign.
+  const AutoPill = ({ kind }: { kind: AutoKind }) =>
+    kind === "auto" ? (
+      <span
+        className="ml-auto inline-flex items-center gap-1 rounded-full bg-success/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.06em] text-success"
+        title="Runs automatically on a schedule — no action needed"
+      >
+        <span className="h-1 w-1 rounded-full bg-success" />
+        Auto
+      </span>
+    ) : (
+      <span
+        className="ml-auto text-[9px] font-medium uppercase tracking-[0.06em] text-muted-foreground/50"
+        title="You start it, the AI does the work"
+      >
+        AI
+      </span>
+    );
 
   const NavItemButton = ({
     item,
@@ -400,7 +479,7 @@ export default function Dashboard() {
         onItemClick?.();
       }}
       className={`flex w-full items-center gap-3 rounded-lg ${
-        indent ? "pl-9 pr-3" : "px-3"
+        indent ? "pl-9 pr-2.5" : "px-3"
       } py-2 text-[13px] font-medium transition-colors ${
         active === item.key
           ? "border-l-[3px] border-primary bg-primary/10 text-primary"
@@ -408,10 +487,11 @@ export default function Dashboard() {
       }`}
     >
       <item.icon
-        className="h-[18px] w-[18px]"
+        className="h-[18px] w-[18px] shrink-0"
         strokeWidth={active === item.key ? 2 : 1.5}
       />
-      {item.label}
+      <span className="truncate">{item.label}</span>
+      {item.auto && <AutoPill kind={item.auto} />}
     </button>
   );
 
@@ -423,47 +503,50 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Expandable Workflows group */}
-      <div className="mt-2">
-        <button
-          type="button"
-          onClick={() => setWorkflowsOpen((v) => !v)}
-          className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
-            activeIsWorkflow && !workflowsOpen
-              ? "bg-primary/5 text-primary"
-              : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground"
-          }`}
-          aria-expanded={workflowsOpen}
-        >
-          <Bot className="h-[18px] w-[18px]" strokeWidth={1.5} />
-          <span className="flex-1 text-left">Workflows</span>
-          <ChevronRight
-            className={`h-3.5 w-3.5 transition-transform ${
-              workflowsOpen ? "rotate-90" : ""
-            }`}
-          />
-        </button>
-        {workflowsOpen && (
-          <div className="mt-1 space-y-2 pb-1">
-            {workflowGroups.map((group) => (
-              <div key={group.label}>
-                <p className="px-5 pb-0.5 pt-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/40">
-                  {group.label}
-                </p>
-                <div className="space-y-0.5">
-                  {group.items.map((item) => (
-                    <NavItemButton
-                      key={item.key}
-                      item={item}
-                      onItemClick={onItemClick}
-                      indent
-                    />
+      {/* Ranked, collapsible categories. Each header is a real disclosure with
+          a one-line blurb; autopilot items carry an "Auto" pill. */}
+      <div className="mt-3 space-y-1">
+        {navCategories.map((cat) => {
+          const open = !!openCats[cat.label];
+          const autoCount = cat.items.filter((i) => i.auto === "auto").length;
+          return (
+            <div key={cat.label}>
+              <button
+                type="button"
+                onClick={() => setOpenCats((prev) => ({ ...prev, [cat.label]: !prev[cat.label] }))}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left transition-colors hover:bg-sidebar-accent"
+                aria-expanded={open}
+              >
+                <ChevronRight
+                  className={`h-3 w-3 shrink-0 text-muted-foreground/50 transition-transform ${open ? "rotate-90" : ""}`}
+                />
+                <span className="flex-1">
+                  <span className="block text-[11px] font-semibold uppercase tracking-[0.07em] text-foreground/70">
+                    {cat.label}
+                  </span>
+                  {!open && (
+                    <span className="block truncate text-[10px] text-muted-foreground/60">{cat.blurb}</span>
+                  )}
+                </span>
+                {autoCount > 0 && (
+                  <span
+                    className="shrink-0 rounded-full bg-success/10 px-1.5 py-0.5 text-[9px] font-semibold text-success"
+                    title={`${autoCount} of these run automatically`}
+                  >
+                    {autoCount} auto
+                  </span>
+                )}
+              </button>
+              {open && (
+                <div className="mb-1 mt-0.5 space-y-0.5">
+                  {cat.items.map((item) => (
+                    <NavItemButton key={item.key} item={item} onItemClick={onItemClick} indent />
                   ))}
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <div className="mt-3 border-t border-sidebar-border pt-2">
@@ -488,9 +571,11 @@ export default function Dashboard() {
         <SidebarNav />
 
         <div className="border-t border-sidebar-border px-3 py-3 space-y-2">
-          <div className="flex items-center gap-2 px-2">
+          <div className="flex items-center gap-2 px-2" title="Engines running on their own schedule right now">
             <Heartbeat active={true} />
-            <span className="text-[11px] font-medium text-success">Autopilot Active</span>
+            <span className="text-[11px] font-medium text-success">
+              {autoWorkflowCount} engines on autopilot
+            </span>
           </div>
           <div className="flex items-center gap-3 rounded-lg px-3 py-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{initials}</div>
