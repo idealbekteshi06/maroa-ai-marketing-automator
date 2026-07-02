@@ -1026,3 +1026,110 @@ export const forecastGenerate = (data: { businessId: string; horizonDays?: numbe
 // ─── VOC — Voice of Customer ─────────────────────────────────
 export const vocAuto = (data: { businessId: string }) =>
   post("/webhook/voc-auto", data);
+
+// ─── WF10 — Higgsfield Studio jobs ───────────────────────────
+export const wf10CreateJob = (data: { businessId: string; request: Record<string, unknown> }) =>
+  post("/webhook/wf10-create-job", data);
+
+export const wf10GetJob = (params: { business_id: string; job_id: string }) =>
+  get("/webhook/wf10-job-get", params);
+
+export const wf10ListJobs = (params: { business_id: string; status?: string }) =>
+  get("/webhook/wf10-jobs-list", params);
+
+// ─── Brand assets (logo + product reference images for WF1/Studio) ─
+export const setBrandAssets = (
+  businessId: string,
+  data: { logo_url?: string | null; product_image_urls?: string[] },
+) => post(`/api/business/${businessId}/brand-assets`, data);
+
+// ─── Social publish (social-multi: Meta Graph + Ayrshare) ────
+export const socialPostNow = (data: {
+  businessId: string;
+  platforms: string[];
+  content: { body: string; title?: string };
+  mediaUrl?: string;
+}) => post("/webhook/social-post-now", data);
+
+export const socialPostSchedule = (data: {
+  businessId: string;
+  platforms: string[];
+  content: { body: string; title?: string };
+  mediaUrl?: string;
+  scheduleAt: string;
+}) => post("/webhook/social-post-schedule", data);
+
+// ─── Store connect (Shopify / dropshipping) ──────────────────
+export interface StoreProduct {
+  id?: string;
+  external_id?: string;
+  title?: string;
+  description?: string;
+  price?: number | string;
+  currency?: string;
+  image_urls?: string[];
+  product_url?: string;
+  vendor?: string;
+  tags?: string[];
+}
+
+export const storeConnect = (data: { business_id: string; store_url: string }) =>
+  post<{
+    ok: boolean;
+    platform?: string;
+    product_count?: number;
+    summary_saved?: boolean;
+    store_url?: string;
+  }>("/api/store/connect", data);
+
+export const storeGetProducts = (params: { business_id: string; limit?: string }) =>
+  get<{ ok: boolean; count: number; products: StoreProduct[] }>("/api/store/products", params);
+
+export const storeSync = (data: { business_id: string }) =>
+  post<{ ok: boolean; product_count?: number }>("/api/store/sync", data);
+
+export const storeSetAutomation = (data: { business_id: string; enabled: boolean }) =>
+  post<{ ok: boolean; autopilot_enabled: boolean; wf1_autonomy_mode: string }>(
+    "/api/store/automation",
+    data,
+  );
+
+// ─── Paid Ads hub ────────────────────────────────────────────
+/** Wizard answers injected as hard constraints into the AI campaign strategy. */
+export interface AdWizardInput {
+  objective?: string;
+  target_audience?: string;
+  age_range?: string;
+  locations?: string[];
+  daily_budget?: number;
+  duration_days?: number;
+  offer?: string;
+}
+
+export interface PaidAdsChannel {
+  connected: boolean;
+  campaigns: number;
+  active: number;
+  total_spend: number;
+  avg_roas: number;
+  eligibility: { eligible: boolean; reasons: string[] };
+}
+
+export const getPaidAdsOverview = (params: { business_id: string }) =>
+  get<{
+    business_id: string;
+    generated_at: string;
+    channels: { meta: PaidAdsChannel; google: PaidAdsChannel; tiktok: PaidAdsChannel };
+  }>("/webhook/paid-ads-overview", params);
+
+export const tiktokCampaignCreate = (data: { business_id: string; wizard?: AdWizardInput }) =>
+  post<{ campaign: Record<string, unknown>; eligibility: Record<string, unknown> }>(
+    "/webhook/tiktok-campaign-create",
+    data,
+  );
+
+export const getTiktokCampaigns = (params: { business_id: string }) =>
+  get<{ campaigns: Array<Record<string, unknown>>; summary: Record<string, unknown> }>(
+    "/webhook/tiktok-campaigns-get",
+    params,
+  );

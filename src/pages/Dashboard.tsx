@@ -14,7 +14,7 @@ import {
   Lightbulb, Brain, Code, FileSearch, DollarSign,
   MessageSquare, Briefcase, BarChart3, Wrench, MousePointer,
   UserPlus, TrendingUp, CreditCard, Bot, Palette, Inbox,
-  ChevronRight, Sparkles, Scale,
+  ChevronRight, Sparkles, Scale, BadgeDollarSign, ShoppingBag,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import NotificationCenter from "@/components/NotificationCenter";
@@ -89,6 +89,8 @@ const WF2LeadScoring = lazy(() => import("@/pages/workflows/LeadScoring"));
 const WF4ReviewsReputation = lazy(() => import("@/pages/workflows/ReviewsReputation"));
 
 /* ── v2 premium pages ── */
+const PaidAdsHub = lazy(() => import("@/pages/PaidAdsHub"));
+const StoreConnect = lazy(() => import("@/pages/StoreConnect"));
 const AdOptimization = lazy(() => import("@/pages/AdOptimization"));
 const LocalPresence = lazy(() => import("@/pages/LocalPresence"));
 const EmailLifecycle = lazy(() => import("@/pages/EmailLifecycle"));
@@ -128,6 +130,8 @@ const workflowGroups: WorkflowGroup[] = [
   {
     label: "Revenue Generation",
     items: [
+      { key: "paid-ads", label: "Paid Ads", icon: BadgeDollarSign },
+      { key: "store", label: "Store Connect", icon: ShoppingBag },
       { key: "wf3-ads", label: "Ad Optimization", icon: Megaphone },
       { key: "wf7-email", label: "Email Lifecycle", icon: Mail },
       { key: "wf2-leads", label: "Lead Scoring", icon: TrendingUp },
@@ -175,6 +179,8 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   insights: { title: "Insights", subtitle: "Reports, briefs, analytics" },
   "wf1-daily-content": { title: "Daily Content Engine", subtitle: "Workflow #1 · Senior strategist running daily" },
   "wf2-leads": { title: "Lead Scoring", subtitle: "Workflow #2 · Intent over identity" },
+  "paid-ads": { title: "Paid Ads", subtitle: "Meta · Google · TikTok — guided campaigns, AI-built around your answers" },
+  store: { title: "Store Connect", subtitle: "Shopify & dropshipping — connect your store, AI runs the marketing" },
   "wf3-ads": { title: "Ad Optimization", subtitle: "Workflow #3 · Daily optimization loop" },
   "wf4-reviews": { title: "Reviews & Reputation", subtitle: "Workflow #4 · Brand voice responses" },
   "wf5-competitors": { title: "Competitor Intelligence", subtitle: "Workflow #5 · Continuous monitoring" },
@@ -322,6 +328,8 @@ export default function Dashboard() {
          * workflow is implemented per its spec. Until then they fall through
          * to the legacy component closest in meaning. */
         case "wf2-leads": return <WF2LeadScoring />;
+        case "paid-ads": return <PaidAdsHub />;
+        case "store": return <StoreConnect />;
         case "wf3-ads": return <AdOptimization />;
         case "wf4-reviews": return <WF4ReviewsReputation />;
         case "wf5-competitors": return <CompetitorIntelligence />;
