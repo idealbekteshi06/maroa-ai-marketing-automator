@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Eye, Send, Users, Zap, CalendarClock, CheckCircle2, Circle, Loader2, BarChart2 } from "lucide-react";
@@ -6,7 +6,9 @@ import { externalSupabase } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { pickPrimaryBusiness } from "@/lib/business";
 import { toast } from "sonner";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+// recharts is ~112 KB gzip — lazy-load it so it's not in the dashboard's
+// first paint. The home renders instantly; the chart hydrates a moment later.
+const ReachChart = lazy(() => import("@/components/dashboard/ReachChart"));
 import PendingApprovals from "@/components/PendingApprovals";
 import Sparkline from "@/components/Sparkline";
 import AIBrainStatus from "@/components/AIBrainStatus";
@@ -351,9 +353,9 @@ export default function DashboardOverview() {
 
   /* ── FIX 10.3: Empty metric subtexts ── */
   const metricCards = [
-    // Apple-restrained: the primary metric carries the blue accent; the rest
-    // are neutral so the row reads calm, not like a paint sample.
-    { label: "Total Reach", sub: totalReach > 0 ? "people reached" : "Increases as AI publishes content", value: totalReach, icon: Eye, color: "text-primary bg-primary/10", spark: reachSpark },
+    // Apple-restrained: all four icon chips share the same neutral treatment
+    // so the row reads calm and consistent — no odd-one-out accent.
+    { label: "Total Reach", sub: totalReach > 0 ? "people reached" : "Increases as AI publishes content", value: totalReach, icon: Eye, color: "text-foreground bg-muted", spark: reachSpark },
     { label: "Posts Published", sub: publishedCount > 0 ? "posts this month" : "First post generating soon", value: publishedCount, icon: Send, color: "text-foreground bg-muted", spark: [] as number[] },
     { label: "Active Leads", sub: leadCount > 0 ? "leads in pipeline" : "Leads appear as campaigns run", value: leadCount, icon: Users, color: "text-foreground bg-muted", spark: [] as number[] },
     { label: "AI Actions Today", sub: todayActions > 0 ? "actions today" : "AI will take actions today", value: todayActions, icon: Zap, color: "text-foreground bg-muted", spark: [] as number[] },
@@ -438,15 +440,9 @@ export default function DashboardOverview() {
           </Select>
         </div>
         {chartData.length > 0 ? (
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} width={45} />
-              <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }} />
-              <Line type="monotone" dataKey="reach" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-            </LineChart>
-          </ResponsiveContainer>
+          <Suspense fallback={<div className="h-[200px] rounded-lg skeleton" />}>
+            <ReachChart data={chartData} />
+          </Suspense>
         ) : (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <BarChart2 className="h-10 w-10 text-muted-foreground/20" />

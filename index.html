@@ -6,20 +6,44 @@
     <title>maroa.ai — AI Marketing for Every Business</title>
     <meta name="description" content="The AI marketing platform that works while you sleep. Creates content, runs ads, and tracks competitors. No marketing team needed." />
     <meta name="keywords" content="AI marketing, marketing automation, social media AI, content generation, AI marketing platform" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="author" content="maroa.ai" />
+    <!-- Mobile browser chrome matches the app (light + dark) -->
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0a0a0b" media="(prefers-color-scheme: dark)" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="maroa.ai" />
+    <meta name="format-detection" content="telephone=no" />
     <meta property="og:title" content="maroa.ai — AI Marketing for Every Business" />
     <meta property="og:description" content="AI marketing platform that works while you sleep." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://maroa.ai" />
     <meta property="og:image" content="https://maroa.ai/og-image.png" />
+    <meta property="og:site_name" content="maroa.ai" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="maroa.ai — AI Marketing for Every Business" />
     <meta name="twitter:description" content="AI marketing platform that works while you sleep." />
+    <meta name="twitter:image" content="https://maroa.ai/og-image.png" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="canonical" href="https://maroa.ai" />
+    <!-- Warm the API connection before the first request -->
+    <link rel="preconnect" href="https://maroa-api-production.up.railway.app" crossorigin />
+    <link rel="dns-prefetch" href="https://maroa-api-production.up.railway.app" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet" />
+    <!-- Non-render-blocking font: load async with a system-font fallback while
+         it arrives. Biggest first-paint win on mobile — no waiting on Google. -->
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap"
+      onload="this.onload=null;this.rel='stylesheet'"
+    />
+    <noscript>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet" />
+    </noscript>
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
