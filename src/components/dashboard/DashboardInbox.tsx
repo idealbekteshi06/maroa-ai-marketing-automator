@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { externalSupabase } from "@/integrations/supabase/external-client";
+import { externalSupabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/integrations/supabase/external-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Search, Send, Smile, Sparkles, MessageCircle, Facebook, Instagram, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -108,9 +108,13 @@ export default function DashboardInbox() {
       const context = activeThread.messages.slice(-6).map(m =>
         `${m.is_from_customer ? m.customer_name : "Business"}: ${m.message}`
       ).join("\n");
-      const res = await fetch("https://zqhyrbttuqkvmdewiytf.supabase.co/functions/v1/chat", {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: "sb_publishable_4O2w1ObpYPQ7eOIlOhwl5A_8GxCt-gs" },
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        },
         body: JSON.stringify({
           messages: [
             { role: "system", content: "You are a helpful business assistant. Write a friendly, professional reply to the customer's last message. Keep it concise — 1-2 sentences max. Be warm and helpful." },
@@ -118,6 +122,14 @@ export default function DashboardInbox() {
           ],
         }),
       });
+      if (!res.ok) {
+        // Surface the real failure instead of a generic toast — a 401/429/500
+        // from the edge function is otherwise invisible in the UI.
+        const body = await res.text().catch(() => "");
+        console.error(`[inbox] AI reply failed: ${res.status} ${res.statusText}`, body.slice(0, 500));
+        toast.error(res.status === 429 ? "Too many requests — wait a moment" : `${ERROR_MESSAGES.GENERATION_FAILED} (${res.status})`);
+        return;
+      }
       const data = await res.text();
       // Parse SSE
       let reply = "";

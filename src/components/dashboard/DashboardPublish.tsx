@@ -101,11 +101,7 @@ export default function DashboardPublish() {
     if (!businessId || !isReady) return;
     const { data } = await externalSupabase.from("businesses").select("*").eq("id", businessId).maybeSingle();
     setBusiness(data);
-    if (data && selectedPlatforms.length === 0) {
-      const connected = platforms.filter(p => isPlatformConnected(p.key, data)).map(p => p.key);
-      setSelectedPlatforms(connected);
-    }
-  }, [businessId, isReady, selectedPlatforms.length]);
+  }, [businessId, isReady]);
 
   const fetchDrafts = useCallback(async () => {
     if (!businessId || !draftsSupported) return;
@@ -148,6 +144,19 @@ export default function DashboardPublish() {
     setLoading(true);
     Promise.all([fetchBusiness(), fetchDrafts(), fetchHistory(), fetchPhotos()]).finally(() => setLoading(false));
   }, [businessId, isReady, fetchBusiness, fetchDrafts, fetchHistory, fetchPhotos]);
+
+  // Auto-select the connected platforms once, when the business first loads.
+  // Kept out of fetchBusiness so toggling a platform doesn't feed back into the
+  // fetch effect above and trigger a full drafts/history/photos refetch on every
+  // click. Guarded by a ref so a later business refetch never clobbers the
+  // user's manual platform selection.
+  const autoSelectedRef = useRef(false);
+  useEffect(() => {
+    if (!business || autoSelectedRef.current) return;
+    autoSelectedRef.current = true;
+    const connected = platforms.filter(p => isPlatformConnected(p.key, business)).map(p => p.key);
+    if (connected.length > 0) setSelectedPlatforms(connected);
+  }, [business]);
 
   const togglePlatform = (key: string) => {
     setSelectedPlatforms(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);

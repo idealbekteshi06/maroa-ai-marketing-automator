@@ -68,10 +68,21 @@ export default function AIStatusBar({ businessId }: AIStatusBarProps) {
     let es: EventSource | null = null;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
     let retryDelay = 2000;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 5;
     let cancelled = false;
 
     const scheduleReconnect = () => {
       if (cancelled) return;
+      attempts += 1;
+      if (attempts > MAX_ATTEMPTS) {
+        // Give up after a bounded number of tries so we don't loop forever on a
+        // persistently expired session / unreachable backend. One quiet toast,
+        // then the user refreshes to restart the stream (audit §5: never fail
+        // silently, but never spam either).
+        toast.error("Live updates paused — refresh to reconnect", { id: "sse-offline" });
+        return;
+      }
       clearTimeout(retryTimer);
       retryTimer = setTimeout(connect, retryDelay);
       retryDelay = Math.min(retryDelay * 2, 30000);
@@ -90,7 +101,11 @@ export default function AIStatusBar({ businessId }: AIStatusBarProps) {
           `${apiBase}/webhook/dashboard-events?business_id=${encodeURIComponent(businessId)}&ticket=${encodeURIComponent(ticket)}`
         );
         es.onopen = () => {
+          // A healthy connection resets the backoff budget, so a stream that
+          // runs fine then drops later gets a fresh set of reconnect attempts
+          // rather than exhausting the lifetime cap.
           retryDelay = 2000;
+          attempts = 0;
           // Recovered — clear the deduped "offline" notice if it's still showing.
           toast.dismiss("sse-offline");
         };
@@ -116,17 +131,16 @@ export default function AIStatusBar({ businessId }: AIStatusBarProps) {
         };
         es.onerror = () => {
           // The signed ticket is short-lived and EventSource can't send an auth
-          // header, so a dropped/expired stream surfaces here. Surface it once
-          // (deduped) instead of dying silently (audit §5), then close and
-          // reconnect with a fresh ticket, backing off.
+          // header, so a dropped/expired stream surfaces here. Close and
+          // reconnect with a FRESH ticket (tickets are one-shot), backing off.
+          // scheduleReconnect owns the single deduped toast after the attempt
+          // cap is hit, so we don't spam on every transient drop.
           es?.close();
           es = null;
-          toast.error("Live updates are offline", { id: "sse-offline" });
           scheduleReconnect();
         };
       } catch (err: unknown) {
         if (err instanceof Error && err.name === "AbortError") return;
-        toast.error("Live updates are offline", { id: "sse-offline" });
         scheduleReconnect();
       }
     };
