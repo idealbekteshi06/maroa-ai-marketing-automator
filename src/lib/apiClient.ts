@@ -186,7 +186,13 @@ export async function postCheckout(
   plan: string
 ): Promise<{ checkout_url: string; transaction_id?: string }> {
   if (!businessId) throw new Error("Business profile not loaded — refresh and try again.");
-  return apiPost("/api/checkout", { user_id: businessId, plan });
+  // Do NOT send businessId as user_id: the backend's auth middleware 403s if
+  // the body's user_id differs from the JWT's auth uid, and for onboarding-
+  // created accounts the business id is a fresh UUID (≠ auth uid). Send only
+  // the plan — the middleware injects user_id = auth uid, and the backend
+  // resolves the caller's business by ownership. (businessId kept as the
+  // "is the profile loaded yet?" guard above.)
+  return apiPost("/api/checkout", { plan });
 }
 
 // NOTE: GET /api/business/:id/brand-dna was removed — that route never
