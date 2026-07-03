@@ -292,7 +292,7 @@ export default function DashboardOverview() {
   const setupSteps = [
     { label: "Connect Facebook & Instagram", done: !!(businessData?.facebook_page_id && businessData?.instagram_account_id), tab: "social" },
     { label: "Connect LinkedIn", done: !!businessData?.linkedin_connected, tab: "social" },
-    { label: "Add competitors", done: (() => { try { const c = typeof businessData?.competitors === "string" ? JSON.parse(businessData.competitors) : businessData?.competitors; return Array.isArray(c) ? c.length > 0 : !!businessData?.competitors; } catch { return !!businessData?.competitors; } })(), tab: "settings" },
+    { label: "Add competitors", done: (() => { try { const c = typeof businessData?.competitors === "string" ? JSON.parse(businessData.competitors) : businessData?.competitors; return Array.isArray(c) ? c.length > 0 : !!businessData?.competitors; } catch { return false; } })(), tab: "settings" },
     { label: "Review first AI content", done: pendingApprovalCount === 0 && totalContentCount > 0, tab: "content" },
     { label: "Set up review requests", done: false, tab: "reviews" }, // would need review_requests count
     { label: "Configure email sequences", done: false, tab: "email" }, // would need email_sequences count

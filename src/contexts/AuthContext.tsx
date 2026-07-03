@@ -57,7 +57,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const rows = data ?? [];
-      const chosen = pickPrimaryBusiness(rows);
+      // Rows exist but the primary-picker matched none → fall back to the first
+      // row rather than stranding the user in a null businessId + error-toast loop.
+      const chosen = pickPrimaryBusiness(rows) ?? (rows.length > 0 ? rows[0] : null);
 
       if (chosen) {
         setBusinessId(chosen.id);

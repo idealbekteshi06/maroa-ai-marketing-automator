@@ -56,7 +56,7 @@ export default function WeeklyReportOverlay({ businessId, onDismiss }: WeeklyRep
           week_end: data.week_end,
         };
       } catch {
-        parsed = { id: data.id, score: 0, headline: "Weekly report", wins: [], concerns: [], recommendations: [] };
+        parsed = { id: data.id, score: 0, headline: "Report data unavailable", wins: [], concerns: [], recommendations: [] };
       }
 
       setReport(parsed);

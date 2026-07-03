@@ -280,6 +280,7 @@ export default function PaidAdsHub() {
             variant="outline"
             onClick={() => overviewQuery.refetch()}
             disabled={overviewQuery.isFetching}
+            aria-label="Refresh"
           >
             <RefreshCw
               className={`h-4 w-4 ${overviewQuery.isFetching ? "animate-spin" : ""}`}
@@ -846,7 +847,10 @@ function CampaignWizard({
           ) : (
             <Button
               size="sm"
-              onClick={() => create.mutate()}
+              onClick={() => {
+                if (create.isPending) return; // guard against rapid double-click
+                create.mutate();
+              }}
               disabled={
                 create.isPending || !businessId || !stepValid || belowTiktokFloor
               }
