@@ -15,11 +15,14 @@ import {
 } from "@/components/ui/dialog";
 import {
   Target, Plus, Search, Globe, BarChart3, Eye, Lightbulb,
-  Megaphone, Tag, RefreshCw, Loader2,
+  Megaphone, Tag, RefreshCw, Loader2, Trophy, Wand2, ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { getCompetitorReport, competitorAnalyze } from "@/lib/api";
+import {
+  getCompetitorReport, competitorAnalyze, competitorAdsSearch, competitorAdMakeVersion,
+  type WinningAd,
+} from "@/lib/api";
 
 // ─── Response shapes (routes/competitor-intel.js — competitor_reports +
 //     competitor_snapshots tables) ─────────────────────────────────────────
@@ -107,6 +110,44 @@ export default function CompetitorIntelligence() {
     refetchInterval: () =>
       pollUntil && Date.now() < pollUntil ? POLL_INTERVAL_MS : false,
   });
+
+  // ── Winning ads (Meta Ad Library, longevity-ranked) ──
+  const [recreatingAdId, setRecreatingAdId] = useState<string | null>(null);
+  const winningAdsQuery = useQuery({
+    queryKey: ["competitor", "winning-ads", businessId],
+    queryFn: () => competitorAdsSearch({ business_id: businessId! }),
+    enabled: !!businessId,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const handleMakeMyVersion = async (ad: WinningAd) => {
+    if (!businessId) return;
+    setRecreatingAdId(ad.id);
+    try {
+      const r = await competitorAdMakeVersion({
+        businessId,
+        ad: { headline: ad.headline, text: ad.text, runtime_days: ad.runtime_days, is_active: ad.is_active },
+      });
+      if (r.ok && r.videoUrl) {
+        toast.success("Your version is ready", {
+          description: "Open Studio to review, publish, or download it.",
+          action: { label: "Open video", onClick: () => window.open(r.videoUrl!, "_blank") },
+        });
+      } else {
+        toast.error("Couldn't generate your version yet", {
+          description: r.reason === "ms_video_endpoint_pending"
+            ? "Video generation is being enabled on your media account — try again soon."
+            : r.reason || "Generation failed.",
+        });
+      }
+    } catch (e) {
+      toast.error("Couldn't generate your version", {
+        description: e instanceof Error ? e.message : undefined,
+      });
+    } finally {
+      setRecreatingAdId(null);
+    }
+  };
 
   const analyze = useMutation({
     mutationFn: () =>
@@ -235,6 +276,8 @@ export default function CompetitorIntelligence() {
       </div>
     );
   }
+
+
 
   return (
     <div className="space-y-6">
@@ -441,6 +484,63 @@ export default function CompetitorIntelligence() {
           })}
         </div>
       </div>
+
+      {/* Winning ads — longevity-ranked from the Meta Ad Library */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Trophy className="h-4 w-4 text-primary" /> Their Winning Ads
+          </CardTitle>
+          <CardDescription>
+            Competitor ads ranked by how long they've been running — advertisers kill losing ads within days,
+            so long-runners are proven winners. Make your version in one click.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {winningAdsQuery.isLoading && <Skeleton className="h-24 w-full" />}
+          {!winningAdsQuery.isLoading && (winningAdsQuery.data?.ads?.length ?? 0) === 0 && (
+            <p className="text-sm text-muted-foreground">
+              {winningAdsQuery.data?.reason === "no_competitors_configured"
+                ? "Add competitors above to see their live ads here."
+                : "No live competitor ads found right now — we re-check as competitors launch new campaigns."}
+            </p>
+          )}
+          {(winningAdsQuery.data?.ads ?? []).map((ad) => (
+            <div key={ad.id} className="rounded-lg border border-border p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Badge variant="outline" className="text-[10px] flex-shrink-0">{ad.competitor}</Badge>
+                  <Badge variant={ad.is_active ? "default" : "secondary"} className="text-[10px] flex-shrink-0">
+                    {ad.runtime_days ?? 0}d running{ad.is_active ? "" : " (ended)"}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {ad.url && (
+                    <Button asChild variant="ghost" size="sm" className="h-7 text-xs gap-1">
+                      <a href={ad.url} target="_blank" rel="noreferrer">
+                        <ExternalLink className="h-3 w-3" /> View
+                      </a>
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    className="h-7 text-xs gap-1"
+                    disabled={recreatingAdId !== null}
+                    onClick={() => handleMakeMyVersion(ad)}
+                  >
+                    {recreatingAdId === ad.id
+                      ? <Loader2 className="h-3 w-3 animate-spin" />
+                      : <Wand2 className="h-3 w-3" />}
+                    Make my version
+                  </Button>
+                </div>
+              </div>
+              {ad.headline && <p className="text-sm font-medium">{ad.headline}</p>}
+              {ad.text && <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{ad.text}</p>}
+            </div>
+          ))}
+        </CardContent>
+      </Card>
 
       {/* Competitor active ads detail */}
       {snapshots.some((s) => (s?.active_ads ?? []).length > 0) && (

@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import {
   TrendingUp, DollarSign, Target, Zap, PauseCircle, PlayCircle,
-  ArrowUpRight, Lightbulb, BarChart3, Loader2, RefreshCw,
+  ArrowUpRight, Lightbulb, BarChart3, Loader2, RefreshCw, FlaskConical,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,6 +20,10 @@ import {
   getMetaCampaigns,
   getGoogleCampaigns,
   adOptimizerAuditCampaign,
+  abTestCreate,
+  abTestEvaluate,
+  abTestsList,
+  type AbExperiment,
 } from "@/lib/api";
 
 /* ── Backend response shapes ──────────────────────────────────────────
@@ -225,6 +229,55 @@ export default function AdOptimization() {
     },
     { label: "Conversions", value: totals.conversions.toLocaleString(), icon: Zap },
   ];
+
+
+  // ── Creative A/B experiments (two-proportion z-test engine) ──
+  const [abVariantA, setAbVariantA] = useState<string>("");
+  const [abVariantB, setAbVariantB] = useState<string>("");
+  const abQuery = useQuery({
+    queryKey: ["ab-tests", businessId],
+    queryFn: () => abTestsList({ business_id: businessId! }),
+    enabled: !!businessId,
+  });
+  const abCreate = useMutation({
+    mutationFn: () =>
+      abTestCreate({
+        businessId: businessId!,
+        name: "Creative A/B test",
+        variantA: { campaign_id: abVariantA, label: campaigns.find((c) => c.id === abVariantA)?.objective || "A" },
+        variantB: { campaign_id: abVariantB, label: campaigns.find((c) => c.id === abVariantB)?.objective || "B" },
+      }),
+    onSuccess: () => {
+      toast.success("Experiment started", { description: "We'll call a winner once both ads have enough data." });
+      setAbVariantA("");
+      setAbVariantB("");
+      qc.invalidateQueries({ queryKey: ["ab-tests", businessId] });
+    },
+    onError: (e) =>
+      toast.error("Couldn't start the experiment", { description: e instanceof Error ? e.message : undefined }),
+  });
+  const abEvaluate = useMutation({
+    mutationFn: (experimentId: string) => abTestEvaluate({ businessId: businessId!, experimentId }),
+    onSuccess: (r) => {
+      const verdict = r.result?.verdict || r.status;
+      if (verdict === "collecting") {
+        toast.info("Still collecting data", { description: r.result?.recommendation });
+      } else {
+        toast.success(`Verdict: ${verdict.replace("_", " ")}`, { description: r.result?.recommendation });
+      }
+      qc.invalidateQueries({ queryKey: ["ab-tests", businessId] });
+    },
+    onError: (e) =>
+      toast.error("Evaluation failed", { description: e instanceof Error ? e.message : undefined }),
+  });
+  const abStatusLabel = (x: AbExperiment) =>
+    x.status === "winner_a"
+      ? `Winner: ${x.variant_a?.label || "A"}`
+      : x.status === "winner_b"
+        ? `Winner: ${x.variant_b?.label || "B"}`
+        : x.status === "no_difference"
+          ? "No difference"
+          : "Collecting";
 
   return (
     <div className="space-y-6">
@@ -481,6 +534,104 @@ export default function AdOptimization() {
               </div>
             ))
           )}
+        </CardContent>
+      </Card>
+
+      {/* Creative A/B experiments */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <FlaskConical className="h-4 w-4 text-primary" /> A/B Experiments
+          </CardTitle>
+          <CardDescription>
+            Test two campaigns' creatives scientifically — we run a proper statistical test and only call a
+            winner at 95% confidence, instead of eyeballing CTR.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Variant A</p>
+              <select
+                className="h-8 rounded-md border border-border bg-background px-2 text-xs"
+                value={abVariantA}
+                onChange={(e) => setAbVariantA(e.target.value)}
+              >
+                <option value="">Pick a campaign…</option>
+                {campaigns.filter((c) => c.id && c.id !== abVariantB).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {(c.platform || "ad").toUpperCase()} — {c.objective || c.id!.slice(0, 8)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Variant B</p>
+              <select
+                className="h-8 rounded-md border border-border bg-background px-2 text-xs"
+                value={abVariantB}
+                onChange={(e) => setAbVariantB(e.target.value)}
+              >
+                <option value="">Pick a campaign…</option>
+                {campaigns.filter((c) => c.id && c.id !== abVariantA).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {(c.platform || "ad").toUpperCase()} — {c.objective || c.id!.slice(0, 8)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Button
+              size="sm"
+              className="h-8 text-xs gap-1.5"
+              disabled={!abVariantA || !abVariantB || abCreate.isPending}
+              onClick={() => abCreate.mutate()}
+            >
+              {abCreate.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FlaskConical className="h-3.5 w-3.5" />}
+              Start experiment
+            </Button>
+          </div>
+
+          {(abQuery.data?.experiments ?? []).length === 0 && !abQuery.isLoading && (
+            <p className="text-xs text-muted-foreground">No experiments yet — pick two campaigns above to start one.</p>
+          )}
+          {(abQuery.data?.experiments ?? []).map((x) => (
+            <div key={x.id} className="rounded-lg border border-border p-3 space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Badge
+                    variant={x.status?.startsWith("winner") ? "default" : "outline"}
+                    className="text-[10px] flex-shrink-0"
+                  >
+                    {abStatusLabel(x)}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground truncate">
+                    {(x.variant_a?.label || "A")} vs {(x.variant_b?.label || "B")} · {x.metric || "ctr"}
+                  </span>
+                </div>
+                {x.status === "collecting" && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs gap-1"
+                    disabled={abEvaluate.isPending}
+                    onClick={() => abEvaluate.mutate(x.id)}
+                  >
+                    {abEvaluate.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                    Check now
+                  </Button>
+                )}
+              </div>
+              {x.result?.recommendation && (
+                <p className="text-xs text-muted-foreground">{x.result.recommendation}</p>
+              )}
+              {typeof x.result?.p_value === "number" && (
+                <p className="text-[10px] text-muted-foreground">
+                  p = {x.result.p_value.toFixed(4)}
+                  {typeof x.result.lift_b_vs_a === "number" && ` · B vs A lift ${(x.result.lift_b_vs_a * 100).toFixed(1)}%`}
+                </p>
+              )}
+            </div>
+          ))}
         </CardContent>
       </Card>
     </div>

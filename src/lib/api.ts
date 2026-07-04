@@ -1092,6 +1092,74 @@ export const studioRecreateAd = (data: {
   imageUrls?: string[];
 }) => post<MsGenerationResult>("/webhook/studio-recreate-ad", data);
 
+// ─── Competitor winning ads (Meta Ad Library, longevity-ranked) ─────
+export interface WinningAd {
+  id: string;
+  competitor: string;
+  page_name?: string;
+  headline?: string | null;
+  text?: string;
+  platforms?: string[];
+  url?: string;
+  runtime_days?: number;
+  is_active?: boolean;
+  winner_score?: number;
+}
+
+export const competitorAdsSearch = (params: {
+  business_id: string;
+  competitor?: string;
+  country?: string;
+  limit?: string;
+}) => get<{ ok: boolean; ads: WinningAd[]; reason?: string; scanned?: number }>(
+  "/webhook/competitor-ads-search",
+  params,
+);
+
+export const competitorAdMakeVersion = (data: {
+  businessId: string;
+  ad: { headline?: string | null; text?: string; runtime_days?: number; is_active?: boolean };
+  mode?: string;
+  imageUrls?: string[];
+}) => post<MsGenerationResult & { brief?: string }>("/webhook/competitor-ad-make-version", data);
+
+// ─── Creative A/B experiments (two-proportion z-test engine) ────────
+export interface AbExperiment {
+  id: string;
+  name?: string;
+  metric?: string;
+  status?: string;
+  confidence?: number | null;
+  winner?: string | null;
+  variant_a?: { campaign_id: string; label?: string };
+  variant_b?: { campaign_id: string; label?: string };
+  result?: {
+    verdict?: string;
+    p_value?: number;
+    lift_b_vs_a?: number | null;
+    recommendation?: string;
+    arm_a?: { impressions: number; clicks: number; conversions: number };
+    arm_b?: { impressions: number; clicks: number; conversions: number };
+  };
+  tested_at?: string;
+  concluded_at?: string | null;
+}
+
+export const abTestCreate = (data: {
+  businessId: string;
+  name?: string;
+  metric?: "ctr" | "conversion_rate";
+  minImpressionsPerArm?: number;
+  variantA: { campaign_id: string; label?: string };
+  variantB: { campaign_id: string; label?: string };
+}) => post<{ ok: boolean; experiment: AbExperiment }>("/webhook/ab-test-create", data);
+
+export const abTestEvaluate = (data: { businessId: string; experimentId: string }) =>
+  post<{ ok: boolean; status: string; result?: AbExperiment["result"] }>("/webhook/ab-test-evaluate", data);
+
+export const abTestsList = (params: { business_id: string; status?: string }) =>
+  get<{ ok: boolean; experiments: AbExperiment[] }>("/webhook/ab-tests-list", params);
+
 // ─── Brand assets (logo + product reference images for WF1/Studio) ─
 export const setBrandAssets = (
   businessId: string,
