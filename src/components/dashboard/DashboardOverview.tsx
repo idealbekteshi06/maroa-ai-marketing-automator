@@ -315,8 +315,24 @@ export default function DashboardOverview() {
       setActionSuccess(action.name);
       toast.success(action.successMsg);
       setTimeout(() => setActionSuccess(null), 3000);
-    } catch {
-      toast.error(ERROR_MESSAGES.CONNECTION_ERROR);
+    } catch (err) {
+      // Audit fix: every failure used to read "check your internet", which is
+      // misleading — e.g. Launch Campaign fails because no ad account is
+      // connected. Surface the real cause where we can tell it apart.
+      const msg = err instanceof Error ? err.message : "";
+      const status = /API error (\d+)/.exec(msg)?.[1];
+      if (action.endpoint.includes("campaign") && (status === "400" || status === "422" || status === "502")) {
+        toast.error("Connect an ad account first", {
+          description: "Go to Settings → Connected Platforms and link Meta or Google, then try again.",
+          action: { label: "Open Settings", onClick: () => navTo("settings") },
+        });
+      } else if (status && status !== "0") {
+        toast.error(`"${action.name}" didn't finish`, {
+          description: "The AI service reported an error — try again in a minute. If it keeps failing, we're on it.",
+        });
+      } else {
+        toast.error(ERROR_MESSAGES.CONNECTION_ERROR);
+      }
     } finally { setActionLoading(null); }
   };
 
