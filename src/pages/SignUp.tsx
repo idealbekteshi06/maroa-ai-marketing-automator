@@ -120,7 +120,7 @@ export default function SignUp() {
         });
       }
 
-      toast.success(SUCCESS_MESSAGES.GENERATED);
+      toast.success("Account created — welcome to Maroa!");
       navigate("/onboarding");
     } catch (error) {
       toast.error(toAuthErrorMessage(error));
@@ -171,7 +171,7 @@ export default function SignUp() {
         </div>
         <div className="mx-auto w-full max-w-md flex-1 px-6 pb-12 animate-fade-in">
           <h1 className="text-2xl font-bold text-foreground">Create your account</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Start your free trial — no credit card needed.</p>
+          <p className="mt-2 text-sm text-muted-foreground">Set up your AI marketing team in minutes.</p>
 
           <Button
             variant="outline"

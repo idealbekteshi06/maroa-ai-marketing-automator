@@ -134,7 +134,7 @@ export default function Index() {
       <section className="pt-16 sm:pt-28 pb-20 px-6">
         <div className="max-w-3xl mx-auto text-center">
           <span className={`inline-flex items-center gap-2 rounded-full border ${c.cardBorder} ${c.card} px-4 py-1.5 text-xs ${c.textSub} mb-8`}>
-            ✨ Now live — start your free trial
+            ✨ Now live — plans from $25/mo
           </span>
 
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.08]">
@@ -154,7 +154,7 @@ export default function Index() {
               to="/signup"
               className={`inline-flex items-center gap-2 rounded-xl px-8 py-3.5 text-sm font-semibold text-white ${c.primaryBg} ${c.primaryBgHover} transition-all`}
             >
-              Start free trial <ArrowRight className="h-4 w-4" />
+              Get started <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
 
@@ -167,7 +167,7 @@ export default function Index() {
         <div className="max-w-5xl mx-auto">
           <p className={`text-xs uppercase tracking-[0.2em] ${c.primary} text-center mb-3`}>Pricing</p>
           <h2 className="text-3xl sm:text-4xl font-bold text-center tracking-tight">Simple plans that scale with you.</h2>
-          <p className={`text-center ${c.textSub} mt-2 text-sm`}>7-day free trial · Cancel anytime</p>
+          <p className={`text-center ${c.textSub} mt-2 text-sm`}>No contracts · Cancel anytime</p>
 
           <div className="mt-12 grid gap-4 sm:gap-5 lg:grid-cols-3">
             {BILLING_PLANS.map(p => (
@@ -204,7 +204,7 @@ export default function Index() {
                       ? `${c.primaryBg} text-white ${c.primaryBgHover}`
                       : `${c.card} border ${c.cardBorder} ${c.text} ${c.cardHover}`
                   }`}>
-                  Start free trial
+                  Get started
                 </Link>
               </div>
             ))}
@@ -215,47 +215,23 @@ export default function Index() {
         </div>
       </Fade>
 
-      {/* ── FORM ── */}
+      {/* ── GET STARTED CTA ── */}
       <Fade className="px-6 pb-24">
         <div ref={formRef} className="max-w-md mx-auto">
-          {submitted ? (
-            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/[0.04] p-8 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/10 mb-4">
-                <Check className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <h3 className="text-lg font-bold">🎉 You're on the list!</h3>
-              <p className={`text-sm ${c.textSub} mt-2`}>Check your email for confirmation. Your pre-launch price is locked.</p>
-            </div>
-          ) : (
-            <form onSubmit={submit} className="space-y-4">
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold tracking-tight">Reserve your spot. It's free.</h3>
-                <p className={`text-sm ${c.textSub} mt-1.5`}>Join 247+ businesses getting early access.</p>
-              </div>
-              <input type="text" required value={form.name} onChange={e => up("name", e.target.value)} placeholder="Full name" className={inputCls} />
-              <input type="email" required value={form.email} onChange={e => up("email", e.target.value)} placeholder="Email address" className={inputCls} />
-              <select value={form.plan} onChange={e => up("plan", e.target.value)} className={inputCls}>
-                <option value="starter">Starter — €19/mo (was €29)</option>
-                <option value="growth">Growth — €39/mo (Most Popular)</option>
-                <option value="agency">Agency — €69/mo (was €99)</option>
-              </select>
-              <div className="grid grid-cols-2 gap-3">
-                <select value={form.business_type} onChange={e => up("business_type", e.target.value)} className={inputCls}>
-                  <option value="">Business type</option>
-                  {BIZ_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-                <select value={form.country} onChange={e => up("country", e.target.value)} className={inputCls}>
-                  <option value="">Country</option>
-                  {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <button type="submit" disabled={submitting}
-                className={`w-full rounded-xl ${c.primaryBg} py-3.5 text-sm font-semibold text-white ${c.primaryBgHover} transition-all disabled:opacity-50 flex items-center justify-center gap-2`}>
-                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <><span>Reserve My Spot</span><ArrowRight className="h-4 w-4" /></>}
-              </button>
-              <p className={`text-center text-[11px] ${c.textFaint}`}>No credit card · 1 week free trial · Cancel anytime</p>
-            </form>
-          )}
+          <div className={`rounded-2xl border ${c.border} p-8 text-center`}>
+            <h3 className="text-2xl font-bold tracking-tight">Ready when you are.</h3>
+            <p className={`text-sm ${c.textSub} mt-1.5`}>
+              Create your account, answer a few questions about your business, and your AI marketing team starts working today.
+            </p>
+            <Link
+              to="/signup"
+              className={`mt-6 w-full rounded-xl ${c.primaryBg} py-3.5 text-sm font-semibold text-white ${c.primaryBgHover} transition-all flex items-center justify-center gap-2`}
+            >
+              <span>Create your account</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <p className={`text-center text-[11px] ${c.textFaint} mt-3`}>Plans from $25/mo · No contracts · Cancel anytime</p>
+          </div>
         </div>
       </Fade>
 
@@ -341,7 +317,7 @@ export default function Index() {
             Ready to put your marketing<br />on autopilot?
           </h2>
           <p className={`text-sm ${c.textSub} mt-4 max-w-lg mx-auto`}>
-            Join 247+ businesses that replaced their marketing agency with AI. Setup takes 10 minutes. Results start on day one.
+            Replace your marketing agency with an AI team that works around the clock. Setup takes 10 minutes. Results start on day one.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
             <button onClick={scrollToForm}
@@ -353,7 +329,7 @@ export default function Index() {
               Book a Demo
             </Link>
           </div>
-          <p className={`text-xs ${c.textFaint} mt-4`}>No credit card · 7-day free trial · Cancel anytime</p>
+          <p className={`text-xs ${c.textFaint} mt-4`}>Setup in minutes · No contracts · Cancel anytime</p>
         </div>
       </Fade>
 

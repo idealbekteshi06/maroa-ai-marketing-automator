@@ -180,6 +180,24 @@ export default function Onboarding() {
 
   const handleBack = () => { if (block > 0) setBlock(block - 1); };
 
+  // Skip-for-now (2026-07 UX fix): the 12-block questionnaire is valuable —
+  // the profile score gates features and better data = better AI — but it
+  // must never be a WALL. Skipping saves whatever was answered, marks
+  // onboarding complete, fires the same launch pipeline (partial profile is
+  // fine; the dashboard's profile-score widget nags the rest), and lands the
+  // user in the product. Answering later from Settings raises the score.
+  const [skipping, setSkipping] = useState(false);
+  const handleSkip = async () => {
+    if (!businessId || skipping) return;
+    setSkipping(true);
+    try {
+      await saveBlock();
+      await handleFinish();
+    } finally {
+      setSkipping(false);
+    }
+  };
+
   const handleFinish = async () => {
     await saveBlock();
     setShowLaunch(true);
@@ -581,9 +599,19 @@ export default function Onboarding() {
         {/* Navigation */}
         <div className="mt-8 flex items-center justify-between">
           <div>{block > 0 && <Button variant="outline" onClick={handleBack}><ArrowLeft className="mr-2 h-4 w-4" /> Back</Button>}</div>
-          <div>
+          <div className="flex items-center gap-4">
             {block < BLOCKS.length - 1 ? (
-              <Button onClick={handleNext}>Continue →</Button>
+              <>
+                <button
+                  type="button"
+                  onClick={handleSkip}
+                  disabled={skipping}
+                  className="text-xs text-muted-foreground underline-offset-4 hover:underline disabled:opacity-50"
+                >
+                  {skipping ? "Launching…" : "Skip for now — finish later in Settings"}
+                </button>
+                <Button onClick={handleNext}>Continue →</Button>
+              </>
             ) : (
               <Button size="lg" className="gap-2" onClick={handleFinish}>
                 <PartyPopper className="h-4 w-4" /> Launch My AI
@@ -591,6 +619,11 @@ export default function Onboarding() {
             )}
           </div>
         </div>
+        {block === 0 && (
+          <p className="mt-3 text-center text-[11px] text-muted-foreground">
+            The more you answer, the smarter your AI gets — but you can start now and fill the rest in anytime.
+          </p>
+        )}
       </div>
     </div>
   );
