@@ -1037,6 +1037,61 @@ export const wf10GetJob = (params: { business_id: string; job_id: string }) =>
 export const wf10ListJobs = (params: { business_id: string; status?: string }) =>
   get("/webhook/wf10-jobs-list", params);
 
+// ─── Higgsfield Marketing Studio (brand kits, DTC ads, ad recreation) ─
+export interface MsGenerationResult {
+  ok: boolean;
+  reason?: string;
+  imageUrl?: string | null;
+  videoUrl?: string | null;
+  brandKitId?: string | null;
+}
+
+export const studioImageStyles = () =>
+  get<{ ok: boolean; styles: Array<{ id: string; name?: string; preview_url?: string }> }>(
+    "/webhook/studio-image-styles",
+    {},
+  );
+
+export const studioVideoPresets = () =>
+  get<{ ok: boolean; presets: Array<{ id?: string; slug?: string; name?: string }> }>(
+    "/webhook/studio-video-presets",
+    {},
+  );
+
+export const studioBrandKitSync = (data: { businessId: string }) =>
+  post<{ ok: boolean; brand_kit_id?: string; reason?: string }>("/webhook/studio-brand-kit-sync", data);
+
+export const studioDtcImage = (data: {
+  businessId: string;
+  styleId: string;
+  prompt?: string;
+  imageUrls?: string[];
+  aspectRatio?: string;
+  resolution?: string;
+  quality?: string;
+  batchSize?: number;
+}) => post<MsGenerationResult>("/webhook/studio-dtc-image", data);
+
+export const studioMarketingVideo = (data: {
+  businessId: string;
+  prompt?: string;
+  mode?: string;
+  hookId?: string;
+  settingId?: string;
+  adReferenceId?: string;
+  imageUrls?: string[];
+  aspectRatio?: string;
+  resolution?: string;
+  generateAudio?: boolean;
+}) => post<MsGenerationResult>("/webhook/studio-marketing-video", data);
+
+export const studioRecreateAd = (data: {
+  businessId: string;
+  referenceVideoUrl: string;
+  prompt?: string;
+  imageUrls?: string[];
+}) => post<MsGenerationResult>("/webhook/studio-recreate-ad", data);
+
 // ─── Brand assets (logo + product reference images for WF1/Studio) ─
 export const setBrandAssets = (
   businessId: string,

@@ -25,7 +25,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { generateContentNow } from "@/lib/apiClient";
 import {
   setBrandAssets, wf10CreateJob, wf10GetJob, wf10ListJobs,
-  socialPostNow, socialPostSchedule,
+  socialPostNow, socialPostSchedule, studioRecreateAd,
 } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -213,6 +213,12 @@ export default function HiggsfieldStudio() {
   const [jobError, setJobError] = useState<string | null>(null);
 
   // ── Publish everywhere ────────────────────────────────────────
+  // ── Recreate a winning ad (Marketing Studio ad_reference pipeline) ──
+  const [recreateUrl, setRecreateUrl] = useState("");
+  const [recreatePrompt, setRecreatePrompt] = useState("");
+  const [recreateResult, setRecreateResult] = useState<string | null>(null);
+  const [recreating, setRecreating] = useState(false);
+
   const [publishTarget, setPublishTarget] = useState<{ mediaUrl: string; caption: string } | null>(null);
   const [publishPlatforms, setPublishPlatforms] = useState<string[]>([]);
   const [publishCaption, setPublishCaption] = useState("");
@@ -380,6 +386,39 @@ export default function HiggsfieldStudio() {
     return () => { cancelled = true; window.clearInterval(interval); };
   }, [activeJob, businessId, qc, fetchAssets]);
 
+
+  const handleRecreateAd = async () => {
+    const url = recreateUrl.trim();
+    if (!businessId || !/^https?:\/\//i.test(url)) {
+      toast.error("Paste the ad's video URL first (https://…)");
+      return;
+    }
+    setRecreating(true);
+    setRecreateResult(null);
+    try {
+      const r = await studioRecreateAd({
+        businessId,
+        referenceVideoUrl: url,
+        prompt: recreatePrompt.trim() || undefined,
+        imageUrls: productUrls.slice(0, 6),
+      });
+      if (r.ok && r.videoUrl) {
+        setRecreateResult(r.videoUrl);
+        toast.success("Your version of the ad is ready");
+      } else {
+        toast.error("Couldn't recreate this ad yet", {
+          description:
+            r.reason === "ad_references_endpoint_pending" || r.reason === "ms_video_endpoint_pending"
+              ? "Ad recreation is being enabled on your media account — try again soon."
+              : r.reason || "Generation failed.",
+        });
+      }
+    } catch (e) {
+      toast.error("Couldn't recreate this ad", { description: e instanceof Error ? e.message : undefined });
+    } finally {
+      setRecreating(false);
+    }
+  };
   const handleReferenceGenerate = () => {
     if (!businessId) {
       toast.error("No business profile found", {
@@ -806,6 +845,86 @@ export default function HiggsfieldStudio() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Recreate a winning ad (competitor ad → your product) ──── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Film className="h-4 w-4 text-primary" /> Recreate a winning ad
+          </CardTitle>
+          <CardDescription>
+            Paste any high-performing video ad (a competitor's, or one you love). We analyze its scenario —
+            hook, pacing, composition — and regenerate it featuring your product photos.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="recreate-url" className="text-xs">Reference ad video URL</Label>
+              <div className="relative">
+                <Link2 className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="recreate-url"
+                  placeholder="https://… (TikTok/Reels/YouTube ad video)"
+                  value={recreateUrl}
+                  onChange={(e) => setRecreateUrl(e.target.value)}
+                  className="pl-9 h-9 text-xs"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="recreate-prompt" className="text-xs">Optional twist</Label>
+              <Input
+                id="recreate-prompt"
+                placeholder='e.g. "our summer discount, upbeat tone"'
+                value={recreatePrompt}
+                onChange={(e) => setRecreatePrompt(e.target.value)}
+                className="h-9 text-xs"
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground">
+              {productUrls.length > 0
+                ? `Uses your ${Math.min(productUrls.length, 6)} saved product photo${productUrls.length > 1 ? "s" : ""}.`
+                : "Tip: upload product photos above so the ad features your product."}
+            </p>
+            <Button className="gap-2 h-8 text-xs" onClick={handleRecreateAd} disabled={recreating || !businessId}>
+              {recreating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+              Recreate with my product
+            </Button>
+          </div>
+          {recreating && (
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+              <span>Analyzing the reference ad and generating your version — this can take a few minutes.</span>
+            </div>
+          )}
+          {recreateResult && (
+            <div className="space-y-2">
+              <video src={recreateResult} controls className="max-h-64 rounded-lg border border-border" />
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs gap-1.5"
+                  onClick={() => {
+                    setPublishTarget({ mediaUrl: recreateResult, caption: recreatePrompt.trim() });
+                    setPublishCaption(recreatePrompt.trim());
+                  }}
+                >
+                  <Send className="h-3.5 w-3.5" /> Publish everywhere
+                </Button>
+                <Button asChild variant="ghost" size="sm" className="h-8 text-xs gap-1.5">
+                  <a href={recreateResult} download target="_blank" rel="noreferrer">
+                    <Download className="h-3.5 w-3.5" /> Download
+                  </a>
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* ── Recent studio jobs ────────────────────────────────────── */}
       <Card>
