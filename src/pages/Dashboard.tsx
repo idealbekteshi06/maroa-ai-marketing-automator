@@ -107,7 +107,7 @@ const BudgetROI = lazy(() => import("@/pages/BudgetROI"));
  * but removed from sidebar to eliminate cognitive overload (Hick's Law).
  */
 type NavItem = { key: string; label: string; icon: typeof Home };
-type WorkflowGroup = { label: string; items: NavItem[] };
+type WorkflowGroup = { label: string; hint: string; items: NavItem[] };
 
 const primaryNav: NavItem[] = [
   { key: "overview", label: "Home", icon: Home },
@@ -121,6 +121,7 @@ const primaryNav: NavItem[] = [
 const workflowGroups: WorkflowGroup[] = [
   {
     label: "Audience Growth",
+    hint: "Get seen by more people",
     items: [
       { key: "wf1-daily-content", label: "Daily Content Engine", icon: FileText },
       { key: "wf6-local-presence", label: "Local + Digital Presence", icon: Globe },
@@ -129,6 +130,7 @@ const workflowGroups: WorkflowGroup[] = [
   },
   {
     label: "Revenue Generation",
+    hint: "Turn attention into sales",
     items: [
       { key: "paid-ads", label: "Paid Ads", icon: BadgeDollarSign },
       { key: "store", label: "Store Connect", icon: ShoppingBag },
@@ -139,6 +141,7 @@ const workflowGroups: WorkflowGroup[] = [
   },
   {
     label: "Customer Operations",
+    hint: "Keep customers happy",
     items: [
       { key: "wf4-reviews", label: "Reviews & Reputation", icon: Star },
       { key: "wf11-inbox", label: "Unified Inbox", icon: MessageSquare },
@@ -147,6 +150,7 @@ const workflowGroups: WorkflowGroup[] = [
   },
   {
     label: "Intelligence",
+    hint: "Know your market",
     items: [
       { key: "wf5-competitors", label: "Competitor Intelligence", icon: Target },
       { key: "wf13-brief", label: "Weekly Strategy Brief", icon: Scale },
@@ -449,6 +453,9 @@ export default function Dashboard() {
               <div key={group.label}>
                 <p className="px-5 pb-0.5 pt-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/40">
                   {group.label}
+                  <span className="ml-1.5 font-normal normal-case tracking-normal text-muted-foreground/50">
+                    · {group.hint}
+                  </span>
                 </p>
                 <div className="space-y-0.5">
                   {group.items.map((item) => (
