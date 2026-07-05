@@ -159,7 +159,13 @@ export default function DashboardSettings() {
     try {
       const result = await postCheckout(businessId, planKey);
       if (result.checkout_url) window.location.href = result.checkout_url;
-    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : ERROR_MESSAGES.SAVE_FAILED); }
+    } catch (err: unknown) {
+      // Never show "API error 500: /api/checkout" to a paying customer.
+      console.error("[checkout]", err);
+      toast.error("Checkout isn't available right now", {
+        description: "Our payment provider didn't respond — please try again in a few minutes. Nothing was charged.",
+      });
+    }
     setCheckoutLoading(null);
   };
 

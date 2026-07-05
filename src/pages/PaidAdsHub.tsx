@@ -228,12 +228,15 @@ const STATUS_STYLES: Record<string, string> = {
 
 function StatusBadge({ status }: { status?: string }) {
   const s = (status || "unknown").toLowerCase();
+  // Audit finding: "Pending" rows on an unconnected channel read like live
+  // campaigns. They are drafts the AI prepared — label them as exactly that.
+  const label = s === "pending" || s === "draft" ? "draft — not live" : s;
   return (
     <Badge
       variant="outline"
       className={`text-[10px] capitalize ${STATUS_STYLES[s] ?? "bg-muted text-muted-foreground border-border"}`}
     >
-      {s}
+      {label}
     </Badge>
   );
 }

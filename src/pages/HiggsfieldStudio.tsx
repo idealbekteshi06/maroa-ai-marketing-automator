@@ -266,9 +266,11 @@ export default function HiggsfieldStudio() {
       qc.invalidateQueries({ queryKey: ["studio-products", businessId] });
     },
     onError: (err) => {
-      toast.error("Couldn't save product images", {
-        description: err instanceof Error ? err.message : "Please try again.",
-      });
+      const raw = err instanceof Error ? err.message : "";
+      const friendly = /500|502|503/.test(raw)
+        ? "Our media engine hit a snag — try again in a minute. If it keeps failing, we've already been alerted."
+        : raw.replace(/\/webhook\/[a-z0-9-]+/gi, "").trim() || "Generation couldn't start.";
+      toast.error("Couldn't start generation", { description: friendly });
     },
   });
 

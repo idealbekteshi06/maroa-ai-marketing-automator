@@ -322,7 +322,17 @@ export default function DashboardOverview() {
       // connected. Surface the real cause where we can tell it apart.
       const msg = err instanceof Error ? err.message : "";
       const status = /API error (\d+)/.exec(msg)?.[1];
-      if (action.endpoint.includes("campaign") && (status === "400" || status === "422" || status === "502")) {
+      if (status === "422" && action.endpoint.includes("seo-audit")) {
+        toast.error("Add your website first", {
+          description: "Maroa audits your real site — add its URL in Settings → Business Profile, then run the audit.",
+          action: { label: "Open Settings", onClick: () => navTo("settings") },
+        });
+      } else if (status === "422" && action.endpoint.includes("review-request")) {
+        toast.error("Add a customer first", {
+          description: "Maroa asks a real customer for the review — add one with an email in Customers.",
+          action: { label: "Open Customers", onClick: () => navTo("crm") },
+        });
+      } else if (action.endpoint.includes("campaign") && (status === "400" || status === "422" || status === "502")) {
         toast.error("Connect an ad account first", {
           description: "Go to Settings → Connected Platforms and link Meta or Google, then try again.",
           action: { label: "Open Settings", onClick: () => navTo("settings") },
