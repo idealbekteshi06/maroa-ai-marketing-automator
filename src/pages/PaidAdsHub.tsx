@@ -431,8 +431,8 @@ function ChannelCard({
               </p>
               <p className="mt-0.5 text-lg font-semibold tabular-nums text-foreground">
                 {data?.campaigns ?? 0}
-                <span className="ml-1 text-[10px] font-normal text-muted-foreground">
-                  {data?.active ?? 0} active
+                <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">
+                  · {data?.active ?? 0} active
                 </span>
               </p>
             </div>

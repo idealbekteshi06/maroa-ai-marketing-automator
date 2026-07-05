@@ -200,7 +200,7 @@ export default function SignUp() {
               <div><Label htmlFor="ln">Last name</Label><Input id="ln" value={form.lastName} onChange={(e) => update("lastName", e.target.value)} className="mt-1 h-11" required /></div>
             </div>
             <div><Label htmlFor="email">Email</Label><Input id="email" type="email" value={form.email} onChange={(e) => update("email", e.target.value)} className="mt-1 h-11" required /></div>
-            <div><Label htmlFor="pass">Password</Label><Input id="pass" type="password" value={form.password} onChange={(e) => update("password", e.target.value)} className="mt-1 h-11" required /></div>
+            <div><Label htmlFor="pass">Password</Label><Input id="pass" type="password" minLength={8} value={form.password} onChange={(e) => update("password", e.target.value)} className="mt-1 h-11" required /><p className="mt-1 text-[11px] text-muted-foreground">At least 8 characters.</p></div>
             <div><Label htmlFor="biz">Business name</Label><Input id="biz" value={form.businessName} onChange={(e) => update("businessName", e.target.value)} className="mt-1 h-11" required /></div>
             <div>
               <Label htmlFor="industry">Industry</Label>

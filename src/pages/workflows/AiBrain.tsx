@@ -437,8 +437,8 @@ export default function AiBrain() {
               </Button>
             </div>
             <p className="mt-1.5 text-[10px] text-muted-foreground">
-              ⌘⏎ to send · Brain routes automatically to Haiku / Sonnet / Opus
-              by query complexity · destructive actions require approval
+              ⌘⏎ to send · Maroa picks the right AI for every request ·
+              destructive actions always require your approval
             </p>
           </div>
         </Card>

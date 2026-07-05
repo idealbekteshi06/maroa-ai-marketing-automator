@@ -47,7 +47,7 @@ export default function Terms() {
             <h2 className="text-lg font-semibold text-foreground">4. Subscription and Payments</h2>
             <ul className="mt-2 list-disc space-y-1 pl-6">
               <li>The Service offers free and paid subscription plans. Features and limits vary by plan.</li>
-              <li>Paid subscriptions are billed monthly or annually in advance through our payment processor (Stripe).</li>
+              <li>Paid subscriptions are billed monthly or annually in advance through our payment processor and merchant of record (Paddle).</li>
               <li>Prices are subject to change with 30 days' prior notice.</li>
               <li>Refunds are handled on a case-by-case basis. Contact us at <a href="mailto:support@maroa.ai" className="text-primary hover:underline">support@maroa.ai</a> for refund requests.</li>
               <li>Ad budgets set within the platform are charged separately through the respective advertising platforms (e.g., Meta, Google).</li>

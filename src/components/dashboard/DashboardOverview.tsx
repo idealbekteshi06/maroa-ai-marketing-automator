@@ -146,11 +146,11 @@ const scheduledTasks = [
 // Apple-restrained: neutral icon chips (no rainbow of tints). The accent
 // lives in the buttons, not scattered across every card.
 const quickActions = [
-  { icon: "📝", name: "Generate Post", desc: "AI writes and schedules a new post", color: "bg-muted text-foreground", endpoint: "/webhook/instant-content", btnLabel: "Generate Now", loadingText: "Creating post...", successMsg: "✓ Post created! Check Content tab" },
-  { icon: "🔍", name: "SEO Audit", desc: "Find new keyword opportunities", color: "bg-muted text-foreground", endpoint: "/webhook/seo-audit", btnLabel: "Start Audit", loadingText: "Starting audit...", successMsg: "✓ Audit started! Check SEO tab in ~60s" },
-  { icon: "📣", name: "Launch Campaign", desc: "AI creates and targets an ad campaign", color: "bg-muted text-foreground", endpoint: "/webhook/meta-campaign-create", btnLabel: "Launch Campaign", loadingText: "Building campaign...", successMsg: "✓ Campaign created! Check Campaigns tab" },
-  { icon: "🎯", name: "Competitor Analysis", desc: "See what competitors are doing", color: "bg-muted text-foreground", endpoint: "/webhook/competitor-analyze", btnLabel: "Analyze Now", loadingText: "Analyzing...", successMsg: "✓ Analysis started! Check Competitors tab" },
-  { icon: "🎬", name: "Video Script", desc: "AI writes a TikTok or Reel script", color: "bg-muted text-foreground", endpoint: "/webhook/video-script-generate", btnLabel: "Write Script", loadingText: "Writing script...", successMsg: "✓ Script ready! Check Content > Videos" },
+  { icon: "📝", name: "Generate Post", desc: "AI writes and schedules a new post", color: "bg-muted text-foreground", endpoint: "/webhook/instant-content", btnLabel: "Generate Now", loadingText: "Creating post...", successMsg: "✓ Post generation started — it will appear in Content shortly", tab: "content" },
+  { icon: "🔍", name: "SEO Audit", desc: "Find new keyword opportunities", color: "bg-muted text-foreground", endpoint: "/webhook/seo-audit", btnLabel: "Start Audit", loadingText: "Starting audit...", successMsg: "✓ Audit running — results land in Local + Digital Presence", tab: "wf6-local-presence" },
+  { icon: "📣", name: "Launch Campaign", desc: "AI creates and targets an ad campaign", color: "bg-muted text-foreground", endpoint: "/webhook/meta-campaign-create", btnLabel: "Launch Campaign", loadingText: "Building campaign...", successMsg: "✓ Campaign draft created — review it in Paid Ads", tab: "paid-ads" },
+  { icon: "🎯", name: "Competitor Analysis", desc: "See what competitors are doing", color: "bg-muted text-foreground", endpoint: "/webhook/competitor-analyze", btnLabel: "Analyze Now", loadingText: "Analyzing...", successMsg: "✓ Analysis running — results land in Competitor Intelligence", tab: "wf5-competitors" },
+  { icon: "🎬", name: "Video Script", desc: "AI writes a TikTok or Reel script", color: "bg-muted text-foreground", endpoint: "/webhook/video-script-generate", btnLabel: "Write Script", loadingText: "Writing script...", successMsg: "✓ Script generating — it will appear in Content", tab: "content" },
   { icon: "⭐", name: "Review Request", desc: "Ask a customer to leave a review", color: "bg-muted text-foreground", endpoint: "/webhook/review-request-send", btnLabel: "Send Request", loadingText: "Sending...", successMsg: "✓ Request sent!" },
 ];
 
@@ -313,7 +313,8 @@ export default function DashboardOverview() {
         email: user?.email,
       });
       setActionSuccess(action.name);
-      toast.success(action.successMsg);
+      const tab = (action as { tab?: string }).tab;
+      toast.success(action.successMsg, tab ? { action: { label: "Open", onClick: () => navTo(tab) } } : undefined);
       setTimeout(() => setActionSuccess(null), 3000);
     } catch (err) {
       // Audit fix: every failure used to read "check your internet", which is

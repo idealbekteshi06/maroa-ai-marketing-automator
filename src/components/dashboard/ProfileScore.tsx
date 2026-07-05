@@ -82,7 +82,7 @@ export default function ProfileScore({ businessId, userId }: ProfileScoreProps) 
             <span className={val.unlocked ? "text-foreground" : "text-muted-foreground"}>
               {featureLabels[key] || key}
             </span>
-            <span className="ml-auto text-[10px] text-muted-foreground">{val.required}%</span>
+            <span className="ml-auto text-[10px] text-muted-foreground">unlocks at {val.required}%</span>
           </div>
         ))}
       </div>

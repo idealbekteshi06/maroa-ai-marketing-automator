@@ -23,14 +23,11 @@ const EVENT_MESSAGES: Record<string, string> = {
   competitor_alert: "🎯 Competitor alert",
 };
 
-const IDLE_MESSAGES = [
-  "● AI is monitoring your business 24/7",
-  "● Content generation running — posts scheduled",
-  "● Lead scoring active — contacts tracked",
-  "● Competitor monitoring — weekly scan active",
-  "● Email sequences processing automatically",
-  "● SEO monitoring — next audit Sunday",
-];
+// One honest idle line. The old rotation cycled canned claims ("posts
+// scheduled", "contacts tracked") regardless of whether the account had any
+// posts or contacts — audit called it "fake activity theater". Real activity
+// now only comes from live EVENT_MESSAGES.
+const IDLE_MESSAGES = ["● Maroa is watching your business — live updates appear here"];
 
 type StatusState = "idle" | "working" | "success" | "error";
 
