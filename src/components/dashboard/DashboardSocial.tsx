@@ -28,6 +28,7 @@ import { timeAgo } from "@/lib/format";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/lib/errorMessages";
 import { apiPost, apiFireAndForget, getApiBase } from "@/lib/apiClient";
 import { getOAuthRedirectUri, META_APP_ID } from "@/lib/oauth";
+import { ayrshareConnectStart, ayrshareConnectStatus } from "@/lib/api";
 const META_PERMISSIONS =
   "email,public_profile,pages_show_list,pages_read_engagement,pages_manage_posts,pages_manage_engagement,pages_read_user_content,instagram_basic,instagram_content_publish,ads_read,ads_management,business_management,read_insights";
 interface AccountConfig {
@@ -110,6 +111,8 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
   const [recentPosts, setRecentPosts] = useState<Array<Record<string, unknown>>>([]);
   const [generating, setGenerating] = useState(false);
+  const [ayrshareBusy, setAyrshareBusy] = useState(false);
+  const [ayrshareLinked, setAyrshareLinked] = useState<string[]>([]);
 
   /* ---- Fetch business ---- */
   const fetchBusiness = useCallback(async () => {
@@ -218,6 +221,45 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
       }
     })();
   }, [businessId, fetchBusiness, oauthCode, user?.id]);
+
+  /* ---- Ayrshare linking (works before Meta app approval) ---- */
+  const handleAyrshareLink = async () => {
+    if (!businessId) return;
+    setAyrshareBusy(true);
+    try {
+      const r = await ayrshareConnectStart(businessId);
+      if (r?.url) {
+        window.open(r.url, "_blank", "noopener");
+        toast.info("Link your accounts in the new tab, then come back and press \u201CCheck linked accounts\u201D.");
+      } else {
+        toast.error("Quick-connect isn't available right now. Please try again later.");
+      }
+    } catch {
+      toast.error("Quick-connect isn't available right now. Please try again later.");
+    } finally {
+      setAyrshareBusy(false);
+    }
+  };
+
+  const handleAyrshareRefresh = async () => {
+    if (!businessId) return;
+    setAyrshareBusy(true);
+    try {
+      const r = await ayrshareConnectStatus(businessId);
+      const linked = Array.isArray(r?.connected) ? r.connected : [];
+      setAyrshareLinked(linked);
+      if (linked.length > 0) {
+        toast.success(`Linked: ${linked.join(", ")}`);
+        await fetchBusiness();
+      } else {
+        toast.info("No accounts linked yet \u2014 finish linking in the connect tab first.");
+      }
+    } catch {
+      toast.error("Couldn't check linked accounts right now.");
+    } finally {
+      setAyrshareBusy(false);
+    }
+  };
 
   /* ---- Connect handler ---- */
   const handleConnect = (a: AccountConfig) => {
@@ -495,6 +537,37 @@ export default function DashboardSocial({ oauthCode }: { oauthCode?: string | nu
             </div>
           );
         })}
+      </div>
+
+      {/* ==================== QUICK CONNECT (Ayrshare) ==================== */}
+      <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground">Quick connect (all platforms)</p>
+            <p className="text-xs text-muted-foreground mt-1 max-w-lg">
+              Link Facebook, Instagram, TikTok, LinkedIn, Pinterest and YouTube in one place through our
+              publishing partner — no extra approvals needed. Maroa posts through the link automatically.
+            </p>
+            {ayrshareLinked.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {ayrshareLinked.map((p) => (
+                  <span key={p} className="inline-flex items-center gap-1 rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 px-2.5 py-0.5 text-[11px] font-medium">
+                    <CheckCircle2 className="h-3 w-3" /> {p}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <Button variant="outline" size="sm" onClick={handleAyrshareRefresh} disabled={ayrshareBusy}>
+              Check linked accounts
+            </Button>
+            <Button size="sm" onClick={handleAyrshareLink} disabled={ayrshareBusy}>
+              {ayrshareBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Link accounts
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* ==================== CONTENT CALENDAR ==================== */}

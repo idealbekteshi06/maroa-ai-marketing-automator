@@ -1182,6 +1182,20 @@ export const socialPostSchedule = (data: {
   scheduleAt: string;
 }) => post("/webhook/social-post-schedule", data);
 
+// ─── Ayrshare social linking (FB/IG without Meta App Review) ──
+export const ayrshareConnectStart = (businessId: string) =>
+  post("/webhook/ayrshare-connect-start", { businessId }) as Promise<{
+    ok: boolean;
+    url?: string;
+  }>;
+
+export const ayrshareConnectStatus = (businessId: string) =>
+  post("/webhook/ayrshare-connect-status", { businessId }) as Promise<{
+    ok: boolean;
+    linked: boolean;
+    connected: string[];
+  }>;
+
 // ─── Store connect (Shopify / dropshipping) ──────────────────
 export interface StoreProduct {
   id?: string;
